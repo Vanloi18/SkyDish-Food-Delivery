@@ -12,12 +12,14 @@ A Vietnamese food delivery platform built with a microservices architecture.
 4. [Authentication & Authorization (JWT / RBAC)](#4-authentication--authorization-jwt--rbac)
 5. [Multi-Channel Payment Gateways](#5-multi-channel-payment-gateways)
 6. [Real-Time & Engagement Features](#6-real-time--engagement-features)
-7. [Installation & Development Startup](#7-installation--development-startup)
-8. [Environment Variables](#8-environment-variables)
-9. [Docker & Container Deployment](#9-docker--container-deployment)
-10. [Automated Testing & Security Matrix](#10-automated-testing--security-matrix)
-11. [Development / Demo Accounts](#11-development--demo-accounts)
-12. [Known Limitations & Historical Notes](#12-known-limitations--historical-notes)
+7. [Quick Start with Docker](#7-quick-start-with-docker-recommended---one-command)
+8. [Development & Demo Credentials](#8-development--demo-credentials)
+9. [Microservices Port & Endpoint Map](#9-microservices-port--endpoint-map)
+10. [Common Docker Operations](#10-common-docker-operations--cheat-sheet)
+11. [Troubleshooting Guide](#11-troubleshooting-guide)
+12. [Local Host Development](#12-local-host-development-without-docker)
+13. [Automated Testing & Security Matrix](#13-automated-testing--security-matrix)
+14. [Known Limitations & Historical Notes](#14-known-limitations--historical-notes)
 
 ---
 
@@ -157,33 +159,139 @@ SkyDish provides 5 payment methods tailored for the Vietnamese and international
 
 ---
 
-## 7. Installation & Development Startup
+## 7. Quick Start with Docker (Recommended - One Command)
 
-### Prerequisites
-- Node.js `v18+` or `v20+` LTS
-- npm `v9+`
-- MongoDB `v6+` / `v7+` (Local standalone on port `27000` / `27017` or MongoDB Atlas URI)
+Get the complete SkyDish platform up and running in **under 2 minutes** on any clean computer with only **Docker Desktop** and **Git** installed. No Node.js, npm, or MongoDB host installations required!
 
-### Quick Start (Local Node.js)
+### Windows PowerShell
 
-1. **Clone the repository**:
+```powershell
+# 1. Clone repository
+git clone https://github.com/Vanloi18/SkyDish-Food-Delivery.git
+cd SkyDish-Food-Delivery
+
+# 2. Create environment configuration from template
+Copy-Item .env.example .env
+
+# 3. Build & start all services in the background
+docker compose up -d --build
+
+# 4. Open browser
+Start-Process "http://localhost:3000"
+```
+
+### macOS / Linux (bash / zsh)
+
+```bash
+# 1. Clone repository
+git clone https://github.com/Vanloi18/SkyDish-Food-Delivery.git
+cd SkyDish-Food-Delivery
+
+# 2. Create environment configuration from template
+cp .env.example .env
+
+# 3. Build & start all services in the background
+docker compose up -d --build
+
+# 4. Open browser
+open http://localhost:3000   # macOS
+# xdg-open http://localhost:3000  # Linux
+```
+
+> **Automatic Database Seeding**: On the initial startup with an empty database, `restaurant-service` automatically seeds demo accounts (Super Admin, Customer, Shipper), 5 authentic Vietnamese restaurants with menus and food items, and 4 discount coupons.
+
+---
+
+## 8. Development & Demo Credentials
+
+All demo accounts are pre-seeded and ready to use immediately:
+
+| Role | Email | Password | Access Portal / URL | Features Available |
+| :--- | :--- | :--- | :--- | :--- |
+| **Super Admin** | `admin@skydish.com` | `password123` | `http://localhost:3000/admin/super-login` | Platform analytics, restaurant approvals, driver status, cross-service logs. |
+| **Customer** | `customer@skydish.com` | `password123` | `http://localhost:3000/auth/login` | Browse restaurants, add to cart, apply vouchers, checkout via COD/VietQR/MoMo/VNPay/Stripe, track orders. |
+| **Shipper / Driver** | `driver@skydish.com` | `password123` | `http://localhost:3000/driver/login` | View dispatched deliveries, update order status (`Picked-up`, `Delivered`), GPS simulation. |
+| **Restaurant Partner** | `trangtien@pizza4ps.com` | `password123` | `http://localhost:3000/restaurant/login` | Menu CRUD, dish pricing, inventory availability, coupon management, restaurant reviews. |
+
+---
+
+## 9. Microservices Port & Endpoint Map
+
+All backend services listen on `0.0.0.0` and are exposed to the host machine:
+
+| Container Name | Service | Internal Port | Host Port | Health Check / Direct URL |
+| :--- | :--- | :--- | :--- | :--- |
+| `skydish-frontend` | React Frontend (Nginx) | `3000` | `3000` | [http://localhost:3000](http://localhost:3000) |
+| `skydish-auth-service` | Auth Microservice | `4000` | `4000` | [http://localhost:4000/health](http://localhost:4000/health) |
+| `skydish-restaurant-service` | Restaurant Microservice | `5002` | `5002` | [http://localhost:5002/health](http://localhost:5002/health) |
+| `skydish-delivery-service` | Delivery Microservice | `5003` | `5003` | [http://localhost:5003/health](http://localhost:5003/health) |
+| `skydish-payment-service` | Payment Microservice | `5004` | `5004` | [http://localhost:5004/health](http://localhost:5004/health) |
+| `skydish-order-service` | Order Microservice | `5005` | `5005` | [http://localhost:5005/health](http://localhost:5005/health) |
+| `skydish-mongo` | MongoDB 7.0 Engine | `27017` | `27017` | `mongodb://localhost:27017/food_delivery_db` |
+
+---
+
+## 10. Common Docker Operations & Cheat Sheet
+
+```bash
+# View container status and health
+docker compose ps
+
+# Follow logs from all services
+docker compose logs -f
+
+# Follow logs from a specific microservice
+docker compose logs -f restaurant-service
+docker compose logs -f payment-service
+
+# Re-run database seeding at any time
+docker compose exec restaurant-service node seed-all.mjs
+
+# Restart an individual service
+docker compose restart payment-service
+
+# Stop all containers (preserves database data in mongo-data volume)
+docker compose down
+
+# Stop and wipe database volume for a clean state
+docker compose down -v
+```
+
+---
+
+## 11. Troubleshooting Guide
+
+### Port Already in Use (EADDRINUSE)
+If a port (e.g. `3000`, `4000`, `5002`, `27017`) is already occupied on your host machine:
+- Windows PowerShell:
+  ```powershell
+  Get-NetTCPConnection -LocalPort 3000,4000,5002,5003,5004,5005,27017 -ErrorAction SilentlyContinue | Select-Object LocalPort, OwningProcess
+  ```
+- macOS / Linux:
+  ```bash
+  lsof -i :3000 -i :4000 -i :5002 -i :5003 -i :5004 -i :5005 -i :27017
+  ```
+- Alternatively, override port mappings in your `.env` file (e.g. `FRONTEND_PORT=3001`, `AUTH_PORT=4001`).
+
+### Docker Desktop Not Running
+Ensure Docker Desktop is launched and the Docker engine is running before executing `docker compose up`.
+
+### Re-seeding the Database
+To reset the database and re-seed from scratch:
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+---
+
+## 12. Local Host Development (Without Docker)
+
+If you prefer running services directly on your host machine with Node.js and local MongoDB:
+
+1. **Install dependencies**:
    ```bash
-   git clone https://github.com/Vanloi18/SkyDish-Food-Delivery.git
-   cd SkyDish-Food-Delivery
-   ```
-
-2. **Configure environment variables**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your environment configuration
-   ```
-
-3. **Install dependencies**:
-   ```bash
-   # Root / Runner
    npm install
-
-   # Services
    cd backend/auth-service && npm install && cd ../..
    cd backend/restaurant-service && npm install && cd ../..
    cd backend/order-service && npm install && cd ../..
@@ -192,108 +300,13 @@ SkyDish provides 5 payment methods tailored for the Vietnamese and international
    cd frontend && npm install && cd ..
    ```
 
-4. **Start microservices**:
-   - Using Windows helper batch scripts:
-     ```cmd
-     start-all.bat
-     ```
-   - Or start each microservice independently in separate terminal windows:
-     ```bash
-     # Auth Service
-     cd backend/auth-service && npm start
+2. **Configure `.env`**:
+   Set `MONGO_URI=mongodb://127.0.0.1:27017/food_delivery_db` in `.env`.
 
-     # Restaurant Service
-     cd backend/restaurant-service && npm start
-
-     # Order Service
-     cd backend/order-service && npm start
-
-     # Delivery Service
-     cd delivery-service/backend && npm start
-
-     # Payment Service
-     cd backend/payment-service && npm start
-
-     # React Frontend
-     cd frontend && npm start
-     ```
-
----
-
-## 8. Environment Variables
-
-Create `.env` in the repository root (see `.env.example` for the complete template):
-
-```dotenv
-# Database
-MONGO_URI=mongodb://127.0.0.1:27000/food_delivery_db
-
-# Microservice Ports
-PORT_AUTH=4000
-PORT_REST=5002
-PORT_ORDER=5005
-PORT_DELIVERY=5003
-PORT_PAYMENT=5004
-
-# Security
-JWT_SECRET=your_strong_jwt_secret_key
-JWT_EXPIRES_IN=7d
-
-# Stripe
-STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
-REACT_APP_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-
-# VNPay Sandbox
-VNPAY_TMN_CODE=your_vnpay_tmn_code
-VNPAY_HASH_SECRET=your_vnpay_hash_secret
-VNPAY_PAYMENT_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
-VNPAY_RETURN_URL=http://localhost:3000/payment/vnpay/callback
-
-# MoMo Sandbox
-MOMO_PARTNER_CODE=your_momo_partner_code
-MOMO_ACCESS_KEY=your_momo_access_key
-MOMO_SECRET_KEY=your_momo_secret_key
-MOMO_ENDPOINT=https://test-payment.momo.vn/v2/gateway/api/create
-MOMO_REDIRECT_URL=http://localhost:3000/payment/momo/callback
-MOMO_IPN_URL=http://localhost:5004/api/payment/momo/ipn
-
-# Bank Transfer / VietQR
-BANK_TRANSFER_ENABLED=true
-BANK_ID=970422
-BANK_CODE=MB
-BANK_NAME=MB Bank
-BANK_ACCOUNT_NUMBER=your_merchant_account_number
-BANK_ACCOUNT_NAME=your_merchant_account_name
-VIETQR_TEMPLATE=compact2
-
-# Frontend
-REACT_APP_BACKEND_URL=http://localhost:4000
-```
-
-> **Security Note**: Never commit actual secrets or production credentials to Git. Keep sensitive values strictly in local `.env` files.
-
----
-
-## 9. Docker & Container Deployment
-
-### Local Docker Compose
-
-Build and launch all 5 microservices, the React frontend, and a containerized MongoDB instance:
-
-```bash
-docker compose up --build -d
-```
-
-Check running containers:
-```bash
-docker compose ps
-```
-
-Stop containers:
-```bash
-docker compose down
-```
+3. **Start services**:
+   ```cmd
+   start-all.bat
+   ```
 
 ### Kubernetes Manifests
 
@@ -305,7 +318,7 @@ Production-ready YAML specifications are available in `k8s/`:
 
 ---
 
-## 10. Automated Testing & Security Matrix
+## 13. Automated Testing & Security Matrix
 
 The project includes an 18-point automated security and data integrity matrix along with comprehensive microservice test suites.
 
@@ -338,20 +351,7 @@ cd frontend && npm run build
 
 ---
 
-## 11. Development / Demo Accounts
-
-For local development and testing across user roles, the platform supports the following role structures:
-
-- **Customer Role**: Registered via `/auth/register` or created with `role: "customer"`.
-- **Restaurant Partner Role**: Registered via `/restaurant/register` or created with `role: "restaurant"`.
-- **Shipper / Driver Role**: Registered with `role: "driver"`.
-- **Super Admin Role**: Platform-wide administrator with `role: "admin"` or `role: "superAdmin"`.
-
-> *Passwords for development accounts should be configured locally in your development database and not committed to source control.*
-
----
-
-## 12. Known Limitations & Historical Notes
+## 14. Known Limitations & Historical Notes
 
 - **Payment Sandboxes**: VNPay and MoMo integrations run in sandbox/test environments by default. Production deployment requires approved merchant credentials from respective payment providers.
 - **MongoDB Transactions**: On MongoDB standalone instances (non-replica set), multi-document ACID transactions gracefully fall back to atomic direct operations in the Order Service. Full replica sets or MongoDB Atlas are recommended for production clustering.

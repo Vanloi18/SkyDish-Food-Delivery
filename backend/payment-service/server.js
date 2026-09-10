@@ -51,7 +51,7 @@ app.get("/", (req, res) => res.send("Payment Service Running"));
 
 const PORT = process.env.PORT || 5004;
 if (require.main === module) {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Payment Service running on port ${PORT}`);
     console.log(`🌍 API Base URL: http://localhost:${PORT}`);
     console.log(`📖 Swagger API Docs: http://localhost:${PORT}/api-docs`);

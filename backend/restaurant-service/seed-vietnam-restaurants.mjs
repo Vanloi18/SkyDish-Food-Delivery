@@ -520,7 +520,8 @@ const VIETNAM_RESTAURANTS = [
 ];
 
 async function seed() {
-  await mongoose.connect('mongodb://127.0.0.1:27000/food_delivery_db');
+  const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27000/food_delivery_db';
+  await mongoose.connect(mongoUri);
   console.log('Connected to MongoDB');
 
   // 1. Clean up demo/fake restaurants

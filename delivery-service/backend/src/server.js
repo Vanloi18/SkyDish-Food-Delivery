@@ -24,6 +24,6 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 5003;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Delivery Service running on port ${PORT}`);
 });

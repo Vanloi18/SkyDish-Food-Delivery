@@ -11,6 +11,8 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import couponRoutes from './routes/couponRoutes.js';
 import searchRoutes from './routes/searchRoutes.js';
 import cors from 'cors';
+import Restaurant from './models/Restaurant.js';
+import { seedAll } from '../seed-all.mjs';
 
 
 const app = express();
@@ -41,9 +43,22 @@ app.get('/', (req, res) => {
   res.send('Restaurant Service Running...');
 });
 
-// MongoDB connection
+// MongoDB connection & auto-seed if database is clean
 mongoose.connect(process.env.MONGO_URI, {})
-  .then(() => console.log('✅ MongoDB Connected'))
+  .then(async () => {
+    console.log('✅ MongoDB Connected');
+    try {
+      const count = await Restaurant.countDocuments();
+      if (count === 0) {
+        console.log('🌱 Empty database detected. Running initial SkyDish idempotent seed...');
+        await seedAll();
+      } else {
+        console.log(`ℹ️ Database initialized (${count} restaurants found).`);
+      }
+    } catch (seedErr) {
+      console.warn('Auto-seed check notice:', seedErr.message);
+    }
+  })
   .catch(err => console.log('MongoDB connection error:', err));
 
 // Error handling middleware
@@ -63,4 +78,4 @@ app.use((error, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 5002;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));

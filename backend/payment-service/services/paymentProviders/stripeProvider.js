@@ -1,5 +1,6 @@
 const Payment = require("../../models/PaymentModel");
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const stripeKey = process.env.STRIPE_SECRET_KEY || "sk_test_placeholder_key_skydish_dev";
+const stripe = require("stripe")(stripeKey);
 const { sendSmsNotification } = require("../../utils/twilioService");
 
 /**

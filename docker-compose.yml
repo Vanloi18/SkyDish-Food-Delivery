@@ -4,7 +4,7 @@ services:
     container_name: skydish-mongo
     restart: always
     ports:
-      - "27017:27017"
+      - "${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo-data:/data/db
     healthcheck:
@@ -12,6 +12,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 5s
 
   auth-service:
     build:
@@ -20,15 +21,21 @@ services:
     container_name: skydish-auth-service
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "${AUTH_PORT:-4000}:4000"
     environment:
       - PORT=4000
-      - MONGO_URI=mongodb://mongo:27017/food_delivery_db
-      - JWT_SECRET=supersecretjwtkeyforfooddeliverymicroservices2025
-      - JWT_EXPIRES_IN=7d
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
     depends_on:
       mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   restaurant-service:
     build:
@@ -37,14 +44,20 @@ services:
     container_name: skydish-restaurant-service
     restart: unless-stopped
     ports:
-      - "5002:5002"
+      - "${REST_PORT:-5002}:5002"
     environment:
       - PORT=5002
-      - MONGO_URI=mongodb://mongo:27017/food_delivery_db
-      - JWT_SECRET=supersecretjwtkeyforfooddeliverymicroservices2025
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
     depends_on:
       mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5002/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   order-service:
     build:
@@ -53,14 +66,20 @@ services:
     container_name: skydish-order-service
     restart: unless-stopped
     ports:
-      - "5005:5005"
+      - "${ORDER_PORT:-5005}:5005"
     environment:
       - PORT=5005
-      - MONGO_URI=mongodb://mongo:27017/food_delivery_db
-      - JWT_SECRET=supersecretjwtkeyforfooddeliverymicroservices2025
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
     depends_on:
       mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5005/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   delivery-service:
     build:
@@ -69,14 +88,20 @@ services:
     container_name: skydish-delivery-service
     restart: unless-stopped
     ports:
-      - "5003:5003"
+      - "${DELIVERY_PORT:-5003}:5003"
     environment:
       - PORT=5003
-      - MONGO_URI=mongodb://mongo:27017/food_delivery_db
-      - JWT_SECRET=supersecretjwtkeyforfooddeliverymicroservices2025
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
     depends_on:
       mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5003/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   payment-service:
     build:
@@ -85,16 +110,43 @@ services:
     container_name: skydish-payment-service
     restart: unless-stopped
     ports:
-      - "5004:5004"
+      - "${PAY_PORT:-5004}:5004"
     environment:
       - PORT=5004
-      - MONGO_URI=mongodb://mongo:27017/food_delivery_db
-      - JWT_SECRET=supersecretjwtkeyforfooddeliverymicroservices2025
-      - STRIPE_SECRET_KEY=sk_test_placeholder_key_not_provided
-      - STRIPE_WEBHOOK_SECRET=whsec_placeholder_key_not_provided
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-sk_test_placeholder_key_skydish_dev}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-whsec_placeholder_key_skydish_dev}
+      - VNPAY_TMN_CODE=${VNPAY_TMN_CODE:-}
+      - VNPAY_HASH_SECRET=${VNPAY_HASH_SECRET:-}
+      - VNPAY_PAYMENT_URL=${VNPAY_PAYMENT_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      - VNPAY_RETURN_URL=${VNPAY_RETURN_URL:-http://localhost:3000/payment/vnpay/callback}
+      - MOMO_PARTNER_CODE=${MOMO_PARTNER_CODE:-}
+      - MOMO_ACCESS_KEY=${MOMO_ACCESS_KEY:-}
+      - MOMO_SECRET_KEY=${MOMO_SECRET_KEY:-}
+      - MOMO_ENDPOINT=${MOMO_ENDPOINT:-https://test-payment.momo.vn/v2/gateway/api/create}
+      - MOMO_REDIRECT_URL=${MOMO_REDIRECT_URL:-http://localhost:3000/payment/momo/callback}
+      - MOMO_IPN_URL=${MOMO_IPN_URL:-http://localhost:5004/api/payment/momo/ipn}
+      - BANK_TRANSFER_ENABLED=${BANK_TRANSFER_ENABLED:-true}
+      - BANK_ID=${BANK_ID:-970422}
+      - BANK_CODE=${BANK_CODE:-MB}
+      - BANK_NAME=${BANK_NAME:-MB Bank}
+      - BANK_ACCOUNT_NUMBER=${BANK_ACCOUNT_NUMBER:-0932366523}
+      - BANK_ACCOUNT_NAME=${BANK_ACCOUNT_NAME:-LE VAN LOI}
+      - VIETQR_TEMPLATE=${VIETQR_TEMPLATE:-compact2}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
     depends_on:
       mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5004/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   frontend:
     build:
@@ -103,15 +155,22 @@ services:
     container_name: skydish-frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
-      - REACT_APP_BACKEND_URL=http://localhost:4000
+      - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-http://localhost:4000}
+      - REACT_APP_STRIPE_PUBLISHABLE_KEY=${REACT_APP_STRIPE_PUBLISHABLE_KEY:-}
     depends_on:
       - auth-service
       - restaurant-service
       - order-service
       - delivery-service
       - payment-service
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
 volumes:
   mongo-data:
