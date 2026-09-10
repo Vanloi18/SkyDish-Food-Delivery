@@ -1,0 +1,74 @@
+/* SkyDish Design System Tokens */
+:root {
+  /* Brand Palette */
+  --sd-primary: #ff5722;
+  --sd-primary-hover: #e64a19;
+  --sd-primary-active: #d84315;
+  --sd-primary-light: #fff3ed;
+  --sd-primary-glow: rgba(255, 87, 34, 0.22);
+
+  /* Secondary / Navy */
+  --sd-secondary: #0f172a;
+  --sd-secondary-hover: #1e293b;
+  --sd-secondary-light: #f1f5f9;
+
+  /* Accent Colors */
+  --sd-accent: #ff9800;
+  --sd-accent-light: #fff8e1;
+  --sd-success: #10b981;
+  --sd-success-hover: #059669;
+  --sd-success-light: #ecfdf5;
+  --sd-warning: #f59e0b;
+  --sd-warning-light: #fffbeb;
+  --sd-danger: #ef4444;
+  --sd-danger-hover: #dc2626;
+  --sd-danger-light: #fef2f2;
+  --sd-info: #3b82f6;
+  --sd-info-light: #eff6ff;
+
+  /* Neutral Scale */
+  --sd-bg-main: #f8fafc;
+  --sd-bg-surface: #ffffff;
+  --sd-bg-muted: #f1f5f9;
+  --sd-border: #e2e8f0;
+  --sd-border-focus: #ff5722;
+
+  /* Text Colors */
+  --sd-text-primary: #0f172a;
+  --sd-text-secondary: #475569;
+  --sd-text-muted: #94a3b8;
+  --sd-text-inverted: #ffffff;
+
+  /* Typography */
+  --sd-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --sd-font-size-xs: 0.75rem;    /* 12px */
+  --sd-font-size-sm: 0.875rem;   /* 14px */
+  --sd-font-size-base: 1rem;     /* 16px */
+  --sd-font-size-lg: 1.125rem;   /* 18px */
+  --sd-font-size-xl: 1.25rem;    /* 20px */
+  --sd-font-size-2xl: 1.5rem;    /* 24px */
+  --sd-font-size-3xl: 1.875rem;  /* 30px */
+  --sd-font-size-4xl: 2.25rem;   /* 36px */
+  --sd-font-size-5xl: 3rem;      /* 48px */
+
+  /* Shadows & Elevation */
+  --sd-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --sd-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --sd-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
+  --sd-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+  --sd-shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
+  --sd-shadow-glow: 0 8px 24px var(--sd-primary-glow);
+
+  /* Border Radii */
+  --sd-radius-xs: 4px;
+  --sd-radius-sm: 8px;
+  --sd-radius-md: 12px;
+  --sd-radius-lg: 16px;
+  --sd-radius-xl: 24px;
+  --sd-radius-full: 9999px;
+
+  /* Transitions */
+  --sd-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --sd-transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --sd-transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+}

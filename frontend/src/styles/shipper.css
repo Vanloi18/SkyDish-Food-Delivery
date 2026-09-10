@@ -1,0 +1,515 @@
+/* =========================================================================
+   SKYDISH SHIPPER MOBILE APP - STYLESHEET
+   Mobile-first, touch-friendly, high-contrast, professional delivery UX
+   ========================================================================= */
+
+:root {
+  --shipper-primary: #ff5722;
+  --shipper-primary-dark: #e64a19;
+  --shipper-primary-light: #fff7ed;
+  --shipper-navy: #0f172a;
+  --shipper-bg: #f8fafc;
+  --shipper-card-bg: #ffffff;
+  --shipper-border: #e2e8f0;
+  --shipper-text-main: #0f172a;
+  --shipper-text-muted: #64748b;
+  --shipper-success: #10b981;
+  --shipper-success-bg: #ecfdf5;
+  --shipper-warning: #f59e0b;
+  --shipper-warning-bg: #fffbeb;
+  --shipper-danger: #ef4444;
+  --shipper-danger-bg: #fef2f2;
+  --shipper-info: #0284c7;
+  --shipper-info-bg: #f0f9ff;
+}
+
+/* Base Mobile Wrapper */
+.shipper-app-wrapper {
+  min-height: 100vh;
+  background-color: #0f172a;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--shipper-text-main);
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .shipper-app-wrapper {
+    padding: 1.5rem 1rem;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  }
+}
+
+/* Mobile Container / Frame */
+.shipper-mobile-frame {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  background-color: var(--shipper-bg);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .shipper-mobile-frame {
+    min-height: 844px;
+    max-height: 92vh;
+    border-radius: 28px;
+    border: 6px solid #1e293b;
+  }
+}
+
+/* Top App Header */
+.shipper-top-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--shipper-border);
+  padding: 0.85rem 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.shipper-brand-info {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.shipper-avatar-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: var(--shipper-primary-light);
+  color: var(--shipper-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border: 1.5px solid var(--shipper-primary);
+}
+
+.shipper-name-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--shipper-navy);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.shipper-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  margin-top: 0.2rem;
+}
+
+.shipper-status-badge.online {
+  background-color: var(--shipper-success-bg);
+  color: var(--shipper-success);
+}
+
+.shipper-status-badge.offline {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+/* Toggle Switch */
+.shipper-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.shipper-toggle-btn.is-online {
+  background-color: var(--shipper-success-bg);
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.shipper-toggle-btn.is-offline {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+/* Content Area */
+.shipper-content-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.15rem 5.5rem 1.15rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Bottom Navigation Bar */
+.shipper-bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background-color: #ffffff;
+  border-top: 1px solid var(--shipper-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 50;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.shipper-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex: 1;
+  height: 100%;
+  position: relative;
+  transition: color 0.15s ease;
+}
+
+.shipper-nav-item.active {
+  color: var(--shipper-primary);
+}
+
+.shipper-nav-item.active::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: 3px;
+  background-color: var(--shipper-primary);
+  border-radius: 0 0 4px 4px;
+}
+
+.shipper-nav-badge {
+  position: absolute;
+  top: 6px;
+  right: 24%;
+  background-color: var(--shipper-danger);
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+/* KPI Summary Cards */
+.shipper-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.shipper-kpi-card {
+  background-color: #ffffff;
+  border-radius: 14px;
+  border: 1px solid var(--shipper-border);
+  padding: 0.9rem 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.shipper-kpi-card-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--shipper-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.35rem;
+}
+
+.shipper-kpi-card-val {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--shipper-navy);
+  margin: 0;
+}
+
+.shipper-kpi-card-val.primary {
+  color: var(--shipper-primary);
+}
+
+.shipper-kpi-card-val.success {
+  color: var(--shipper-success);
+}
+
+/* Section Header */
+.shipper-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.shipper-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--shipper-navy);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Delivery Order Card */
+.shipper-order-card {
+  background-color: #ffffff;
+  border: 1px solid var(--shipper-border);
+  border-radius: 16px;
+  padding: 1.1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.shipper-order-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.shipper-order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px dashed var(--shipper-border);
+}
+
+.shipper-order-id {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--shipper-navy);
+}
+
+.shipper-route-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.shipper-route-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.shipper-step-pin {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.shipper-step-pin.pickup {
+  background-color: #fff7ed;
+  color: var(--shipper-primary);
+  border: 1px solid #fed7aa;
+}
+
+.shipper-step-pin.dropoff {
+  background-color: #ecfdf5;
+  color: var(--shipper-success);
+  border: 1px solid #a7f3d0;
+}
+
+.shipper-step-info {
+  flex: 1;
+}
+
+.shipper-step-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--shipper-text-muted);
+  text-transform: uppercase;
+}
+
+.shipper-step-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--shipper-navy);
+  margin: 0.1rem 0;
+}
+
+.shipper-step-addr {
+  font-size: 0.78rem;
+  color: #475569;
+  line-height: 1.35;
+}
+
+/* Stepper Progress Bar */
+.shipper-stepper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1.25rem 0;
+  position: relative;
+}
+
+.shipper-stepper::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background-color: #e2e8f0;
+  z-index: 1;
+}
+
+.shipper-stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  flex: 1;
+}
+
+.shipper-stepper-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0.35rem;
+}
+
+.shipper-stepper-step.completed .shipper-stepper-circle {
+  background-color: var(--shipper-success);
+  color: #ffffff;
+}
+
+.shipper-stepper-step.active .shipper-stepper-circle {
+  background-color: var(--shipper-primary);
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.2);
+}
+
+.shipper-stepper-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #64748b;
+  text-align: center;
+}
+
+.shipper-stepper-step.active .shipper-stepper-label {
+  color: var(--shipper-primary);
+  font-weight: 700;
+}
+
+/* Touch Action Button */
+.shipper-action-btn {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.shipper-action-btn.primary {
+  background-color: var(--shipper-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(255, 87, 34, 0.25);
+}
+
+.shipper-action-btn.primary:hover {
+  background-color: var(--shipper-primary-dark);
+}
+
+.shipper-action-btn.success {
+  background-color: var(--shipper-success);
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
+}
+
+.shipper-action-btn.outline {
+  background-color: transparent;
+  color: var(--shipper-navy);
+  border: 1px solid var(--shipper-border);
+}
+
+.shipper-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Map Screen Container */
+.shipper-map-container {
+  background-color: #ffffff;
+  border-radius: 18px;
+  border: 1px solid var(--shipper-border);
+  overflow: hidden;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.shipper-map-view {
+  height: 260px;
+  background: #e5e7eb;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shipper-map-info-box {
+  padding: 1rem 1.15rem;
+  background: #ffffff;
+}

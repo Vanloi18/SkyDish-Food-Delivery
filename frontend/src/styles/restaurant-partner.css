@@ -1,0 +1,367 @@
+/* =========================================================================
+   SKYDISH RESTAURANT PARTNER / MERCHANT PORTAL - STYLESHEET
+   Professional SaaS / Merchant UI (Deep Navy #0F172A, Primary #FF5722, Slate Canvas #F8FAFC)
+   ========================================================================= */
+
+:root {
+  --merch-primary: #ff5722;
+  --merch-primary-hover: #f4511e;
+  --merch-primary-light: #fff7ed;
+  --merch-navy: #0f172a;
+  --merch-sidebar-bg: #0f172a;
+  --merch-bg: #f8fafc;
+  --merch-card-bg: #ffffff;
+  --merch-border: #e2e8f0;
+  --merch-text-main: #0f172a;
+  --merch-text-muted: #64748b;
+  --merch-success: #10b981;
+  --merch-success-bg: #ecfdf5;
+  --merch-warning: #f59e0b;
+  --merch-warning-bg: #fffbeb;
+  --merch-danger: #ef4444;
+  --merch-danger-bg: #fef2f2;
+  --merch-info: #0284c7;
+  --merch-info-bg: #f0f9ff;
+}
+
+/* Base Wrapper */
+.merchant-layout-wrapper {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--merch-bg);
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--merch-text-main);
+}
+
+/* Sidebar */
+.merchant-sidebar {
+  width: 250px;
+  background-color: var(--merch-sidebar-bg);
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+  transition: width 0.2s ease, transform 0.2s ease;
+  border-right: 1px solid #1e293b;
+}
+
+.merchant-sidebar.collapsed {
+  width: 72px;
+}
+
+.merchant-sidebar-brand {
+  padding: 1.25rem 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid #1e293b;
+}
+
+.merchant-brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff5722 0%, #ff7043 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(255, 87, 34, 0.3);
+}
+
+.merchant-brand-text {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.merchant-brand-sub {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  display: block;
+}
+
+/* Navigation List */
+.merchant-nav-menu {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.merchant-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.merchant-nav-item:hover {
+  background-color: #1e293b;
+  color: #ffffff;
+}
+
+.merchant-nav-item.active {
+  background-color: var(--merch-primary);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.25);
+}
+
+/* Main Area */
+.merchant-main-area {
+  flex: 1;
+  margin-left: 250px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: margin-left 0.2s ease;
+}
+
+.merchant-main-area.sidebar-collapsed {
+  margin-left: 72px;
+}
+
+@media (max-width: 900px) {
+  .merchant-sidebar {
+    transform: translateX(-100%);
+  }
+  .merchant-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .merchant-main-area {
+    margin-left: 0 !important;
+  }
+}
+
+/* Topbar */
+.merchant-topbar {
+  height: 64px;
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--merch-border);
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.merchant-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.merchant-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Content Canvas */
+.merchant-content-canvas {
+  flex: 1;
+  padding: 1.5rem 2rem 3rem 2rem;
+}
+
+@media (max-width: 640px) {
+  .merchant-content-canvas {
+    padding: 1rem 1rem 3rem 1rem;
+  }
+}
+
+/* KPI Cards Grid */
+.merchant-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.merchant-kpi-card {
+  background-color: #ffffff;
+  border-radius: 14px;
+  border: 1px solid var(--merch-border);
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.merchant-kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.merchant-kpi-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--merch-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.merchant-kpi-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.merchant-kpi-val {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--merch-navy);
+  margin: 0;
+}
+
+/* Merchant Tables & Cards */
+.merchant-card-box {
+  background-color: #ffffff;
+  border-radius: 14px;
+  border: 1px solid var(--merch-border);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.merchant-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.merchant-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--merch-navy);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Food Items Grid */
+.merchant-food-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.merchant-food-card {
+  background-color: #ffffff;
+  border: 1px solid var(--merch-border);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.merchant-food-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.merchant-food-img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  background-color: #f1f5f9;
+}
+
+.merchant-food-body {
+  padding: 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.merchant-food-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--merch-navy);
+  margin: 0 0 0.35rem 0;
+}
+
+.merchant-food-desc {
+  font-size: 0.8rem;
+  color: var(--merch-text-muted);
+  line-height: 1.4;
+  margin-bottom: 0.75rem;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.merchant-food-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.merchant-food-price {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--merch-primary);
+}
+
+/* Store Open/Close Switch */
+.merchant-store-status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.merchant-store-status-btn.open {
+  background-color: var(--merch-success-bg);
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.merchant-store-status-btn.closed {
+  background-color: var(--merch-danger-bg);
+  color: #b91c1c;
+  border-color: #fecaca;
+}

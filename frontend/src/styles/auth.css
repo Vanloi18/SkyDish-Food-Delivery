@@ -1,0 +1,102 @@
+/* Modern SkyDish Auth Styles */
+.auth-page-wrapper {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 1.25rem;
+  background: radial-gradient(circle at top right, rgba(255, 87, 34, 0.05), transparent 40%),
+              radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.05), transparent 40%),
+              var(--sd-bg-main);
+}
+
+.auth-card-container {
+  width: 100%;
+  max-width: 480px;
+  background-color: #ffffff;
+  border-radius: var(--sd-radius-xl);
+  border: 1px solid var(--sd-border);
+  box-shadow: var(--sd-shadow-xl);
+  padding: 2.5rem 2.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--sd-radius-lg);
+  background: linear-gradient(135deg, #ff5722 0%, #ff8a65 100%);
+  color: #ffffff;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.3);
+}
+
+.auth-title {
+  font-size: var(--sd-font-size-2xl);
+  font-weight: 800;
+  color: var(--sd-text-primary);
+  margin-bottom: 0.35rem;
+  letter-spacing: -0.02em;
+}
+
+.auth-subtitle {
+  font-size: var(--sd-font-size-sm);
+  color: var(--sd-text-secondary);
+}
+
+.auth-error-banner {
+  background-color: var(--sd-danger-light);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--sd-danger-hover);
+  padding: 0.85rem 1rem;
+  border-radius: var(--sd-radius-md);
+  font-size: var(--sd-font-size-sm);
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.auth-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 500px) {
+  .auth-form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+.auth-footer-prompt {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--sd-border);
+  text-align: center;
+  font-size: var(--sd-font-size-sm);
+  color: var(--sd-text-secondary);
+}
+
+.auth-footer-prompt a {
+  color: var(--sd-primary);
+  font-weight: 600;
+  transition: color var(--sd-transition-fast);
+}
+
+.auth-footer-prompt a:hover {
+  color: var(--sd-primary-hover);
+  text-decoration: underline;
+}

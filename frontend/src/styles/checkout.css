@@ -1,0 +1,315 @@
+/* Modern SkyDish Checkout Styles */
+.checkout-page-wrapper {
+  padding: 3rem 0 5rem 0;
+  background-color: var(--sd-bg-main);
+  min-height: 80vh;
+}
+
+.checkout-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr;
+  gap: 2.5rem;
+  align-items: flex-start;
+}
+
+@media (max-width: 900px) {
+  .checkout-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+.checkout-card {
+  background-color: #ffffff;
+  border-radius: var(--sd-radius-xl);
+  border: 1px solid var(--sd-border);
+  box-shadow: var(--sd-shadow-sm);
+  padding: 2rem;
+}
+
+.checkout-section-title {
+  font-size: var(--sd-font-size-lg);
+  font-weight: 700;
+  color: var(--sd-text-primary);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--sd-border);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Payment Mode Tabs */
+.payment-mode-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  background-color: #f1f5f9;
+  padding: 0.3rem;
+  border-radius: 8px;
+}
+
+.payment-mode-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all 0.15s ease;
+}
+
+.payment-mode-tab.active {
+  background-color: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* QR Code Presentation Box */
+.qr-checkout-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fafafa;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.qr-image-wrapper {
+  background-color: #ffffff;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  margin-bottom: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-image-wrapper.vnpay {
+  border-color: #0066cc;
+}
+
+.qr-image-wrapper.momo {
+  border-color: #a21caf;
+}
+
+.qr-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+  width: 100%;
+  max-width: 400px;
+  font-size: 0.85rem;
+  color: #334155;
+  background: #ffffff;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1.25rem;
+}
+
+.qr-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.qr-step-bullet {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Stripe Field Styles */
+.stripe-field-wrapper {
+  margin-bottom: 1.25rem;
+}
+
+.stripe-field-label {
+  display: block;
+  font-size: var(--sd-font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sd-text-secondary);
+  margin-bottom: 0.4rem;
+}
+
+.stripe-input-box {
+  background-color: #ffffff;
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-md);
+  padding: 0.75rem 1rem;
+  box-shadow: var(--sd-shadow-xs);
+  transition: border-color var(--sd-transition-fast), box-shadow var(--sd-transition-fast);
+}
+
+.stripe-input-box:focus-within {
+  border-color: var(--sd-primary);
+  box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.15);
+}
+
+.checkout-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.checkout-status-alert {
+  padding: 1rem 1.25rem;
+  border-radius: var(--sd-radius-md);
+  font-size: var(--sd-font-size-sm);
+  font-weight: 600;
+  margin-top: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.checkout-status-alert.error {
+  background-color: var(--sd-danger-light);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--sd-danger-hover);
+}
+
+.checkout-status-alert.success {
+  background-color: var(--sd-success-light);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--sd-success-hover);
+}
+
+/* VietQR Bank Transfer Card */
+.bank-transfer-card {
+  background: #ffffff;
+  border: 1.5px solid #0284c7;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(2, 132, 199, 0.08);
+  margin-top: 1rem;
+}
+
+.bank-transfer-header {
+  background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+  color: #ffffff;
+  padding: 1.15rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bank-transfer-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .bank-transfer-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+}
+
+.bank-qr-box {
+  background: #f8fafc;
+  border: 2px dashed #0284c7;
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.bank-info-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bank-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.bank-info-label {
+  font-size: 0.825rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.bank-info-value-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bank-info-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: monospace, sans-serif;
+}
+
+.bank-copy-btn {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: none;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.15s ease;
+}
+
+.bank-copy-btn:hover {
+  background: #bae6fd;
+  color: #0284c7;
+}
+
+.bank-transfer-alert {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  margin-top: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.825rem;
+  color: #92400e;
+  line-height: 1.5;
+}

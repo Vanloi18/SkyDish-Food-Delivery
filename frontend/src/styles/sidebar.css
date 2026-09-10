@@ -1,0 +1,93 @@
+/* Modern SkyDish Sidebar Drawer Styles */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1100;
+  display: flex;
+}
+
+.sidebar {
+  width: 300px;
+  max-width: 85vw;
+  height: 100%;
+  background-color: #ffffff;
+  box-shadow: var(--sd-shadow-xl);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1101;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--sd-border);
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--sd-bg-muted);
+  color: var(--sd-text-secondary);
+  border: none;
+  cursor: pointer;
+  transition: all var(--sd-transition-fast);
+}
+
+.sidebar-close-btn:hover {
+  background-color: #e2e8f0;
+  color: var(--sd-text-primary);
+}
+
+.sidebar-section-title {
+  font-size: var(--sd-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sd-text-muted);
+  margin: 1.25rem 0 0.5rem 0;
+}
+
+.sidebar-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--sd-radius-md);
+  font-size: var(--sd-font-size-sm);
+  font-weight: 600;
+  color: var(--sd-text-primary);
+  transition: all var(--sd-transition-fast);
+  text-decoration: none;
+}
+
+.sidebar-nav-item:hover {
+  background-color: var(--sd-primary-light);
+  color: var(--sd-primary);
+}
+
+.sidebar-footer-actions {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--sd-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

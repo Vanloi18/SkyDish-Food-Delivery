@@ -1,0 +1,13 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import './styles/global.css';
+
+/* Override bootstrap conflicting defaults to match SkyDish design system */
+body {
+  font-family: var(--sd-font-family);
+  background-color: var(--sd-bg-main);
+  color: var(--sd-text-primary);
+}
+
+a {
+  text-decoration: none;
+}

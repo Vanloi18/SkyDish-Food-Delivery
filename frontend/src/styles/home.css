@@ -1,0 +1,511 @@
+/* ==========================================================================
+   SkyDish Natural Commercial Landing Page Styles
+   Editorial, Clean, Modern Vietnamese Food Delivery Platform
+   ========================================================================== */
+
+/* Main Continuous Landing Wrapper */
+.landing-page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  color: #1e293b;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.landing-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================================================
+   1. HERO SECTION (Editorial 2-Column Composition)
+   ========================================================================== */
+.landing-hero-section {
+  padding: 3.5rem 0 4.5rem 0;
+  background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.landing-hero-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  align-items: center;
+  gap: 3.5rem;
+}
+
+.landing-hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.landing-hero-eyebrow {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ea580c;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.landing-hero-title {
+  font-size: clamp(2.25rem, 3.8vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1.18;
+  color: #0f172a;
+  margin: 0 0 1.25rem 0;
+  letter-spacing: -0.02em;
+}
+
+.landing-hero-title span {
+  color: #ff5722;
+}
+
+.landing-hero-desc {
+  font-size: 1.05rem;
+  font-weight: 400;
+  line-height: 1.6;
+  color: #475569;
+  margin: 0 0 2rem 0;
+  max-width: 520px;
+}
+
+/* Hero Search Box */
+.landing-hero-search {
+  width: 100%;
+  max-width: 540px;
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 0.35rem 0.45rem 0.35rem 1.25rem;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
+  transition: all 0.2s ease;
+  margin-bottom: 1.25rem;
+}
+
+.landing-hero-search:focus-within {
+  border-color: #ff5722;
+  box-shadow: 0 4px 20px -2px rgba(255, 87, 34, 0.15);
+}
+
+.landing-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #0f172a;
+  background: transparent;
+  padding-right: 0.5rem;
+}
+
+.landing-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.landing-search-btn {
+  background-color: #ff5722;
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.65rem 1.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: background-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.landing-search-btn:hover {
+  background-color: #ea580c;
+}
+
+/* Quick Search Chips */
+.landing-hero-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.landing-tag-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-right: 0.25rem;
+}
+
+.landing-tag-chip {
+  background-color: #f1f5f9;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.landing-tag-chip:hover {
+  background-color: #ffe8e0;
+  color: #ea580c;
+}
+
+/* Hero Action CTAs */
+.landing-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.landing-btn-primary {
+  background-color: #ff5722;
+  color: #ffffff;
+  padding: 0.75rem 1.6rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(255, 87, 34, 0.2);
+}
+
+.landing-btn-primary:hover {
+  background-color: #ea580c;
+  color: #ffffff;
+}
+
+.landing-btn-secondary {
+  background-color: transparent;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  padding: 0.75rem 1.4rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.landing-btn-secondary:hover {
+  border-color: #94a3b8;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Hero Food Visual */
+.landing-hero-visual {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.landing-hero-img-container {
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 4 / 3.2;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.12);
+  background-color: #f1f5f9;
+}
+
+.landing-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ==========================================================================
+   2. POPULAR CATEGORIES SECTION (Horizontal Lightweight Flow)
+   ========================================================================== */
+.landing-categories-section {
+  padding: 4rem 0 3.5rem 0;
+  background-color: #ffffff;
+}
+
+.landing-section-header {
+  margin-bottom: 2.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.landing-section-title-group {
+  max-width: 600px;
+}
+
+.landing-section-title {
+  font-size: clamp(1.5rem, 2.2vw, 1.85rem);
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.4rem 0;
+  letter-spacing: -0.01em;
+}
+
+.landing-section-subtitle {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.landing-section-link {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ea580c;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: color 0.15s ease;
+}
+
+.landing-section-link:hover {
+  color: #c2410c;
+  text-decoration: underline;
+}
+
+/* Category Navigation Grid */
+.landing-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 1.25rem;
+}
+
+.landing-category-pill-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.15rem 0.75rem;
+  background-color: #fafafa;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.landing-category-pill-card:hover {
+  background-color: #ffffff;
+  border-color: #fdba74;
+  box-shadow: 0 6px 16px -4px rgba(234, 88, 12, 0.12);
+  transform: translateY(-2px);
+}
+
+.landing-category-img-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+  background-color: #f1f5f9;
+}
+
+.landing-category-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.landing-category-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  text-align: center;
+}
+
+/* ==========================================================================
+   3. FEATURED RESTAURANTS SECTION
+   ========================================================================== */
+.landing-featured-section {
+  padding: 3.5rem 0 4.5rem 0;
+  background-color: #fafafa;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.landing-restaurants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 1.75rem;
+}
+
+/* ==========================================================================
+   4. HOW SKYDISH WORKS (Simple Linear Flow)
+   ========================================================================== */
+.landing-how-section {
+  padding: 4.5rem 0;
+  background-color: #ffffff;
+}
+
+.landing-how-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  position: relative;
+}
+
+.landing-how-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-top: 0.5rem;
+}
+
+.landing-step-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ea580c;
+  line-height: 1;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.landing-step-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 0.5rem 0;
+}
+
+.landing-step-desc {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ==========================================================================
+   5. PROMOTIONAL CTA BANNER
+   ========================================================================== */
+.landing-cta-section {
+  padding: 2.5rem 0 4.5rem 0;
+  background-color: #ffffff;
+}
+
+.landing-cta-card {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-radius: 16px;
+  padding: 3.5rem 2.5rem;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.landing-cta-title {
+  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.85rem 0;
+  letter-spacing: -0.01em;
+}
+
+.landing-cta-desc {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #94a3b8;
+  max-width: 540px;
+  margin: 0 0 2rem 0;
+  line-height: 1.6;
+}
+
+.landing-cta-btn {
+  background-color: #ff5722;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.85rem 2rem;
+  border-radius: 8px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.15s ease;
+}
+
+.landing-cta-btn:hover {
+  background-color: #ea580c;
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .landing-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .landing-hero-copy {
+    align-items: center;
+    text-align: center;
+  }
+
+  .landing-hero-desc {
+    max-width: 100%;
+  }
+
+  .landing-hero-tags {
+    justify-content: center;
+  }
+
+  .landing-hero-actions {
+    justify-content: center;
+  }
+
+  .landing-how-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-hero-section {
+    padding: 2.5rem 0 3.5rem 0;
+  }
+
+  .landing-categories-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+  }
+
+  .landing-how-grid {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+
+  .landing-cta-card {
+    padding: 2.5rem 1.5rem;
+  }
+}

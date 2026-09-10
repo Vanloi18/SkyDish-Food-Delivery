@@ -1,0 +1,121 @@
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: skydish-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+    container_name: skydish-auth-service
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - MONGO_URI=mongodb://mongo:27017/food_delivery_db
+      - JWT_SECRET=supersecretjwtkeyforfooddeliverymicroservices2025
+      - JWT_EXPIRES_IN=7d
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  restaurant-service:
+    build:
+      context: ./backend/restaurant-service
+      dockerfile: Dockerfile
+    container_name: skydish-restaurant-service
+    restart: unless-stopped
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - MONGO_URI=mongodb://mongo:27017/food_delivery_db
+      - JWT_SECRET=supersecretjwtkeyforfooddeliverymicroservices2025
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  order-service:
+    build:
+      context: ./backend/order-service
+      dockerfile: Dockerfile
+    container_name: skydish-order-service
+    restart: unless-stopped
+    ports:
+      - "5005:5005"
+    environment:
+      - PORT=5005
+      - MONGO_URI=mongodb://mongo:27017/food_delivery_db
+      - JWT_SECRET=supersecretjwtkeyforfooddeliverymicroservices2025
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  delivery-service:
+    build:
+      context: ./delivery-service/backend
+      dockerfile: Dockerfile
+    container_name: skydish-delivery-service
+    restart: unless-stopped
+    ports:
+      - "5003:5003"
+    environment:
+      - PORT=5003
+      - MONGO_URI=mongodb://mongo:27017/food_delivery_db
+      - JWT_SECRET=supersecretjwtkeyforfooddeliverymicroservices2025
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  payment-service:
+    build:
+      context: ./backend/payment-service
+      dockerfile: Dockerfile
+    container_name: skydish-payment-service
+    restart: unless-stopped
+    ports:
+      - "5004:5004"
+    environment:
+      - PORT=5004
+      - MONGO_URI=mongodb://mongo:27017/food_delivery_db
+      - JWT_SECRET=supersecretjwtkeyforfooddeliverymicroservices2025
+      - STRIPE_SECRET_KEY=sk_test_placeholder_key_not_provided
+      - STRIPE_WEBHOOK_SECRET=whsec_placeholder_key_not_provided
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: skydish-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:4000
+    depends_on:
+      - auth-service
+      - restaurant-service
+      - order-service
+      - delivery-service
+      - payment-service
+
+volumes:
+  mongo-data:
+
+networks:
+  default:
+    name: skydish-network
