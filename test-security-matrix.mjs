@@ -5,7 +5,7 @@ const mongoose = require("./backend/order-service/node_modules/mongoose");
 const jwt = require("./backend/order-service/node_modules/jsonwebtoken");
 const paymentMongoose = require("./backend/payment-service/node_modules/mongoose");
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27000/food_delivery_db";
+const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/food_delivery_db";
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretjwtkeyforfooddeliverymicroservices2025";
 
 // Import models and services from microservices
