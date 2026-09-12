@@ -20,7 +20,7 @@ exports.protect = async (req, res, next) => {
     }
 
     // 2) Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "supersecretjwtkeyforfooddeliverymicroservices2025");
 
     // 3) (Optional) Check that the user still exists
     const user = await Customer.findById(decoded.id);

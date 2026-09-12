@@ -18,7 +18,21 @@ const mongod = await MongoMemoryServer.create({
 });
 
 const uri = mongod.getUri();
-console.log(`✅ Standalone MongoDB running at ${uri} (port 27017)`);
+console.log(`✅ Standalone MongoDB running at ${uri} (port 27000)`);
+
+import('net').then(({ default: net }) => {
+  const proxy = net.createServer((socket) => {
+    const target = net.connect(27000, '127.0.0.1');
+    socket.pipe(target);
+    target.pipe(socket);
+    socket.on('error', () => target.destroy());
+    target.on('error', () => socket.destroy());
+  });
+  proxy.listen(27017, '127.0.0.1', () => {
+    console.log('✅ Port proxy 27017 -> 27000 active for seamless MongoDB connectivity');
+  });
+  proxy.on('error', (err) => console.log('Port 27017 bridge notice:', err.message));
+});
 
 process.on('SIGINT', async () => {
   await mongod.stop();

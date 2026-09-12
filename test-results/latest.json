@@ -1,0 +1,98 @@
+{
+  "timestamp": "2026-09-12T20:37:17.758Z",
+  "platform": "win32",
+  "node": "v24.13.0",
+  "summary": {
+    "total": 14,
+    "pass": 13,
+    "fail": 0,
+    "blocked": 1,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "name": "Environment",
+      "status": "PASS",
+      "details": "Node v24.13.0 matches requirements",
+      "durationMs": 0
+    },
+    {
+      "name": "Health Checks",
+      "status": "PASS",
+      "details": "All 5 microservices healthy (Ports 4000, 5002, 5003, 5004, 5005)",
+      "durationMs": 0
+    },
+    {
+      "name": "Unit: Auth Service",
+      "status": "PASS",
+      "details": "4 tests passed (Password hash, JWT, RBAC)",
+      "durationMs": 1950
+    },
+    {
+      "name": "Unit: Order Service",
+      "status": "PASS",
+      "details": "10 tests passed (Server authority, validation, ownership)",
+      "durationMs": 924
+    },
+    {
+      "name": "Unit: Restaurant",
+      "status": "PASS",
+      "details": "5 tests passed (CRUD, search, pagination, coupons)",
+      "durationMs": 1099
+    },
+    {
+      "name": "Unit: Delivery",
+      "status": "PASS",
+      "details": "4 tests passed (Assignment, ownership, lifecycle)",
+      "durationMs": 1095
+    },
+    {
+      "name": "Unit: Payment",
+      "status": "PASS",
+      "details": "8 tests passed (COD, VietQR, RBAC, Guest 401)",
+      "durationMs": 1813
+    },
+    {
+      "name": "Security Matrix",
+      "status": "PASS",
+      "details": "18/18 verified (HTTP 403, Data isolation, Server authority)",
+      "durationMs": 1735
+    },
+    {
+      "name": "Payment Gateways",
+      "status": "PASS",
+      "details": "13/13 verified (Stripe, VNPay SHA512, MoMo, COD, Guest 401)",
+      "durationMs": 676
+    },
+    {
+      "name": "VN Localization",
+      "status": "PASS",
+      "details": "11/11 verified (17 restaurants, VND currency, categories)",
+      "durationMs": 457
+    },
+    {
+      "name": "Phase 6 Engagement",
+      "status": "PASS",
+      "details": "23/23 verified (Vouchers, reviews, order updates)",
+      "durationMs": 411
+    },
+    {
+      "name": "E2E Master Flow",
+      "status": "PASS",
+      "details": "30/30 verified (Customer -> Restaurant -> Order -> Payment -> Shipper -> Socket.IO)",
+      "durationMs": 3341
+    },
+    {
+      "name": "Frontend Build",
+      "status": "PASS",
+      "details": "Static production bundle verified (342 kB gzip)",
+      "durationMs": 0
+    },
+    {
+      "name": "Docker Runtime",
+      "status": "BLOCKED",
+      "details": "Compose configuration valid; Docker Engine daemon is offline",
+      "durationMs": 421
+    }
+  ]
+}

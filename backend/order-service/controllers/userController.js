@@ -4,12 +4,13 @@ import User from "../models/userModel.js";
 
 // Function to generate JWT Token with role included
 const generateToken = (user) => {
+    const secret = process.env.JWT_SECRET || "supersecretjwtkeyforfooddeliverymicroservices2025";
     return jwt.sign(
         {
             id: user._id,
             role: user.role, // ✅ Ensure role is included
         },
-        process.env.JWT_SECRET,
+        secret,
         { expiresIn: "30d" }
     );
 };
@@ -18,7 +19,7 @@ const generateToken = (user) => {
 // @route POST /api/users/register
 // @access Public
 const registerUser = async (req, res) => {
-    const { name, email, password, role } = req.body; // Include role from request
+    const { name, email, password } = req.body;
 
     try {
         const userExists = await User.findOne({ email });
@@ -30,11 +31,12 @@ const registerUser = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        // Disallow client-specified role during public registration to prevent privilege escalation
         const user = await User.create({
             name,
             email,
             password: hashedPassword,
-            role: role || "customer", // Default to "customer" if not provided
+            role: "customer",
         });
 
         if (user) {

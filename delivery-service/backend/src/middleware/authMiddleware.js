@@ -10,7 +10,8 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const rawToken = token.startsWith("Bearer ") ? token.slice(7).trim() : token;
-    const decoded = jwt.verify(rawToken, process.env.JWT_SECRET);
+    const secret = process.env.JWT_SECRET || 'supersecretjwtkeyforfooddeliverymicroservices2025';
+    const decoded = jwt.verify(rawToken, secret);
     req.driver = decoded.id;
     req.user = decoded;
     req.role = decoded.role || 'driver';

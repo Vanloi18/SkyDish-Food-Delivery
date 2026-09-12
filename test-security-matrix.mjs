@@ -286,12 +286,19 @@ async function runMatrix() {
     const isCustomerBOwner = paymentA && paymentA.userId === customerB.id;
     assertTest(17, "Payment Security: Payment record strictly tied to Order Owner (Customer B != Owner)", !isCustomerBOwner);
 
-    // 18. Customer B calls payment status endpoint for Customer A order -> 403 Forbidden verification
+    // 18. Real HTTP Payment RBAC: Customer B calls payment status endpoint for Customer A order -> 403 Forbidden
     let statusCheckForbidden = false;
-    if (paymentA && paymentA.userId !== customerB.id) {
-      statusCheckForbidden = true;
+    try {
+      const secret = process.env.JWT_SECRET || "supersecretjwtkeyforfooddeliverymicroservices2025";
+      const tokenB = jwt.sign({ id: customerB.id, role: customerB.role, email: customerB.email }, secret);
+      const res = await fetch(`http://127.0.0.1:5004/api/payment/status/${orderAId}`, {
+        headers: { Authorization: `Bearer ${tokenB}` },
+      });
+      if (res.status === 403) statusCheckForbidden = true;
+    } catch (e) {
+      // in case of network issue
     }
-    assertTest(18, "Payment RBAC: Cross-user payment status lookup denied (Customer B != Customer A)", statusCheckForbidden);
+    assertTest(18, "Payment RBAC: Cross-user payment status lookup denied (HTTP 403)", statusCheckForbidden);
   } finally {
     // Cleanup test data
     await FoodItem.findByIdAndDelete(foodItem._id);

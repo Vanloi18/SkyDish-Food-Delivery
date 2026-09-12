@@ -112,7 +112,7 @@ async function createBankTransferPayment({
   // Synchronize order with Order Service if items are provided
   if (items && items.length > 0) {
     try {
-      await axios.post("http://localhost:5005/api/orders", {
+      await axios.post("http://127.0.0.1:5005/api/orders", {
         customerId: userId,
         restaurantId: restaurantId || "restaurant_1",
         items,
@@ -120,7 +120,7 @@ async function createBankTransferPayment({
         paymentMethod: "BANK_TRANSFER",
         paymentStatus: "Pending",
         deliveryAddress: deliveryAddress || "Hà Nội",
-      });
+      }, { timeout: 3000 });
     } catch (orderErr) {
       console.warn("Order service sync notice (Bank Transfer):", orderErr.message);
     }
@@ -257,10 +257,10 @@ async function verifyBankTransactionWebhook({
 
   // Synchronize Order Service
   try {
-    await axios.patch(`http://localhost:5005/api/orders/${payment.orderId}`, {
+    await axios.patch(`http://127.0.0.1:5005/api/orders/${payment.orderId}`, {
       status: "Confirmed",
       paymentStatus: "Paid",
-    });
+    }, { timeout: 3000 });
   } catch (err) {
     console.warn("Order service status update notice:", err.message);
   }

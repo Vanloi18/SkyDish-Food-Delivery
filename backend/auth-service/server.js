@@ -1,4 +1,6 @@
 require('dotenv').config();
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkeyforfooddeliverymicroservices2025';
+process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const express = require('express');
 const cors = require('cors');  
 const connectDB = require('./config/db');

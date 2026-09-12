@@ -19,7 +19,8 @@ const getAuthUser = (req) => {
   if (!authHeader) return null;
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : authHeader.trim();
   try {
-    return jwt.verify(token, process.env.JWT_SECRET);
+    const secret = process.env.JWT_SECRET || 'supersecretjwtkeyforfooddeliverymicroservices2025';
+    return jwt.verify(token, secret);
   } catch (e) {
     return null;
   }
@@ -42,12 +43,13 @@ router.post("/process", async (req, res) => {
     }
 
     const authUser = getAuthUser(req);
-    if (authUser && authUser.id) {
-      req.body.userId = authUser.id;
+    if (!authUser) {
+      return res.status(401).json({ error: "Unauthorized: Authentication required" });
     }
+    req.body.userId = authUser.id;
 
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
-    if (existingPayment && authUser && authUser.role !== 'admin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
+    if (existingPayment && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
       return res.status(403).json({ error: "Access denied: This order belongs to another user" });
     }
 
@@ -90,12 +92,13 @@ router.post("/vnpay/create", async (req, res) => {
     }
 
     const authUser = getAuthUser(req);
-    if (authUser && authUser.id) {
-      req.body.userId = authUser.id;
+    if (!authUser) {
+      return res.status(401).json({ error: "Unauthorized: Authentication required" });
     }
+    req.body.userId = authUser.id;
 
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
-    if (existingPayment && authUser && authUser.role !== 'admin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
+    if (existingPayment && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
       return res.status(403).json({ error: "Access denied: This order belongs to another user" });
     }
 
@@ -128,12 +131,13 @@ router.post("/momo/create", async (req, res) => {
     }
 
     const authUser = getAuthUser(req);
-    if (authUser && authUser.id) {
-      req.body.userId = authUser.id;
+    if (!authUser) {
+      return res.status(401).json({ error: "Unauthorized: Authentication required" });
     }
+    req.body.userId = authUser.id;
 
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
-    if (existingPayment && authUser && authUser.role !== 'admin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
+    if (existingPayment && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
       return res.status(403).json({ error: "Access denied: This order belongs to another user" });
     }
 
@@ -193,6 +197,7 @@ router.get("/momo/callback", async (req, res) => {
 });
 
 // ==========================================
+// ==========================================
 // 4. CASH ON DELIVERY (COD) FLOW
 // ==========================================
 router.post("/cod/process", async (req, res) => {
@@ -202,12 +207,13 @@ router.post("/cod/process", async (req, res) => {
     }
 
     const authUser = getAuthUser(req);
-    if (authUser && authUser.id) {
-      req.body.userId = authUser.id;
+    if (!authUser) {
+      return res.status(401).json({ error: "Unauthorized: Authentication required" });
     }
+    req.body.userId = authUser.id;
 
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
-    if (existingPayment && authUser && authUser.role !== 'admin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
+    if (existingPayment && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
       return res.status(403).json({ error: "Access denied: This order belongs to another user" });
     }
 
@@ -243,12 +249,13 @@ router.post("/bank-transfer/create", async (req, res) => {
     }
 
     const authUser = getAuthUser(req);
-    if (authUser && authUser.id) {
-      req.body.userId = authUser.id;
+    if (!authUser) {
+      return res.status(401).json({ error: "Unauthorized: Authentication required" });
     }
+    req.body.userId = authUser.id;
 
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
-    if (existingPayment && authUser && authUser.role !== 'admin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
+    if (existingPayment && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
       return res.status(403).json({ error: "Access denied: This order belongs to another user" });
     }
 
@@ -266,8 +273,11 @@ router.post("/bank-transfer/create", async (req, res) => {
 router.post("/bank-transfer/confirm-request", async (req, res) => {
   try {
     const authUser = getAuthUser(req);
+    if (!authUser) {
+      return res.status(401).json({ error: "Unauthorized: Authentication required" });
+    }
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
-    if (existingPayment && authUser && authUser.role !== 'admin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
+    if (existingPayment && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
       return res.status(403).json({ error: "Access denied: This order belongs to another user" });
     }
 
@@ -306,7 +316,10 @@ router.get("/status/:orderId", async (req, res) => {
     }
 
     const authUser = getAuthUser(req);
-    if (authUser && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && payment.userId && payment.userId !== authUser.id) {
+    if (!authUser) {
+      return res.status(401).json({ error: "Unauthorized: Authentication required to view payment status" });
+    }
+    if (authUser.role !== 'admin' && authUser.role !== 'superAdmin' && payment.userId && payment.userId !== authUser.id) {
       return res.status(403).json({ error: "Access denied: Not your payment record" });
     }
 

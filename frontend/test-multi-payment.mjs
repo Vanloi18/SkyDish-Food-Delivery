@@ -1,7 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
 
-const PAYMENT_API = 'http://localhost:5004/api/payment';
+const PAYMENT_API = 'http://127.0.0.1:5004/api/payment';
 
 function buildVNPaySignData(obj) {
   const sortedKeys = Object.keys(obj).sort();
@@ -34,6 +34,17 @@ async function runPaymentTests() {
   }
 
   const timestamp = Date.now();
+  const testUserId = `USER_${timestamp}`;
+
+  function createTestToken(userId, role = 'customer') {
+    const secret = 'supersecretjwtkeyforfooddeliverymicroservices2025';
+    const h = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+    const p = Buffer.from(JSON.stringify({ id: userId, role, email: 'customer@test.com' })).toString('base64url');
+    const s = crypto.createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
+    return `${h}.${p}.${s}`;
+  }
+  const customerToken = createTestToken(testUserId);
+  const authHeaders = { Authorization: `Bearer ${customerToken}` };
 
   // ----------------------------------------------------
   // TEST 1: STRIPE CARD PAYMENT (PRESERVED)
@@ -43,12 +54,12 @@ async function runPaymentTests() {
   try {
     const res = await axios.post(`${PAYMENT_API}/process`, {
       orderId: stripeOrderId,
-      userId: `USER_${timestamp}`,
+      userId: testUserId,
       amount: 45.0,
       currency: 'usd',
       email: 'customer@test.com',
       phone: '+94712345678',
-    });
+    }, { headers: authHeaders });
     assert(
       res.status === 200 && (res.data.clientSecret !== undefined || res.data.paymentId !== undefined),
       'Stripe Payment Initialization',
@@ -71,13 +82,13 @@ async function runPaymentTests() {
   try {
     const res = await axios.post(`${PAYMENT_API}/vnpay/create`, {
       orderId: vnpOrderId,
-      userId: `USER_${timestamp}`,
+      userId: testUserId,
       amount: 150000,
       email: 'customer_vn@test.com',
       phone: '+84901234567',
       bankCode: 'NCB',
       language: 'vn',
-    });
+    }, { headers: authHeaders });
 
     vnpPaymentUrl = res.data.paymentUrl;
     assert(
@@ -141,12 +152,12 @@ async function runPaymentTests() {
   try {
     const res = await axios.post(`${PAYMENT_API}/momo/create`, {
       orderId: momoOrderId,
-      userId: `USER_${timestamp}`,
+      userId: testUserId,
       amount: 85000,
       email: 'customer_momo@test.com',
       phone: '+84987654321',
       orderInfo: `SkyDish Food Delivery ${momoOrderId}`,
-    });
+    }, { headers: authHeaders });
 
     assert(
       res.status === 200 && res.data.payUrl !== undefined,
@@ -196,7 +207,7 @@ async function runPaymentTests() {
   try {
     const res = await axios.post(`${PAYMENT_API}/cod/process`, {
       orderId: codOrderId,
-      userId: `USER_${timestamp}`,
+      userId: testUserId,
       amount: 185000,
       currency: 'vnd',
       email: 'customer_cod@test.com',
@@ -204,7 +215,7 @@ async function runPaymentTests() {
       restaurantId: "Pizza 4P's Tràng Tiền",
       deliveryAddress: '78 Lý Thường Kiệt, Quận Hoàn Kiếm, Hà Nội',
       items: [{ foodId: 'Pizza 4 Cheese', quantity: 1, price: 185000 }],
-    });
+    }, { headers: authHeaders });
 
     assert(
       res.status === 200 && res.data.paymentMethod === 'COD' && res.data.paymentStatus === 'Pending',
@@ -215,12 +226,12 @@ async function runPaymentTests() {
     // Duplicate submission test (Idempotency)
     const dupRes = await axios.post(`${PAYMENT_API}/cod/process`, {
       orderId: codOrderId,
-      userId: `USER_${timestamp}`,
+      userId: testUserId,
       amount: 185000,
       phone: '+84901234567',
       restaurantId: "Pizza 4P's Tràng Tiền",
       deliveryAddress: '78 Lý Thường Kiệt, Quận Hoàn Kiếm, Hà Nội',
-    });
+    }, { headers: authHeaders });
 
     assert(
       dupRes.status === 200 && dupRes.data.orderId === codOrderId,
@@ -236,21 +247,21 @@ async function runPaymentTests() {
   // ----------------------------------------------------
   console.log('\n--- 5. TESTING UNIFIED PAYMENT STATUS LOOKUP ---');
   try {
-    const vnpStatus = await axios.get(`${PAYMENT_API}/status/${vnpOrderId}`);
+    const vnpStatus = await axios.get(`${PAYMENT_API}/status/${vnpOrderId}`, { headers: authHeaders });
     assert(
       vnpStatus.status === 200 && vnpStatus.data.status === 'Paid' && vnpStatus.data.paymentMethod === 'VNPAY',
       'VNPay Status Lookup',
       `Status: ${vnpStatus.data.status}, Method: ${vnpStatus.data.paymentMethod}`
     );
 
-    const momoStatus = await axios.get(`${PAYMENT_API}/status/${momoOrderId}`);
+    const momoStatus = await axios.get(`${PAYMENT_API}/status/${momoOrderId}`, { headers: authHeaders });
     assert(
       momoStatus.status === 200 && momoStatus.data.status === 'Paid' && momoStatus.data.paymentMethod === 'MOMO',
       'MoMo Status Lookup',
       `Status: ${momoStatus.data.status}, Method: ${momoStatus.data.paymentMethod}`
     );
 
-    const codStatus = await axios.get(`${PAYMENT_API}/status/${codOrderId}`);
+    const codStatus = await axios.get(`${PAYMENT_API}/status/${codOrderId}`, { headers: authHeaders });
     assert(
       codStatus.status === 200 && codStatus.data.status === 'Pending' && codStatus.data.paymentMethod === 'COD',
       'COD Status Lookup',
@@ -258,6 +269,35 @@ async function runPaymentTests() {
     );
   } catch (err) {
     assert(false, 'Payment Status Lookup', err.message);
+  }
+
+  // ----------------------------------------------------
+  // TEST 6: GUEST ACCESS DENIAL (SECURITY RBAC BOUNDARY)
+  // ----------------------------------------------------
+  console.log('\n--- 6. TESTING GUEST ACCESS REJECTION (401) ---');
+  try {
+    const guestStatusRes = await axios.get(`${PAYMENT_API}/status/${codOrderId}`);
+    assert(false, 'Guest Status Lookup Blocked', `Expected 401, got ${guestStatusRes.status}`);
+  } catch (err) {
+    assert(
+      err.response?.status === 401,
+      'Guest Payment Status Rejection (HTTP 401)',
+      `Status: ${err.response?.status}`
+    );
+  }
+
+  try {
+    const guestPayRes = await axios.post(`${PAYMENT_API}/cod/process`, {
+      orderId: `ORDER_GUEST_${timestamp}`,
+      amount: 50000,
+    });
+    assert(false, 'Guest Payment Creation Blocked', `Expected 401, got ${guestPayRes.status}`);
+  } catch (err) {
+    assert(
+      err.response?.status === 401,
+      'Guest Payment Creation Rejection (HTTP 401)',
+      `Status: ${err.response?.status}`
+    );
   }
 
   console.log('\n=====================================================');

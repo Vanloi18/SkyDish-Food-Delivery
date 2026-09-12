@@ -55,7 +55,7 @@ async function processCodPayment({
   // Synchronize with Order Service if items and restaurantId are provided
   if (items && items.length > 0) {
     try {
-      await axios.post("http://localhost:5005/api/orders", {
+      await axios.post("http://127.0.0.1:5005/api/orders", {
         customerId: userId,
         restaurantId: restaurantId || "restaurant_1",
         items,
@@ -63,7 +63,7 @@ async function processCodPayment({
         paymentMethod: "COD",
         paymentStatus: "Pending",
         deliveryAddress: deliveryAddress || "Customer Address",
-      });
+      }, { timeout: 3000 });
     } catch (orderErr) {
       console.warn("Order service sync notice:", orderErr.message);
     }

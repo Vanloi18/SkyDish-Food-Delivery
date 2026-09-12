@@ -134,3 +134,22 @@ test('6. Enforce ownership on status lookup: Owner vs Other User vs Admin', asyn
   assert.strictEqual(resAdmin.status, 200);
   assert.strictEqual(resAdmin.body.orderId, 'TEST_PAY_COD_1');
 });
+
+test('7. Reject unauthenticated guest payment status lookup with 401', async () => {
+  const resGuest = await request(app).get('/api/payment/status/TEST_PAY_COD_1');
+  assert.strictEqual(resGuest.status, 401);
+  assert.match(resGuest.body.error, /Unauthorized/);
+});
+
+test('8. Reject unauthenticated guest payment creation with 401', async () => {
+  const resGuest = await request(app)
+    .post('/api/payment/cod/process')
+    .send({
+      orderId: 'TEST_PAY_COD_GUEST',
+      amount: 100000,
+      phone: '0901234567',
+    });
+  assert.strictEqual(resGuest.status, 401);
+  assert.match(resGuest.body.error, /Unauthorized/);
+});
+

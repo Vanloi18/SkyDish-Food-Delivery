@@ -12,7 +12,7 @@ const signToken = (customer) => {
       email: customer.email || undefined,
       name: customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : (customer.name || undefined)
     },
-    process.env.JWT_SECRET,
+    process.env.JWT_SECRET || "supersecretjwtkeyforfooddeliverymicroservices2025",
     { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
   );
 };

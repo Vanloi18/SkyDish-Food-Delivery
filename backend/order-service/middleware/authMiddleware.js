@@ -14,7 +14,8 @@ const protect = (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const secret = process.env.JWT_SECRET || 'supersecretjwtkeyforfooddeliverymicroservices2025';
+        const decoded = jwt.verify(token, secret);
 
         // Normalize roles for seamless RBAC
         if (!decoded.role) {
