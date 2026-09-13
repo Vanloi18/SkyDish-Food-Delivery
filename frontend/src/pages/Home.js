@@ -1,53 +1,57 @@
 import { API_URLS } from '../config/api';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaSearch, FaArrowRight } from "react-icons/fa";
+import { FaSearch, FaArrowRight, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import RestaurantCard from "../components/common/RestaurantCard";
 import "../styles/home.css";
 
 const categories = [
-  { 
-    name: "Phở", 
-    image: "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=300&auto=format&fit=crop&q=80" 
+  {
+    name: "Phở",
+    image: "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=300&auto=format&fit=crop&q=80"
   },
-  { 
-    name: "Bún chả", 
-    image: "https://images.unsplash.com/photo-1559847844-5315695dadae?w=300&auto=format&fit=crop&q=80" 
+  {
+    name: "Bún chả",
+    image: "https://images.unsplash.com/photo-1559847844-5315695dadae?w=300&auto=format&fit=crop&q=80"
   },
-  { 
-    name: "Cơm", 
-    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&auto=format&fit=crop&q=80" 
+  {
+    name: "Cơm",
+    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&auto=format&fit=crop&q=80"
   },
-  { 
-    name: "Bánh mì", 
-    image: "https://images.unsplash.com/photo-1626804475297-41608ea09aeb?w=300&auto=format&fit=crop&q=80" 
+  {
+    name: "Bánh mì",
+    image: "https://images.unsplash.com/photo-1626804475297-41608ea09aeb?w=300&auto=format&fit=crop&q=80"
   },
-  { 
-    name: "Pizza", 
-    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=300&auto=format&fit=crop&q=80" 
+  {
+    name: "Pizza",
+    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=300&auto=format&fit=crop&q=80"
   },
-  { 
-    name: "Lẩu", 
-    image: "https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=300&auto=format&fit=crop&q=80" 
+  {
+    name: "Lẩu",
+    image: "https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=300&auto=format&fit=crop&q=80"
   },
-  { 
-    name: "Đồ ăn nhanh", 
-    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&auto=format&fit=crop&q=80" 
+  {
+    name: "Đồ ăn nhanh",
+    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&auto=format&fit=crop&q=80"
   },
-  { 
-    name: "Đồ uống", 
-    image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&auto=format&fit=crop&q=80" 
+  {
+    name: "Đồ uống",
+    image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&auto=format&fit=crop&q=80"
+  },
+  {
+    name: "Tráng miệng",
+    image: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=300&auto=format&fit=crop&q=80"
   },
 ];
 
 const quickSearchTags = [
-  "Phở Thìn", 
-  "Bún chả", 
-  "Cơm tấm", 
-  "Bánh mì", 
-  "Pizza 4P's", 
+  "Phở Thìn",
+  "Bún chả",
+  "Cơm tấm",
+  "Bánh mì",
+  "Pizza 4P's",
   "Highlands Coffee"
 ];
 
@@ -74,25 +78,254 @@ const steps = [
   }
 ];
 
+/**
+ * CategoryCarousel — horizontal auto-scrolling marketplace carousel
+ *
+ * Features:
+ * - Auto-scroll: slow, subtle (10s per full cycle)
+ * - Pauses on: hover, focus, touch, drag
+ * - Resumes after 2.5s idle
+ * - Desktop arrow controls (left/right)
+ * - Touch-native horizontal scrolling
+ * - Mouse drag support
+ * - Keyboard accessible (arrow keys when focused)
+ * - prefers-reduced-motion: disables auto-scroll
+ */
+function CategoryCarousel({ onCategoryClick }) {
+  const trackRef = useRef(null);
+  const autoScrollRef = useRef(null);
+  const resumeTimerRef = useRef(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartX = useRef(0);
+  const dragStartScroll = useRef(0);
+
+  // Detect prefers-reduced-motion
+  const prefersReducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const ITEM_WIDTH = 148; // approx width + gap
+  const AUTO_SCROLL_INTERVAL = 10000; // 10 seconds per step
+
+  const updateScrollButtons = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  const scrollBy = useCallback((direction) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const amount = ITEM_WIDTH * 3 * direction;
+    el.scrollBy({ left: amount, behavior: "smooth" });
+    setTimeout(updateScrollButtons, 350);
+  }, [updateScrollButtons]);
+
+  const pauseAutoScroll = useCallback(() => {
+    setIsPaused(true);
+    clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => setIsPaused(false), 2500);
+  }, []);
+
+  // Auto-scroll logic
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+
+    const tick = () => {
+      if (isPaused) return;
+      const el = trackRef.current;
+      if (!el) return;
+      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+      if (atEnd) {
+        // Loop back to start smoothly
+        el.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        el.scrollBy({ left: ITEM_WIDTH, behavior: "smooth" });
+      }
+      setTimeout(updateScrollButtons, 350);
+    };
+
+    autoScrollRef.current = setInterval(tick, AUTO_SCROLL_INTERVAL);
+    return () => clearInterval(autoScrollRef.current);
+  }, [isPaused, prefersReducedMotion, updateScrollButtons]);
+
+  // Initial scroll button state
+  useEffect(() => {
+    updateScrollButtons();
+    const el = trackRef.current;
+    if (el) {
+      el.addEventListener("scroll", updateScrollButtons, { passive: true });
+      return () => el.removeEventListener("scroll", updateScrollButtons);
+    }
+  }, [updateScrollButtons]);
+
+  // Mouse drag handlers
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    dragStartX.current = e.pageX;
+    dragStartScroll.current = trackRef.current.scrollLeft;
+    pauseAutoScroll();
+    e.preventDefault();
+  };
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging) return;
+    const dx = e.pageX - dragStartX.current;
+    trackRef.current.scrollLeft = dragStartScroll.current - dx;
+    updateScrollButtons();
+  }, [isDragging, updateScrollButtons]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
+  // Keyboard navigation when track is focused
+  const handleKeyDown = (e) => {
+    if (e.key === "ArrowRight") {
+      scrollBy(1);
+      pauseAutoScroll();
+    } else if (e.key === "ArrowLeft") {
+      scrollBy(-1);
+      pauseAutoScroll();
+    }
+  };
+
+  return (
+    <div
+      className="category-carousel-wrapper"
+      onMouseEnter={pauseAutoScroll}
+      onMouseLeave={() => {
+        clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = setTimeout(() => setIsPaused(false), 1000);
+      }}
+      onFocus={pauseAutoScroll}
+      onTouchStart={pauseAutoScroll}
+    >
+      {/* Left Arrow */}
+      {canScrollLeft && (
+        <button
+          type="button"
+          className="carousel-nav-btn carousel-nav-btn--left"
+          onClick={() => { scrollBy(-1); pauseAutoScroll(); }}
+          aria-label="Cuộn trái"
+          tabIndex={-1}
+        >
+          <FaChevronLeft size={13} />
+        </button>
+      )}
+
+      {/* Track */}
+      <div
+        ref={trackRef}
+        className={`category-carousel-track${isDragging ? " is-dragging" : ""}`}
+        onMouseDown={handleMouseDown}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="region"
+        aria-label="Danh mục món ăn — dùng phím mũi tên để cuộn"
+        onTouchStart={pauseAutoScroll}
+        onScroll={updateScrollButtons}
+      >
+        {categories.map((cat) => (
+          <div
+            key={cat.name}
+            className="category-carousel-item"
+            onClick={() => onCategoryClick(cat.name)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onCategoryClick(cat.name); }}
+            tabIndex={0}
+            role="button"
+            aria-label={`Xem danh mục ${cat.name}`}
+          >
+            <div className="category-carousel-img-box">
+              <img
+                src={cat.image}
+                alt={cat.name}
+                className="category-carousel-img"
+                loading="lazy"
+                draggable={false}
+              />
+            </div>
+            <span className="category-carousel-name">{cat.name}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Right Arrow */}
+      {canScrollRight && (
+        <button
+          type="button"
+          className="carousel-nav-btn carousel-nav-btn--right"
+          onClick={() => { scrollBy(1); pauseAutoScroll(); }}
+          aria-label="Cuộn phải"
+          tabIndex={-1}
+        >
+          <FaChevronRight size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * RestaurantSkeletons — shimmer placeholders while real data loads
+ */
+function RestaurantSkeletons({ count = 4 }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="restaurant-skeleton-card">
+          <div className="restaurant-skeleton-img sd-skeleton" />
+          <div className="restaurant-skeleton-body">
+            <div className="restaurant-skeleton-line sd-skeleton" style={{ width: "70%" }} />
+            <div className="restaurant-skeleton-line sd-skeleton" style={{ width: "45%", height: "0.75rem" }} />
+            <div className="restaurant-skeleton-line sd-skeleton" style={{ width: "55%", height: "0.75rem" }} />
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [restaurants, setRestaurants] = useState([]);
+  const [restaurantsLoading, setRestaurantsLoading] = useState(true);
   const navigate = useNavigate();
 
   // Fetch live restaurants from backend for showcase
   useEffect(() => {
+    let cancelled = false;
     const fetchRestaurants = async () => {
+      setRestaurantsLoading(true);
       try {
         const res = await fetch(`${API_URLS.RESTAURANT}/api/restaurant`);
         const data = await res.json();
-        if (res.ok && Array.isArray(data)) {
+        if (!cancelled && res.ok && Array.isArray(data)) {
           setRestaurants(data.slice(0, 8));
         }
       } catch (err) {
-        console.warn("Featured restaurants fetch note:", err.message);
+        if (!cancelled) console.warn("Featured restaurants fetch note:", err.message);
+      } finally {
+        if (!cancelled) setRestaurantsLoading(false);
       }
     };
     fetchRestaurants();
+    return () => { cancelled = true; };
   }, []);
 
   const handleSearchSubmit = (e) => {
@@ -102,6 +335,10 @@ const Home = () => {
     } else {
       navigate("/customer/home");
     }
+  };
+
+  const handleCategoryClick = (categoryName) => {
+    navigate(`/customer/home?category=${encodeURIComponent(categoryName)}`);
   };
 
   return (
@@ -131,31 +368,34 @@ const Home = () => {
                 </p>
 
                 {/* Core Search Form */}
-                <form onSubmit={handleSearchSubmit} className="landing-hero-search">
-                  <FaSearch style={{ color: "#94a3b8", marginRight: "0.5rem" }} />
+                <form onSubmit={handleSearchSubmit} className="landing-hero-search" role="search">
+                  <FaSearch style={{ color: "#94a3b8", marginRight: "0.5rem", flexShrink: 0 }} />
                   <input
-                    type="text"
+                    type="search"
                     className="landing-search-input"
                     placeholder="Tìm món ăn, nhà hàng..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Tìm kiếm món ăn hoặc nhà hàng"
                   />
-                  <button type="submit" className="landing-search-btn">
+                  <button type="submit" className="landing-search-btn" aria-label="Tìm kiếm">
                     Tìm món
                   </button>
                 </form>
 
                 {/* Quick Search Chips */}
-                <div className="landing-hero-tags">
+                <div className="landing-hero-tags" aria-label="Gợi ý tìm kiếm nhanh">
                   <span className="landing-tag-label">Gợi ý:</span>
                   {quickSearchTags.map((tag) => (
-                    <span
+                    <button
                       key={tag}
+                      type="button"
                       className="landing-tag-chip"
                       onClick={() => navigate(`/customer/home?q=${encodeURIComponent(tag)}`)}
+                      aria-label={`Tìm kiếm ${tag}`}
                     >
                       {tag}
-                    </span>
+                    </button>
                   ))}
                 </div>
 
@@ -185,13 +425,13 @@ const Home = () => {
         </section>
 
         {/* ====================================================================
-            2. POPULAR CATEGORIES (Lightweight Horizontal Flow)
+            2. POPULAR CATEGORIES — Professional Horizontal Carousel
             ==================================================================== */}
-        <section className="landing-categories-section">
+        <section className="landing-categories-section" aria-labelledby="categories-heading">
           <div className="sd-container">
             <div className="landing-section-header">
               <div className="landing-section-title-group">
-                <h2 className="landing-section-title">Danh mục món ăn</h2>
+                <h2 id="categories-heading" className="landing-section-title">Danh mục món ăn</h2>
                 <p className="landing-section-subtitle">
                   Khám phá thực đơn phong phú từ các nhóm món được yêu thích nhất
                 </p>
@@ -201,36 +441,18 @@ const Home = () => {
               </Link>
             </div>
 
-            <div className="landing-categories-grid">
-              {categories.map((cat) => (
-                <div
-                  key={cat.name}
-                  className="landing-category-pill-card"
-                  onClick={() => navigate(`/customer/home?category=${encodeURIComponent(cat.name)}`)}
-                >
-                  <div className="landing-category-img-box">
-                    <img
-                      src={cat.image}
-                      alt={cat.name}
-                      className="landing-category-img"
-                      loading="lazy"
-                    />
-                  </div>
-                  <h3 className="landing-category-name">{cat.name}</h3>
-                </div>
-              ))}
-            </div>
+            <CategoryCarousel onCategoryClick={handleCategoryClick} />
           </div>
         </section>
 
         {/* ====================================================================
-            3. FEATURED RESTAURANTS (Real Backend Data)
+            3. FEATURED RESTAURANTS (Real Backend Data + Loading Skeleton)
             ==================================================================== */}
-        <section className="landing-featured-section">
+        <section className="landing-featured-section" aria-labelledby="featured-heading">
           <div className="sd-container">
             <div className="landing-section-header">
               <div className="landing-section-title-group">
-                <h2 className="landing-section-title">Nhà hàng nổi bật</h2>
+                <h2 id="featured-heading" className="landing-section-title">Nhà hàng nổi bật</h2>
                 <p className="landing-section-subtitle">
                   Những địa điểm ẩm thực được đánh giá cao và yêu thích gần bạn
                 </p>
@@ -241,9 +463,17 @@ const Home = () => {
             </div>
 
             <div className="landing-restaurants-grid">
-              {restaurants.map((rest) => (
-                <RestaurantCard key={rest._id} restaurant={rest} />
-              ))}
+              {restaurantsLoading ? (
+                <RestaurantSkeletons count={4} />
+              ) : restaurants.length > 0 ? (
+                restaurants.map((rest) => (
+                  <RestaurantCard key={rest._id} restaurant={rest} />
+                ))
+              ) : (
+                <p style={{ color: "#94a3b8", fontSize: "0.9rem", gridColumn: "1/-1" }}>
+                  Chưa có nhà hàng nào. Hãy quay lại sau!
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -251,11 +481,11 @@ const Home = () => {
         {/* ====================================================================
             4. HOW SKYDISH WORKS (Simple Linear Rhythm)
             ==================================================================== */}
-        <section className="landing-how-section">
+        <section className="landing-how-section" aria-labelledby="how-heading">
           <div className="sd-container">
             <div className="landing-section-header">
               <div className="landing-section-title-group">
-                <h2 className="landing-section-title">Cách SkyDish hoạt động</h2>
+                <h2 id="how-heading" className="landing-section-title">Cách SkyDish hoạt động</h2>
                 <p className="landing-section-subtitle">
                   Quy trình đặt và nhận món nhanh chóng chỉ trong 4 bước đơn giản
                 </p>

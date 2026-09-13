@@ -103,6 +103,6 @@
 | **Phase 01** | Customer Portal Modernization | **PASS** | [audit/ui-overhaul/phase-01/REPORT.md](ui-overhaul/phase-01/REPORT.md) |
 | **Phase 02** | Restaurant Partner Portal Modernization | **PASS** | [audit/ui-overhaul/phase-02/REPORT.md](ui-overhaul/phase-02/REPORT.md) |
 | **Phase 03** | Shipper Mobile/PWA Modernization | **PASS** | [audit/ui-overhaul/phase-03/REPORT.md](ui-overhaul/phase-03/REPORT.md) |
-| **Phase 04** | Super Admin Portal Modernization | **IN PROGRESS** | `audit/ui-overhaul/phase-04/REPORT.md` |
-| **Phase 05** | Cross-Portal Visual Consistency | **PENDING** | `audit/ui-overhaul/phase-05/REPORT.md` |
+| **Phase 04** | Super Admin Portal Modernization | **PASS** | [audit/ui-overhaul/phase-04/REPORT.md](ui-overhaul/phase-04/REPORT.md) |
+| **Phase 05** | Cross-Portal Visual Consistency | **IN PROGRESS** | `audit/ui-overhaul/phase-05/REPORT.md` |
 | **Phase 06** | Final UI/UX Verification & Regression | **PENDING** | `audit/ui-overhaul/phase-06/REPORT.md` |

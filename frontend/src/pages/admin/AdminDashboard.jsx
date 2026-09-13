@@ -1029,7 +1029,7 @@ const AdminDashboard = () => {
                   <p>Tổng hợp doanh thu, lượng đơn hàng và chỉ số vận hành</p>
                 </div>
                 <div className="admin-page-actions">
-                  <button type="button" className="admin-action-btn" onClick={() => alert("Đang xuất báo cáo tài chính định dạng CSV...")}>
+                  <button type="button" className="admin-action-btn" onClick={() => setSuccessMessage("Đang xuất báo cáo tài chính định dạng CSV...")}>
                     <FaDownload /> Xuất báo cáo (CSV)
                   </button>
                 </div>
