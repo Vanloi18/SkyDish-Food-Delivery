@@ -119,6 +119,21 @@ function Header() {
     navigate("/auth/login");
   };
 
+  /**
+   * Smart auth-aware routing for "Đối tác nhà hàng" in portals dropdown.
+   * - restaurantToken present  → Restaurant Partner Dashboard (no intermediate page)
+   * - No restaurantToken       → Restaurant Partner Login
+   */
+  const handleRestaurantPartnerClick = () => {
+    setShowPortalsDropdown(false);
+    const restaurantToken = localStorage.getItem("restaurantToken");
+    if (restaurantToken) {
+      navigate("/restaurant/dashboard");
+    } else {
+      navigate("/restaurant/login");
+    }
+  };
+
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -199,13 +214,15 @@ function Header() {
                   >
                     <FaUtensils style={{ color: "var(--sd-primary)" }} /> Khách hàng
                   </Link>
-                  <Link
-                    to="/restaurant/home"
+                  {/* Smart auth-aware: dashboard if restaurantToken exists, else login */}
+                  <button
+                    type="button"
                     className="header_dropdown-item"
-                    onClick={() => setShowPortalsDropdown(false)}
+                    onClick={handleRestaurantPartnerClick}
+                    aria-label="Cổng đối tác nhà hàng"
                   >
                     <FaStore style={{ color: "#3b82f6" }} /> Đối tác nhà hàng
-                  </Link>
+                  </button>
                   <Link
                     to="/delivery/dashboard"
                     className="header_dropdown-item"
