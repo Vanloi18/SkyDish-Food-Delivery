@@ -1,18 +1,17 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Link, useNavigate } from 'react-router-dom';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
+import { Button, LoadingSkeleton, EmptyState } from '../../components/common';
+import { formatCurrency } from '../../utils/formatters';
+import { FaPlus, FaReceipt, FaEye, FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { API_URLS } from '../../config/api';
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { Link } from "react-router-dom";
-import { FaPlus, FaEye, FaEdit, FaTrashAlt, FaReceipt } from "react-icons/fa";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
-import Button from "../../components/common/Button";
-import LoadingSkeleton from "../../components/common/LoadingSkeleton";
-import EmptyState from "../../components/common/EmptyState";
-import { formatCurrency } from "../../utils/currency";
 
 function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -61,7 +60,7 @@ function Orders() {
               title="Không tìm thấy đơn hàng"
               description="Hiện tại chưa có đơn hàng nào được ghi nhận."
               actionLabel="Tạo đơn hàng"
-              onAction={() => window.location.href = "/orders/new"}
+              onAction={() => navigate("/orders/new")}
             />
           ) : (
             <div style={{ backgroundColor: "#ffffff", borderRadius: "var(--sd-radius-lg)", border: "1px solid var(--sd-border)", overflowX: "auto", boxShadow: "var(--sd-shadow-sm)" }}>

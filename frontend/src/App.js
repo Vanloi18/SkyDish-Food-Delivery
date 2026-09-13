@@ -50,11 +50,13 @@ import SuperAdminLogin from "./pages/restaurant/components/SuperAdminLogin";
 import SuperAdminRegister from "./pages/restaurant/components/SuperAdminRegister";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminGuard from "./layouts/AdminLayout/AdminGuard";
+import { ToastProvider } from "./components/common";
 
 function App() {
   return (
-    <CartProvider>
-      <Router>
+    <ToastProvider>
+      <CartProvider>
+        <Router>
         <Routes>
           {/* Common & Informational Routes (Guest / Public) */}
           <Route path="/" element={<Home />} />
@@ -132,6 +134,7 @@ function App() {
         </Routes>
       </Router>
     </CartProvider>
+    </ToastProvider>
   );
 }
 

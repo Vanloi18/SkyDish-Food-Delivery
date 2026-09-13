@@ -1,74 +1,172 @@
-/* SkyDish Design System Tokens */
+/* ==========================================================================
+   SKYDISH FOOD DELIVERY PLATFORM — DESIGN SYSTEM TOKENS v3.0
+   Coherent, accessible, food-oriented, commercial design tokens.
+   ========================================================================== */
+
 :root {
-  /* Brand Palette */
-  --sd-primary: #ff5722;
-  --sd-primary-hover: #e64a19;
-  --sd-primary-active: #d84315;
-  --sd-primary-light: #fff3ed;
-  --sd-primary-glow: rgba(255, 87, 34, 0.22);
+  /* 1. BRAND & IDENTITY COLOR PALETTE */
+  --sd-primary: #FF5722;
+  --sd-primary-hover: #F4511E;
+  --sd-primary-active: #E64A19;
+  --sd-primary-light: #FFF3ED;
+  --sd-primary-glow: rgba(255, 87, 34, 0.18);
 
-  /* Secondary / Navy */
-  --sd-secondary: #0f172a;
-  --sd-secondary-hover: #1e293b;
-  --sd-secondary-light: #f1f5f9;
+  /* Deep Navy / Secondary */
+  --sd-navy: #0F172A;
+  --sd-navy-hover: #1E293B;
+  --sd-navy-light: #334155;
+  --sd-secondary: #0F172A;
+  --sd-secondary-hover: #1E293B;
+  --sd-secondary-light: #F1F5F9;
 
-  /* Accent Colors */
-  --sd-accent: #ff9800;
-  --sd-accent-light: #fff8e1;
-  --sd-success: #10b981;
+  /* Canvas & Neutral Backgrounds */
+  --sd-canvas: #F8FAFC;
+  --sd-bg-main: #F8FAFC;
+  --sd-bg-surface: #FFFFFF;
+  --sd-bg-muted: #F1F5F9;
+  --sd-bg-alt: #F8FAFC;
+
+  /* Pure White */
+  --sd-white: #FFFFFF;
+
+  /* Semantic Feedback Colors */
+  --sd-success: #10B981;
   --sd-success-hover: #059669;
-  --sd-success-light: #ecfdf5;
-  --sd-warning: #f59e0b;
-  --sd-warning-light: #fffbeb;
-  --sd-danger: #ef4444;
-  --sd-danger-hover: #dc2626;
-  --sd-danger-light: #fef2f2;
-  --sd-info: #3b82f6;
-  --sd-info-light: #eff6ff;
+  --sd-success-light: #ECFDF5;
+  --sd-success-text: #065F46;
 
-  /* Neutral Scale */
-  --sd-bg-main: #f8fafc;
-  --sd-bg-surface: #ffffff;
-  --sd-bg-muted: #f1f5f9;
-  --sd-border: #e2e8f0;
-  --sd-border-focus: #ff5722;
+  --sd-warning: #F59E0B;
+  --sd-warning-hover: #D97706;
+  --sd-warning-light: #FFFBEB;
+  --sd-warning-text: #92400E;
 
-  /* Text Colors */
-  --sd-text-primary: #0f172a;
+  --sd-error: #EF4444;
+  --sd-error-hover: #DC2626;
+  --sd-error-light: #FEF2F2;
+  --sd-error-text: #991B1B;
+  --sd-danger: #EF4444;
+  --sd-danger-hover: #DC2626;
+  --sd-danger-light: #FEF2F2;
+
+  --sd-info: #3B82F6;
+  --sd-info-hover: #2563EB;
+  --sd-info-light: #EFF6FF;
+  --sd-info-text: #1E40AF;
+
+  /* Borders */
+  --sd-border: #E2E8F0;
+  --sd-border-light: #F1F5F9;
+  --sd-border-strong: #CBD5E1;
+  --sd-border-focus: #FF5722;
+
+  /* Typography Text Colors */
+  --sd-text-primary: #0F172A;
   --sd-text-secondary: #475569;
-  --sd-text-muted: #94a3b8;
-  --sd-text-inverted: #ffffff;
+  --sd-text-muted: #94A3B8;
+  --sd-text-inverted: #FFFFFF;
+  --sd-text-placeholder: #94A3B8;
 
-  /* Typography */
-  --sd-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* 2. TYPOGRAPHY SYSTEM */
+  --sd-font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --sd-font-family-display: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Font Weights (Natural Hierarchy: avoid excessive 800/900) */
+  --sd-weight-body: 400;
+  --sd-weight-metadata: 500;
+  --sd-weight-nav: 500;
+  --sd-weight-nav-active: 600;
+  --sd-weight-title: 600;
+  --sd-weight-heading: 700;
+  --sd-weight-hero: 700;
+
+  /* Type Scale */
   --sd-font-size-xs: 0.75rem;    /* 12px */
   --sd-font-size-sm: 0.875rem;   /* 14px */
   --sd-font-size-base: 1rem;     /* 16px */
+  --sd-font-size-md: 1.0625rem;  /* 17px */
   --sd-font-size-lg: 1.125rem;   /* 18px */
   --sd-font-size-xl: 1.25rem;    /* 20px */
   --sd-font-size-2xl: 1.5rem;    /* 24px */
   --sd-font-size-3xl: 1.875rem;  /* 30px */
   --sd-font-size-4xl: 2.25rem;   /* 36px */
-  --sd-font-size-5xl: 3rem;      /* 48px */
 
-  /* Shadows & Elevation */
-  --sd-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --sd-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --sd-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
-  --sd-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
-  --sd-shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
-  --sd-shadow-glow: 0 8px 24px var(--sd-primary-glow);
+  /* Line Heights */
+  --sd-leading-tight: 1.2;
+  --sd-leading-snug: 1.35;
+  --sd-leading-normal: 1.5;
+  --sd-leading-relaxed: 1.625;
 
-  /* Border Radii */
+  /* 3. SPACING SCALE */
+  --sd-space-1: 0.25rem;  /* 4px */
+  --sd-space-2: 0.5rem;   /* 8px */
+  --sd-space-3: 0.75rem;  /* 12px */
+  --sd-space-4: 1rem;     /* 16px */
+  --sd-space-5: 1.25rem;  /* 20px */
+  --sd-space-6: 1.5rem;   /* 24px */
+  --sd-space-8: 2rem;     /* 32px */
+  --sd-space-10: 2.5rem;  /* 40px */
+  --sd-space-12: 3rem;    /* 48px */
+  --sd-space-16: 4rem;    /* 64px */
+
+  /* 4. RADIUS SYSTEM (Restrained: small 8px, medium 12px, large 16px) */
   --sd-radius-xs: 4px;
   --sd-radius-sm: 8px;
   --sd-radius-md: 12px;
   --sd-radius-lg: 16px;
-  --sd-radius-xl: 24px;
+  --sd-radius-pill: 9999px; /* Reserved strictly for circular icons and pill badges */
+
+  /* Backwards compatibility aliases */
+  --sd-radius-xl: 16px;     /* Mapped from 24px down to 16px per design guidance */
   --sd-radius-full: 9999px;
 
-  /* Transitions */
-  --sd-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --sd-transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --sd-transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* 5. ELEVATION & SHADOWS (Restrained, crisp, non-muddy) */
+  --sd-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --sd-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --sd-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.03);
+  --sd-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -2px rgba(15, 23, 42, 0.02);
+  --sd-shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 10px 10px -5px rgba(15, 23, 42, 0.03);
+  --sd-shadow-dropdown: 0 12px 28px rgba(15, 23, 42, 0.12), 0 4px 8px rgba(15, 23, 42, 0.04);
+  --sd-shadow-modal: 0 24px 48px rgba(15, 23, 42, 0.16), 0 8px 16px rgba(15, 23, 42, 0.06);
+
+  /* 6. MOTION SYSTEM */
+  --sd-motion-micro: 140ms;
+  --sd-motion-standard: 220ms;
+  --sd-motion-large: 320ms;
+  --sd-motion-major: 450ms;
+  --sd-ease-default: cubic-bezier(0.16, 1, 0.3, 1);
+  --sd-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Transition shortcuts */
+  --sd-transition-fast: var(--sd-motion-micro) var(--sd-ease-default);
+  --sd-transition-normal: var(--sd-motion-standard) var(--sd-ease-default);
+  --sd-transition-slow: var(--sd-motion-large) var(--sd-ease-default);
+
+  /* 7. Z-INDEX SCALE */
+  --sd-z-dropdown: 1000;
+  --sd-z-sticky: 1020;
+  --sd-z-fixed: 1030;
+  --sd-z-backdrop: 1040;
+  --sd-z-modal: 1050;
+  --sd-z-popover: 1060;
+  --sd-z-tooltip: 1070;
+  --sd-z-toast: 1080;
+
+  /* 8. BREAKPOINTS & LAYOUT */
+  --sd-container-max: 1280px;
+  --sd-header-height: 68px;
+  --sd-sidebar-width: 260px;
+  --sd-sidebar-collapsed: 72px;
+}
+
+/* Reduced motion preference support */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --sd-motion-micro: 0ms;
+    --sd-motion-standard: 0ms;
+    --sd-motion-large: 0ms;
+    --sd-motion-major: 0ms;
+    --sd-transition-fast: none;
+    --sd-transition-normal: none;
+    --sd-transition-slow: none;
+  }
 }

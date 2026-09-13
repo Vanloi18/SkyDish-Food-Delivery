@@ -7,7 +7,6 @@ import {
   FaUtensils,
   FaMoneyBillWave,
   FaShieldAlt,
-  FaExclamationCircle,
 } from "react-icons/fa";
 
 /**
