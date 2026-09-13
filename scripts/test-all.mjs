@@ -65,6 +65,7 @@ function runCmd(cmd, args, cwd = ROOT_DIR, timeout = 60000) {
       timeout,
       env: {
         ...process.env,
+        MONGO_URI: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/food_delivery_db',
         NODE_PATH: path.join(ROOT_DIR, 'frontend', 'node_modules'),
       },
     });

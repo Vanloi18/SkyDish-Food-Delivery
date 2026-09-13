@@ -329,7 +329,6 @@
   gap: 0.875rem;
   overflow-x: auto;
   scroll-behavior: smooth;
-  scroll-snap-type: x proximity;
   padding: 0.5rem 0 0.75rem 0;
   cursor: grab;
   user-select: none;
@@ -371,7 +370,6 @@
   cursor: pointer;
   text-decoration: none;
   transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
-  scroll-snap-align: start;
 }
 
 .category-carousel-item:hover {
@@ -508,6 +506,69 @@
 .restaurant-skeleton-line {
   height: 1rem;
   border-radius: 6px;
+}
+
+/* Restaurant Empty State */
+.landing-restaurants-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 1.5rem;
+  background-color: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.landing-empty-text {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Restaurant Error State */
+.landing-restaurants-error {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3.5rem 1.5rem;
+  background-color: #ffffff;
+  border: 1px solid #fee2e2;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.landing-error-text {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #dc2626;
+  margin: 0;
+}
+
+.landing-retry-btn {
+  background-color: #ff5722;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.landing-retry-btn:hover {
+  background-color: #ea580c;
+}
+
+.landing-retry-btn:active {
+  transform: scale(0.97);
 }
 
 
@@ -667,4 +728,16 @@
   .landing-cta-card {
     padding: 2.5rem 1.5rem;
   }
-}
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .category-carousel-track {
+    scroll-behavior: auto !important;
+  }
+  .category-carousel-item,
+  .carousel-nav-btn {
+    transition: none !important;
+  }
+}
+

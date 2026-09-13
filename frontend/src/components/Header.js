@@ -18,6 +18,7 @@ import {
 import { CartContext } from "../pages/contexts/CartContext";
 import Sidebar from "./Sidebar";
 import Button from "./common/Button";
+import { validateRestaurantToken } from "../layouts/RestaurantPartnerLayout/RestaurantPartnerGuard";
 import "../styles/header.css";
 
 function Header() {
@@ -93,7 +94,7 @@ function Header() {
     }
   }, [location.pathname, fetchNotifications]);
 
-  // Click outside listener for dropdowns
+  // Click outside and Escape key listener for dropdowns
   useEffect(() => {
     function handleClickOutside(e) {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
@@ -106,8 +107,22 @@ function Header() {
         setShowNotifDropdown(false);
       }
     }
+
+    function handleKeyDown(e) {
+      if (e.key === "Escape") {
+        setShowProfileDropdown(false);
+        setShowPortalsDropdown(false);
+        setShowNotifDropdown(false);
+        setSidebarOpen(false);
+      }
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -121,13 +136,15 @@ function Header() {
 
   /**
    * Smart auth-aware routing for "Đối tác nhà hàng" in portals dropdown.
-   * - restaurantToken present  → Restaurant Partner Dashboard (no intermediate page)
-   * - No restaurantToken       → Restaurant Partner Login
+   * Uses existing guard architecture to validate token legitimacy:
+   * - Guest (no token)                  → /restaurant/login
+   * - Valid RESTAURANT_PARTNER          → /restaurant/dashboard
+   * - Invalid / expired / wrong role    → /restaurant/login
    */
   const handleRestaurantPartnerClick = () => {
     setShowPortalsDropdown(false);
-    const restaurantToken = localStorage.getItem("restaurantToken");
-    if (restaurantToken) {
+    const token = localStorage.getItem("restaurantToken") || localStorage.getItem("token");
+    if (validateRestaurantToken(token)) {
       navigate("/restaurant/dashboard");
     } else {
       navigate("/restaurant/login");

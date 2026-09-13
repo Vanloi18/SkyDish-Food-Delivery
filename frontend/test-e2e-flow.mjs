@@ -200,9 +200,9 @@ async function runTests() {
       restaurantId: `Pizza 4P's Tràng Tiền`,
       items: [
         { foodId: 'Pizza 4 Cheese Kèm Mật Ong', quantity: 1, price: 260000 },
-        { foodId: 'Trà Đá Hà Nội', quantity: 2, price: 5000 },
+        { foodId: 'Pizza Gà Teriyaki Rong Biển', quantity: 1, price: 220000 },
       ],
-      totalPrice: 270000,
+      totalPrice: 480000,
       deliveryAddress: '11B Tràng Tiền, Quận Hoàn Kiếm, Hà Nội',
     };
 

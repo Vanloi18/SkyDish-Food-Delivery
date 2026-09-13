@@ -82,56 +82,80 @@ const steps = [
  * CategoryCarousel — horizontal auto-scrolling marketplace carousel
  *
  * Features:
- * - Auto-scroll: slow, subtle (10s per full cycle)
- * - Pauses on: hover, focus, touch, drag
- * - Resumes after 2.5s idle
- * - Desktop arrow controls (left/right)
- * - Touch-native horizontal scrolling
- * - Mouse drag support
- * - Keyboard accessible (arrow keys when focused)
- * - prefers-reduced-motion: disables auto-scroll
+ * - Desktop left/right arrow controls
+ * - Touch swipe support with native momentum
+ * - Mouse drag support without accidental click triggers
+ * - Keyboard navigation (ArrowLeft / ArrowRight)
+ * - Smooth horizontal scrolling without mandatory snap jumps
+ * - Pause during user interaction (drag, touch, click, scroll, keyboard)
+ * - Pause on hover and focus
+ * - Resume after 3.0s idle (2–4 seconds specification)
+ * - Disables auto-scroll under prefers-reduced-motion
+ * - Avoid visual jumps (smooth loop back)
+ * - Categories remain real project data
  */
 function CategoryCarousel({ onCategoryClick }) {
   const trackRef = useRef(null);
   const autoScrollRef = useRef(null);
   const resumeTimerRef = useRef(null);
-  const [isPaused, setIsPaused] = useState(false);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const hasDraggedRef = useRef(false);
   const dragStartX = useRef(0);
   const dragStartScroll = useRef(0);
 
-  // Detect prefers-reduced-motion
-  const prefersReducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [isPaused, setIsPaused] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [isDraggingState, setIsDraggingState] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
-  const ITEM_WIDTH = 148; // approx width + gap
-  const AUTO_SCROLL_INTERVAL = 10000; // 10 seconds per step
+  const ITEM_WIDTH = 148; // card width + gap
+  const AUTO_SCROLL_STEP_MS = 3800; // subtle step advance every 3.8s
+  const RESUME_IDLE_DELAY_MS = 3000; // 3 seconds idle resume (within 2-4s range)
 
+  // Listen to prefers-reduced-motion media query
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mediaQuery.matches);
+    const listener = (e) => setPrefersReducedMotion(e.matches);
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", listener);
+      return () => mediaQuery.removeEventListener("change", listener);
+    }
+  }, []);
+
+  // Update button visibility based on scroll position
   const updateScrollButtons = useCallback(() => {
     const el = trackRef.current;
     if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 4);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    setCanScrollLeft(el.scrollLeft > 6);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6);
   }, []);
 
-  const scrollBy = useCallback((direction) => {
-    const el = trackRef.current;
-    if (!el) return;
-    const amount = ITEM_WIDTH * 3 * direction;
-    el.scrollBy({ left: amount, behavior: "smooth" });
-    setTimeout(updateScrollButtons, 350);
-  }, [updateScrollButtons]);
+  // Schedule auto-scroll resume after idle delay
+  const scheduleResume = useCallback(() => {
+    clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      setIsPaused(false);
+    }, RESUME_IDLE_DELAY_MS);
+  }, [RESUME_IDLE_DELAY_MS]);
 
-  const pauseAutoScroll = useCallback(() => {
+  // Pause auto-scroll immediately upon interaction
+  const pauseInteraction = useCallback(() => {
     setIsPaused(true);
     clearTimeout(resumeTimerRef.current);
-    resumeTimerRef.current = setTimeout(() => setIsPaused(false), 2500);
   }, []);
 
-  // Auto-scroll logic
+  // Manual scroll by distance
+  const scrollByAmount = useCallback((amount) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollBy({ left: amount, behavior: prefersReducedMotion ? "auto" : "smooth" });
+    setTimeout(updateScrollButtons, 350);
+  }, [prefersReducedMotion, updateScrollButtons]);
+
+  // Auto-scroll loop
   useEffect(() => {
     if (prefersReducedMotion) return;
 
@@ -139,114 +163,142 @@ function CategoryCarousel({ onCategoryClick }) {
       if (isPaused) return;
       const el = trackRef.current;
       if (!el) return;
-      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+
+      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 8;
       if (atEnd) {
-        // Loop back to start smoothly
+        // Smoothly loop back to start without abrupt jumps
         el.scrollTo({ left: 0, behavior: "smooth" });
       } else {
         el.scrollBy({ left: ITEM_WIDTH, behavior: "smooth" });
       }
-      setTimeout(updateScrollButtons, 350);
+      setTimeout(updateScrollButtons, 400);
     };
 
-    autoScrollRef.current = setInterval(tick, AUTO_SCROLL_INTERVAL);
+    autoScrollRef.current = setInterval(tick, AUTO_SCROLL_STEP_MS);
     return () => clearInterval(autoScrollRef.current);
   }, [isPaused, prefersReducedMotion, updateScrollButtons]);
 
-  // Initial scroll button state
+  // Initial scroll button check
   useEffect(() => {
     updateScrollButtons();
-    const el = trackRef.current;
-    if (el) {
-      el.addEventListener("scroll", updateScrollButtons, { passive: true });
-      return () => el.removeEventListener("scroll", updateScrollButtons);
-    }
   }, [updateScrollButtons]);
 
   // Mouse drag handlers
   const handleMouseDown = (e) => {
-    setIsDragging(true);
+    if (e.button !== 0) return; // Primary click only
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
     dragStartX.current = e.pageX;
-    dragStartScroll.current = trackRef.current.scrollLeft;
-    pauseAutoScroll();
-    e.preventDefault();
+    dragStartScroll.current = trackRef.current ? trackRef.current.scrollLeft : 0;
+    setIsDraggingState(true);
+    pauseInteraction();
   };
 
   const handleMouseMove = useCallback((e) => {
-    if (!isDragging) return;
-    const dx = e.pageX - dragStartX.current;
-    trackRef.current.scrollLeft = dragStartScroll.current - dx;
+    if (!isDraggingRef.current || !trackRef.current) return;
+    const deltaX = e.pageX - dragStartX.current;
+    if (Math.abs(deltaX) > 5) {
+      hasDraggedRef.current = true;
+    }
+    trackRef.current.scrollLeft = dragStartScroll.current - deltaX;
     updateScrollButtons();
-  }, [isDragging, updateScrollButtons]);
+  }, [updateScrollButtons]);
 
   const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      setIsDraggingState(false);
+      scheduleResume();
+    }
+  }, [scheduleResume]);
 
   useEffect(() => {
-    if (isDragging) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-    }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [handleMouseMove, handleMouseUp]);
 
   // Keyboard navigation when track is focused
   const handleKeyDown = (e) => {
     if (e.key === "ArrowRight") {
-      scrollBy(1);
-      pauseAutoScroll();
+      e.preventDefault();
+      scrollByAmount(ITEM_WIDTH * 2);
+      pauseInteraction();
+      scheduleResume();
     } else if (e.key === "ArrowLeft") {
-      scrollBy(-1);
-      pauseAutoScroll();
+      e.preventDefault();
+      scrollByAmount(-ITEM_WIDTH * 2);
+      pauseInteraction();
+      scheduleResume();
     }
+  };
+
+  const handleItemClick = (catName) => {
+    if (hasDraggedRef.current) {
+      hasDraggedRef.current = false;
+      return;
+    }
+    onCategoryClick(catName);
   };
 
   return (
     <div
       className="category-carousel-wrapper"
-      onMouseEnter={pauseAutoScroll}
-      onMouseLeave={() => {
-        clearTimeout(resumeTimerRef.current);
-        resumeTimerRef.current = setTimeout(() => setIsPaused(false), 1000);
-      }}
-      onFocus={pauseAutoScroll}
-      onTouchStart={pauseAutoScroll}
+      onMouseEnter={pauseInteraction}
+      onMouseLeave={scheduleResume}
+      onFocus={pauseInteraction}
+      onBlur={scheduleResume}
     >
-      {/* Left Arrow */}
+      {/* Desktop Left Control */}
       {canScrollLeft && (
         <button
           type="button"
           className="carousel-nav-btn carousel-nav-btn--left"
-          onClick={() => { scrollBy(-1); pauseAutoScroll(); }}
-          aria-label="Cuộn trái"
+          onClick={() => {
+            scrollByAmount(-ITEM_WIDTH * 2.5);
+            pauseInteraction();
+            scheduleResume();
+          }}
+          aria-label="Cuộn danh mục sang trái"
           tabIndex={-1}
         >
           <FaChevronLeft size={13} />
         </button>
       )}
 
-      {/* Track */}
+      {/* Carousel Track */}
       <div
         ref={trackRef}
-        className={`category-carousel-track${isDragging ? " is-dragging" : ""}`}
+        className={`category-carousel-track${isDraggingState ? " is-dragging" : ""}`}
         onMouseDown={handleMouseDown}
         onKeyDown={handleKeyDown}
+        onTouchStart={pauseInteraction}
+        onTouchEnd={scheduleResume}
+        onScroll={() => {
+          updateScrollButtons();
+          if (!isDraggingRef.current) {
+            pauseInteraction();
+            scheduleResume();
+          }
+        }}
         tabIndex={0}
         role="region"
-        aria-label="Danh mục món ăn — dùng phím mũi tên để cuộn"
-        onTouchStart={pauseAutoScroll}
-        onScroll={updateScrollButtons}
+        aria-label="Danh mục món ăn — dùng phím mũi tên để duyệt"
       >
         {categories.map((cat) => (
           <div
             key={cat.name}
             className="category-carousel-item"
-            onClick={() => onCategoryClick(cat.name)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onCategoryClick(cat.name); }}
+            onClick={() => handleItemClick(cat.name)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onCategoryClick(cat.name);
+              }
+            }}
             tabIndex={0}
             role="button"
             aria-label={`Xem danh mục ${cat.name}`}
@@ -265,13 +317,17 @@ function CategoryCarousel({ onCategoryClick }) {
         ))}
       </div>
 
-      {/* Right Arrow */}
+      {/* Desktop Right Control */}
       {canScrollRight && (
         <button
           type="button"
           className="carousel-nav-btn carousel-nav-btn--right"
-          onClick={() => { scrollBy(1); pauseAutoScroll(); }}
-          aria-label="Cuộn phải"
+          onClick={() => {
+            scrollByAmount(ITEM_WIDTH * 2.5);
+            pauseInteraction();
+            scheduleResume();
+          }}
+          aria-label="Cuộn danh mục sang phải"
           tabIndex={-1}
         >
           <FaChevronRight size={13} />
@@ -304,29 +360,36 @@ function RestaurantSkeletons({ count = 4 }) {
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [restaurants, setRestaurants] = useState([]);
-  const [restaurantsLoading, setRestaurantsLoading] = useState(true);
+  // Explicit states: "loading" | "success" | "empty" | "error"
+  const [restaurantStatus, setRestaurantStatus] = useState("loading");
   const navigate = useNavigate();
 
   // Fetch live restaurants from backend for showcase
-  useEffect(() => {
-    let cancelled = false;
-    const fetchRestaurants = async () => {
-      setRestaurantsLoading(true);
-      try {
-        const res = await fetch(`${API_URLS.RESTAURANT}/api/restaurant`);
-        const data = await res.json();
-        if (!cancelled && res.ok && Array.isArray(data)) {
-          setRestaurants(data.slice(0, 8));
-        }
-      } catch (err) {
-        if (!cancelled) console.warn("Featured restaurants fetch note:", err.message);
-      } finally {
-        if (!cancelled) setRestaurantsLoading(false);
+  const fetchRestaurants = useCallback(async () => {
+    setRestaurantStatus("loading");
+    try {
+      const res = await fetch(`${API_URLS.RESTAURANT}/api/restaurant`);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
       }
-    };
-    fetchRestaurants();
-    return () => { cancelled = true; };
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setRestaurants(data.slice(0, 8));
+        setRestaurantStatus("success");
+      } else {
+        setRestaurants([]);
+        setRestaurantStatus("empty");
+      }
+    } catch (err) {
+      console.warn("Featured restaurants fetch error:", err.message);
+      setRestaurants([]);
+      setRestaurantStatus("error");
+    }
   }, []);
+
+  useEffect(() => {
+    fetchRestaurants();
+  }, [fetchRestaurants]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -446,7 +509,7 @@ const Home = () => {
         </section>
 
         {/* ====================================================================
-            3. FEATURED RESTAURANTS (Real Backend Data + Loading Skeleton)
+            3. FEATURED RESTAURANTS (Explicit States: Loading, Success, Empty, Error)
             ==================================================================== */}
         <section className="landing-featured-section" aria-labelledby="featured-heading">
           <div className="sd-container">
@@ -458,21 +521,42 @@ const Home = () => {
                 </p>
               </div>
               <Link to="/customer/home" className="landing-section-link">
-                Xem tất cả ({restaurants.length > 0 ? `${restaurants.length} nhà hàng` : "Xem thêm"}) <FaArrowRight size={12} />
+                Xem tất cả ({restaurantStatus === "success" && restaurants.length > 0 ? `${restaurants.length} nhà hàng` : "Xem thêm"}) <FaArrowRight size={12} />
               </Link>
             </div>
 
             <div className="landing-restaurants-grid">
-              {restaurantsLoading ? (
+              {/* 1. Loading State: Skeleton shimmer placeholders */}
+              {restaurantStatus === "loading" && (
                 <RestaurantSkeletons count={4} />
-              ) : restaurants.length > 0 ? (
+              )}
+
+              {/* 2. Success State with Data */}
+              {restaurantStatus === "success" && (
                 restaurants.map((rest) => (
                   <RestaurantCard key={rest._id} restaurant={rest} />
                 ))
-              ) : (
-                <p style={{ color: "#94a3b8", fontSize: "0.9rem", gridColumn: "1/-1" }}>
-                  Chưa có nhà hàng nào. Hãy quay lại sau!
-                </p>
+              )}
+
+              {/* 3. Success Empty State */}
+              {restaurantStatus === "empty" && (
+                <div className="landing-restaurants-empty" role="status">
+                  <p className="landing-empty-text">Chưa có dữ liệu</p>
+                </div>
+              )}
+
+              {/* 4. Error State */}
+              {restaurantStatus === "error" && (
+                <div className="landing-restaurants-error" role="alert">
+                  <p className="landing-error-text">Không thể tải dữ liệu</p>
+                  <button
+                    type="button"
+                    className="landing-retry-btn"
+                    onClick={fetchRestaurants}
+                  >
+                    Thử lại
+                  </button>
+                </div>
               )}
             </div>
           </div>

@@ -40,6 +40,8 @@ const stripePromise = loadStripe(
   process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || ""
 );
 
+const API_BASE_URL = API_URLS.PAYMENT;
+
 const CheckoutForm = () => {
   const stripe = useStripe();
   const elements = useElements();
@@ -76,8 +78,6 @@ const CheckoutForm = () => {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponFeedback, setCouponFeedback] = useState({ type: "", message: "" });
-
-  const API_BASE_URL = API_URLS.PAYMENT;
 
   const [currentOrderId] = useState(() => `ORDER${Math.floor(10000 + Math.random() * 90000)}`);
   const [placedOrder, setPlacedOrder] = useState(null);

@@ -5,7 +5,7 @@ const request = require('supertest');
 const jwt = require('jsonwebtoken');
 
 process.env.JWT_SECRET = 'supersecretjwtkeyforfooddeliverymicroservices2025';
-process.env.MONGO_URI = 'mongodb://127.0.0.1:27000/food_delivery_db';
+process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/food_delivery_db';
 process.env.NODE_ENV = 'test';
 
 const Payment = require('../models/PaymentModel');

@@ -15,6 +15,14 @@
   transition: all var(--sd-transition-normal);
 }
 
+.home-header a,
+.home-header a:hover,
+.home-header a:focus,
+.home-header a:active,
+.home-header a:visited {
+  text-decoration: none;
+}
+
 .header-left {
   display: flex;
   align-items: center;
