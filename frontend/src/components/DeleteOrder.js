@@ -50,7 +50,7 @@ function DeleteOrder() {
       navigate("/orders");
     } catch (err) {
       console.error("Error canceling order:", err);
-      alert("Không thể hủy đơn hàng. Vui lòng thử lại.");
+      setError("Không thể hủy đơn hàng. Vui lòng thử lại sau.");
     } finally {
       setDeleting(false);
     }
