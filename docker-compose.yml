@@ -24,7 +24,7 @@ services:
       - "${AUTH_PORT:-4000}:4000"
     environment:
       - PORT=4000
-      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
     depends_on:
@@ -47,7 +47,7 @@ services:
       - "${REST_PORT:-5002}:5002"
     environment:
       - PORT=5002
-      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
     depends_on:
       mongo:
@@ -69,7 +69,7 @@ services:
       - "${ORDER_PORT:-5005}:5005"
     environment:
       - PORT=5005
-      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
     depends_on:
       mongo:
@@ -91,7 +91,7 @@ services:
       - "${DELIVERY_PORT:-5003}:5003"
     environment:
       - PORT=5003
-      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
     depends_on:
       mongo:
@@ -113,7 +113,8 @@ services:
       - "${PAY_PORT:-5004}:5004"
     environment:
       - PORT=5004
-      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - ORDER_SERVICE_URL=${ORDER_SERVICE_URL:-http://order-service:5005}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-sk_test_placeholder_key_skydish_dev}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-whsec_placeholder_key_skydish_dev}
@@ -128,11 +129,11 @@ services:
       - MOMO_REDIRECT_URL=${MOMO_REDIRECT_URL:-http://localhost:3000/payment/momo/callback}
       - MOMO_IPN_URL=${MOMO_IPN_URL:-http://localhost:5004/api/payment/momo/ipn}
       - BANK_TRANSFER_ENABLED=${BANK_TRANSFER_ENABLED:-true}
-      - BANK_ID=${BANK_ID:-970422}
-      - BANK_CODE=${BANK_CODE:-MB}
-      - BANK_NAME=${BANK_NAME:-MB Bank}
-      - BANK_ACCOUNT_NUMBER=${BANK_ACCOUNT_NUMBER:-0932366523}
-      - BANK_ACCOUNT_NAME=${BANK_ACCOUNT_NAME:-LE VAN LOI}
+      - BANK_ID=${BANK_ID:-970415}
+      - BANK_CODE=${BANK_CODE:-ICB}
+      - BANK_NAME=${BANK_NAME:-VietinBank}
+      - BANK_ACCOUNT_NUMBER=${BANK_ACCOUNT_NUMBER:-1234567890}
+      - BANK_ACCOUNT_NAME=${BANK_ACCOUNT_NAME:-SKYDISH FOOD DELIVERY}
       - VIETQR_TEMPLATE=${VIETQR_TEMPLATE:-compact2}
       - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
       - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}

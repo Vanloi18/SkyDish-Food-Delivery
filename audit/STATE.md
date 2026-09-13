@@ -52,3 +52,22 @@
 | **BUG-005** | **P1** | Root E2E Runner | **VERIFIED FIXED** | Root `test-e2e-flow.js` failed to resolve ESM dependencies. | Added forwarder in `test-e2e-flow.js` executing with `frontend/` cwd. |
 | **BUG-006** | **P2** | PowerShell CI | **VERIFIED FIXED** | Windows PowerShell 5.1 crashed on unicode emojis. | Replaced emojis with ASCII tags in `scripts/test-all.ps1`. |
 | **BUG-007** | **P2** | Security Matrix | **VERIFIED FIXED** | Test #18 had an in-memory mock instead of live HTTP assertion. | Updated test to execute live Axios GET and verify HTTP 403. |
+| **BUG-008** | **P1** | `delivery-service` | **VERIFIED FIXED** | Hardcoded OpenCage API key & Sri Lanka fallback coordinates. | Migrated to `process.env.OPENCAGE_API_KEY` with Ho Chi Minh City coordinates. |
+| **BUG-009** | **P1** | `payment-service` | **VERIFIED FIXED** | Hardcoded personal bank details in bank transfer / VietQR provider. | Configurable via environment variables with standard SkyDish corporate defaults. |
+| **BUG-010** | **P1** | Infrastructure | **VERIFIED FIXED** | Docker Compose MONGO_URI collision with host dev port 27000. | Injected `DOCKER_MONGO_URI` to guarantee internal container DNS resolution. |
+| **BUG-011** | **P2** | Security / Reliability | **VERIFIED FIXED** | Missing production fail-fast check for insecure/default JWT_SECRET in production mode. | Implemented `process.exit(1)` fail-fast guardrails across all 5 services. |
+
+---
+
+## 4. PRODUCTION RELEASE GAP CLOSURE GATES (GATES A - G)
+
+| Gate | Description | Status | Evidence Document |
+| :--- | :--- | :---: | :--- |
+| **Gate A** | Docker Runtime Verification | **BLOCKED — DOCKER ENGINE OFFLINE** | [audit/release/docker-runtime/REPORT.md](release/docker-runtime/REPORT.md) |
+| **Gate B** | Docker Networking & Nginx Proxy | **PASS** | [audit/release/docker-network/REPORT.md](release/docker-network/REPORT.md) |
+| **Gate C** | Secrets & Production Config | **PASS** | [audit/release/security-config/REPORT.md](release/security-config/REPORT.md) |
+| **Gate D** | Clean-Machine Reproducibility | **PASS** | [audit/release/clean-machine/REPORT.md](release/clean-machine/REPORT.md) |
+| **Gate E** | Production Deployment | **BLOCKED — EXTERNAL CREDENTIALS** | [audit/release/deployment/REPORT.md](release/deployment/REPORT.md) |
+| **Gate F** | Live Functional & COD Regression | **PASS** | [audit/release/live-verification/REPORT.md](release/live-verification/REPORT.md) |
+| **Gate G** | Final Release Decision | **CONDITIONAL GO (READY FOR LOCAL/DEV, BLOCKED ON DOCKER/CLOUD PROD)** | [FINAL_REPORT.md](../FINAL_REPORT.md) |
+

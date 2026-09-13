@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-12T20:37:17.758Z",
+  "timestamp": "2026-09-13T03:08:50.827Z",
   "platform": "win32",
   "node": "v24.13.0",
   "summary": {
@@ -26,61 +26,61 @@
       "name": "Unit: Auth Service",
       "status": "PASS",
       "details": "4 tests passed (Password hash, JWT, RBAC)",
-      "durationMs": 1950
+      "durationMs": 1984
     },
     {
       "name": "Unit: Order Service",
       "status": "PASS",
       "details": "10 tests passed (Server authority, validation, ownership)",
-      "durationMs": 924
+      "durationMs": 978
     },
     {
       "name": "Unit: Restaurant",
       "status": "PASS",
       "details": "5 tests passed (CRUD, search, pagination, coupons)",
-      "durationMs": 1099
+      "durationMs": 1165
     },
     {
       "name": "Unit: Delivery",
       "status": "PASS",
       "details": "4 tests passed (Assignment, ownership, lifecycle)",
-      "durationMs": 1095
+      "durationMs": 1125
     },
     {
       "name": "Unit: Payment",
       "status": "PASS",
       "details": "8 tests passed (COD, VietQR, RBAC, Guest 401)",
-      "durationMs": 1813
+      "durationMs": 1848
     },
     {
       "name": "Security Matrix",
       "status": "PASS",
       "details": "18/18 verified (HTTP 403, Data isolation, Server authority)",
-      "durationMs": 1735
+      "durationMs": 1737
     },
     {
       "name": "Payment Gateways",
       "status": "PASS",
       "details": "13/13 verified (Stripe, VNPay SHA512, MoMo, COD, Guest 401)",
-      "durationMs": 676
+      "durationMs": 792
     },
     {
       "name": "VN Localization",
       "status": "PASS",
       "details": "11/11 verified (17 restaurants, VND currency, categories)",
-      "durationMs": 457
+      "durationMs": 437
     },
     {
       "name": "Phase 6 Engagement",
       "status": "PASS",
       "details": "23/23 verified (Vouchers, reviews, order updates)",
-      "durationMs": 411
+      "durationMs": 384
     },
     {
       "name": "E2E Master Flow",
       "status": "PASS",
       "details": "30/30 verified (Customer -> Restaurant -> Order -> Payment -> Shipper -> Socket.IO)",
-      "durationMs": 3341
+      "durationMs": 3668
     },
     {
       "name": "Frontend Build",
@@ -92,7 +92,7 @@
       "name": "Docker Runtime",
       "status": "BLOCKED",
       "details": "Compose configuration valid; Docker Engine daemon is offline",
-      "durationMs": 421
+      "durationMs": 463
     }
   ]
 }

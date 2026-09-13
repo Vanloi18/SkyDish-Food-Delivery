@@ -55,7 +55,8 @@ async function processCodPayment({
   // Synchronize with Order Service if items and restaurantId are provided
   if (items && items.length > 0) {
     try {
-      await axios.post("http://127.0.0.1:5005/api/orders", {
+      const orderServiceUrl = process.env.ORDER_SERVICE_URL || "http://127.0.0.1:5005";
+      await axios.post(`${orderServiceUrl}/api/orders`, {
         customerId: userId,
         restaurantId: restaurantId || "restaurant_1",
         items,

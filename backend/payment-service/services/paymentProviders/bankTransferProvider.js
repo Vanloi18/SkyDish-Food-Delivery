@@ -7,11 +7,11 @@ const axios = require("axios");
 function getBankTransferConfig() {
   return {
     enabled: process.env.BANK_TRANSFER_ENABLED !== "false",
-    bankId: process.env.BANK_ID || "970422",
-    bankCode: process.env.BANK_CODE || "MB",
-    bankName: process.env.BANK_NAME || "MB Bank",
-    accountNumber: process.env.BANK_ACCOUNT_NUMBER || "0932366523",
-    accountHolder: process.env.BANK_ACCOUNT_NAME || "LE VAN LOI",
+    bankId: process.env.BANK_ID || "970415",
+    bankCode: process.env.BANK_CODE || "ICB",
+    bankName: process.env.BANK_NAME || "VietinBank",
+    accountNumber: process.env.BANK_ACCOUNT_NUMBER || "1234567890",
+    accountHolder: process.env.BANK_ACCOUNT_NAME || "SKYDISH FOOD DELIVERY",
     template: process.env.VIETQR_TEMPLATE || "compact2",
   };
 }
@@ -20,12 +20,12 @@ function getBankTransferConfig() {
  * Generate Real VietQR Quick Link URL according to official VietQR standard
  */
 function generateVietQRUrl({ bankId, accountNumber, template, amount, paymentRef, accountHolder }) {
-  const cleanBankId = bankId || "970422";
-  const cleanAccountNo = accountNumber || "0932366523";
-  const cleanTemplate = template || "compact2";
+  const cleanBankId = bankId || process.env.BANK_ID || "970415";
+  const cleanAccountNo = accountNumber || process.env.BANK_ACCOUNT_NUMBER || "1234567890";
+  const cleanTemplate = template || process.env.VIETQR_TEMPLATE || "compact2";
   const numAmount = Math.max(0, Math.round(Number(amount) || 0));
   const encodedRef = encodeURIComponent(paymentRef || "");
-  const encodedName = encodeURIComponent(accountHolder || "LE VAN LOI");
+  const encodedName = encodeURIComponent(accountHolder || process.env.BANK_ACCOUNT_NAME || "SKYDISH FOOD DELIVERY");
 
   return `https://img.vietqr.io/image/${cleanBankId}-${cleanAccountNo}-${cleanTemplate}.png?amount=${numAmount}&addInfo=${encodedRef}&accountName=${encodedName}`;
 }
@@ -112,7 +112,8 @@ async function createBankTransferPayment({
   // Synchronize order with Order Service if items are provided
   if (items && items.length > 0) {
     try {
-      await axios.post("http://127.0.0.1:5005/api/orders", {
+      const orderServiceUrl = process.env.ORDER_SERVICE_URL || "http://127.0.0.1:5005";
+      await axios.post(`${orderServiceUrl}/api/orders`, {
         customerId: userId,
         restaurantId: restaurantId || "restaurant_1",
         items,
@@ -257,7 +258,8 @@ async function verifyBankTransactionWebhook({
 
   // Synchronize Order Service
   try {
-    await axios.patch(`http://127.0.0.1:5005/api/orders/${payment.orderId}`, {
+    const orderServiceUrl = process.env.ORDER_SERVICE_URL || "http://127.0.0.1:5005";
+    await axios.patch(`${orderServiceUrl}/api/orders/${payment.orderId}`, {
       status: "Confirmed",
       paymentStatus: "Paid",
     }, { timeout: 3000 });

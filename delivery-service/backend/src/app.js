@@ -7,6 +7,13 @@ import authRoutes from "./routes/authRoutes.js";
 import deliveryRoutes from "./routes/deliveryRoutes.js";
 
 dotenv.config();
+
+if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'supersecretjwtkeyforfooddeliverymicroservices2025')) {
+  console.error('FATAL: Insecure or missing JWT_SECRET in production mode. Service refusing to start.');
+  process.exit(1);
+}
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkeyforfooddeliverymicroservices2025';
+
 connectDB();
 
 const app = express();  // Define app before using it

@@ -1,4 +1,7 @@
-require('dotenv').config();
+if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'supersecretjwtkeyforfooddeliverymicroservices2025')) {
+  console.error('FATAL: Insecure or missing JWT_SECRET in production mode. Service refusing to start.');
+  process.exit(1);
+}
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkeyforfooddeliverymicroservices2025';
 process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const express = require('express');

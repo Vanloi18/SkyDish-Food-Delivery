@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 
 async function migrate() {
-  await mongoose.connect('mongodb://127.0.0.1:27000/food_delivery_db');
+  const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27000/food_delivery_db';
+  await mongoose.connect(mongoUri);
   console.log('Connected to MongoDB');
 
   const foodItems = await mongoose.connection.db.collection('fooditems').find({}).toArray();
