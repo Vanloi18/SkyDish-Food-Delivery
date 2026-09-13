@@ -5,6 +5,8 @@ import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
+router.get("/health", (req, res) => res.status(200).json({ status: "ok", service: "delivery-service", timestamp: new Date().toISOString() }));
+
 router.post("/create", authMiddleware, createDelivery);
 router.get("/", authMiddleware, getDriverDeliveries);
 router.get("/:id", authMiddleware, getDelivery);

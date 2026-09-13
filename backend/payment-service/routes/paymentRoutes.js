@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+
+router.get("/health", (req, res) => res.status(200).json({ status: "ok", service: "payment-service", timestamp: new Date().toISOString() }));
 const Payment = require("../models/PaymentModel");
 const { processStripePayment } = require("../services/paymentProviders/stripeProvider");
 const { createVNPayUrl, verifyVNPayReturn } = require("../services/paymentProviders/vnpayProvider");

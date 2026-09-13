@@ -1,6 +1,8 @@
 import express from 'express';
 const router = express.Router();
 
+router.get("/health", (req, res) => res.status(200).json({ status: "ok", service: "restaurant-service", timestamp: new Date().toISOString() }));
+
 import jwt from 'jsonwebtoken';
 import Restaurant from '../models/Restaurant.js';
 import authMiddleware from '../middleware/authMiddleware.js';

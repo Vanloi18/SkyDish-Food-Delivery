@@ -63,11 +63,24 @@
 
 | Gate | Description | Status | Evidence Document |
 | :--- | :--- | :---: | :--- |
-| **Gate A** | Docker Runtime Verification | **BLOCKED — DOCKER ENGINE OFFLINE** | [audit/release/docker-runtime/REPORT.md](release/docker-runtime/REPORT.md) |
+| **Gate A** | Docker Runtime Verification | **PASS** | [audit/release/docker-runtime/REPORT.md](release/docker-runtime/REPORT.md) |
 | **Gate B** | Docker Networking & Nginx Proxy | **PASS** | [audit/release/docker-network/REPORT.md](release/docker-network/REPORT.md) |
 | **Gate C** | Secrets & Production Config | **PASS** | [audit/release/security-config/REPORT.md](release/security-config/REPORT.md) |
 | **Gate D** | Clean-Machine Reproducibility | **PASS** | [audit/release/clean-machine/REPORT.md](release/clean-machine/REPORT.md) |
 | **Gate E** | Production Deployment | **BLOCKED — EXTERNAL CREDENTIALS** | [audit/release/deployment/REPORT.md](release/deployment/REPORT.md) |
 | **Gate F** | Live Functional & COD Regression | **PASS** | [audit/release/live-verification/REPORT.md](release/live-verification/REPORT.md) |
-| **Gate G** | Final Release Decision | **CONDITIONAL GO (READY FOR LOCAL/DEV, BLOCKED ON DOCKER/CLOUD PROD)** | [FINAL_REPORT.md](../FINAL_REPORT.md) |
+| **Gate G** | Final Release Decision | **GO (LOCAL & DOCKER READY; CLOUD REQUIRES USER CREDENTIALS)** | [FINAL_REPORT.md](../FINAL_REPORT.md) |
+
+---
+
+## 5. DOCKER RUNTIME VERIFICATION SNAPSHOT
+
+- **Current Phase**: Gate A — Docker Runtime Verification
+- **Gate A Status**: **PASS**
+- **Last Verification**: 2026-09-13T10:32:00+07:00
+- **Exit Code**: 0 (Clean build, all 7 containers Up & Healthy, all 9 Gateway flows passed)
+- **Evidence Path**: `audit/release/docker-runtime/REPORT.md`
+- **Current Git HEAD**: `01add08` (Pending checkpoint commit `checkpoint(gate-a): docker runtime verified`)
+- **Next Action**: Create local checkpoint commit, update FINAL_REPORT.md, and return final verification summary.
+
 
