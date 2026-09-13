@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { Button, LoadingSkeleton, EmptyState } from '../../components/common';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency } from '../../utils/currency';
 import { FaPlus, FaReceipt, FaEye, FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { API_URLS } from '../../config/api';
 
