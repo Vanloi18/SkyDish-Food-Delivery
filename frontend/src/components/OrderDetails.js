@@ -1,3 +1,4 @@
+import { API_URLS } from '../config/api';
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -36,7 +37,7 @@ function OrderDetails() {
 
   const checkExistingReview = useCallback(async () => {
     try {
-      const res = await axios.get(`http://localhost:5002/api/reviews/order/${id}`);
+      const res = await axios.get(`${API_URLS.RESTAURANT}/api/reviews/order/${id}`);
       if (res.data.reviewed) {
         setExistingReview(res.data.review);
       }
@@ -53,7 +54,7 @@ function OrderDetails() {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const res = await axios.get(`http://localhost:5005/api/orders/${id}`, { headers });
+        const res = await axios.get(`${API_URLS.ORDER}/api/orders/${id}`, { headers });
         setOrder(res.data);
       } catch (err) {
         console.error("Error fetching order details:", err);
@@ -81,7 +82,7 @@ function OrderDetails() {
       // Find restaurantId by querying restaurant name or using order.restaurantId
       let rId = order.restaurantId;
       try {
-        const rList = await axios.get("http://localhost:5002/api/restaurant");
+        const rList = await axios.get(`${API_URLS.RESTAURANT}/api/restaurant`);
         const found = rList.data?.find((r) => r.name === order.restaurantId || r._id === order.restaurantId);
         if (found) rId = found._id;
         else if (rList.data?.[0]?._id) rId = rList.data[0]._id;
@@ -90,7 +91,7 @@ function OrderDetails() {
       const custName = localStorage.getItem("customerName") || order.customerId || "Khách hàng";
       const custId = localStorage.getItem("customerId") || localStorage.getItem("customerEmail") || "customer_1";
 
-      const res = await axios.post("http://localhost:5002/api/reviews", {
+      const res = await axios.post(`${API_URLS.RESTAURANT}/api/reviews`, {
         orderId: id,
         customerId: custId,
         customerName: custName,

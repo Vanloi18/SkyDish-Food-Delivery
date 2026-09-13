@@ -1,3 +1,4 @@
+import { API_URLS, getDeliverySocketUrl } from '../../config/api';
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -75,7 +76,7 @@ export default function DriverDashboard() {
   const fetchDeliveries = useCallback(async () => {
     try {
       if (!token) return;
-      const res = await axios.get("http://localhost:5003/api/delivery", {
+      const res = await axios.get(`${API_URLS.DELIVERY}/api/delivery`, {
         headers: { Authorization: token },
       });
       const list = res.data?.deliveries || (Array.isArray(res.data) ? res.data : []);
@@ -90,7 +91,7 @@ export default function DriverDashboard() {
     try {
       const driverToken = localStorage.getItem("driverToken") || localStorage.getItem("token");
       const headers = driverToken ? { Authorization: `Bearer ${driverToken}` } : {};
-      const res = await axios.get("http://localhost:5005/api/orders", { headers });
+      const res = await axios.get(`${API_URLS.ORDER}/api/orders`, { headers });
       const allOrders = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
       // Available orders are those not canceled and not yet delivered
       const available = allOrders.filter(o => o.status !== "Delivered" && o.status !== "Canceled");
@@ -104,7 +105,7 @@ export default function DriverDashboard() {
   const fetchDriverProfile = useCallback(async () => {
     try {
       if (!token) return;
-      const res = await axios.get("http://localhost:5003/api/auth/profile", {
+      const res = await axios.get(`${API_URLS.DELIVERY}/api/delivery/auth/profile`, {
         headers: { Authorization: token },
       });
       if (res.data?.success && res.data?.driver) {
@@ -142,7 +143,7 @@ export default function DriverDashboard() {
 
     // Socket.IO Realtime Connection
     try {
-      socket = io("http://localhost:5003", { autoConnect: false });
+      socket = io(getDeliverySocketUrl(), { path: "/delivery-socket.io", autoConnect: false });
       socket.connect();
 
       const driverId = localStorage.getItem("driverId");
@@ -196,7 +197,7 @@ export default function DriverDashboard() {
     setAcceptingId(order._id || order.orderId);
     try {
       const res = await axios.post(
-        "http://localhost:5003/api/delivery/create",
+        `${API_URLS.DELIVERY}/api/delivery/create`,
         {
           orderId: order._id || order.orderId || `ORD_${Date.now()}`,
           customerId: order.customerId || "Khách Hàng SkyDish",
@@ -227,7 +228,7 @@ export default function DriverDashboard() {
     setStatusUpdatingId(deliveryId);
     try {
       const res = await axios.put(
-        `http://localhost:5003/api/delivery/${deliveryId}/status`,
+        `${API_URLS.DELIVERY}/api/delivery/${deliveryId}/status`,
         { status: nextStatus },
         { headers: { Authorization: token } }
       );

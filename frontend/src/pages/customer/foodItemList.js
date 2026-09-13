@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -45,7 +46,7 @@ function FoodItemList() {
 
         // 1. Fetch Restaurant Foods
         const foodRes = await axios.get(
-          `http://localhost:5002/api/food-items/restaurant/${restaurantId}`,
+          `${API_URLS.RESTAURANT}/api/food-items/restaurant/${restaurantId}`,
           { headers }
         );
         const foodList = Array.isArray(foodRes.data) ? foodRes.data : [];
@@ -54,7 +55,7 @@ function FoodItemList() {
         // 2. Fetch Restaurant Info
         try {
           const restRes = await axios.get(
-            `http://localhost:5002/api/restaurant/${restaurantId}`
+            `${API_URLS.RESTAURANT}/api/restaurant/${restaurantId}`
           );
           setRestaurant(restRes.data);
         } catch {
@@ -314,7 +315,7 @@ function FoodItemList() {
                       <img
                         src={
                           food.image
-                            ? (food.image.startsWith("http") ? food.image : `http://localhost:5002${food.image}`)
+                            ? (food.image.startsWith("http") ? food.image : `${API_URLS.RESTAURANT}${food.image}`)
                             : "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80"
                         }
                         alt={food.name}

@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -27,7 +28,7 @@ export default function RestaurantCard({
   // Format image URL
   const rawImage = restaurant.profilePicture || restaurant.imageURL || restaurant.image;
   const imageSrc = rawImage
-    ? (rawImage.startsWith("http") ? rawImage : `http://localhost:5002${rawImage}`)
+    ? (rawImage.startsWith("http") ? rawImage : `${API_URLS.RESTAURANT}${rawImage}`)
     : "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop&q=80";
 
   const handleFavoriteClick = (e) => {

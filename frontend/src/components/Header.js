@@ -1,3 +1,4 @@
+import { API_URLS } from '../config/api';
 import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -40,7 +41,7 @@ function Header() {
   const fetchNotifications = useCallback(async () => {
     try {
       const custId = localStorage.getItem("customerId") || localStorage.getItem("customerEmail") || "customer";
-      const res = await fetch(`http://localhost:5002/api/notifications?userId=${custId}&role=customer`);
+      const res = await fetch(`${API_URLS.RESTAURANT}/api/notifications?userId=${custId}&role=customer`);
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -54,7 +55,7 @@ function Header() {
   const handleMarkAllRead = async () => {
     try {
       const custId = localStorage.getItem("customerId") || localStorage.getItem("customerEmail") || "customer";
-      await fetch("http://localhost:5002/api/notifications/read-all", {
+      await fetch(`${API_URLS.RESTAURANT}/api/notifications/read-all`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: custId, role: "customer" }),
@@ -68,7 +69,7 @@ function Header() {
 
   const handleMarkSingleRead = async (notifId) => {
     try {
-      await fetch(`http://localhost:5002/api/notifications/${notifId}/read`, { method: "PUT" });
+      await fetch(`${API_URLS.RESTAURANT}/api/notifications/${notifId}/read`, { method: "PUT" });
       setNotifications((prev) => prev.map((n) => (n._id === notifId ? { ...n, isRead: true } : n)));
       setUnreadNotifCount((prev) => Math.max(0, prev - 1));
     } catch (e) {

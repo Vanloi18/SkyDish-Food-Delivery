@@ -4,7 +4,7 @@ import { geocodeAddress } from "../utils/geocode.js";
 export const createDelivery = async (req, res) => {
   try {
     const { orderId, customerId, pickupAddress, deliveryAddress } = req.body;
-    const driverId = req.driver;
+    const driverId = req.body.driverId || (req.role === 'driver' ? req.driver : null);
 
     if (!orderId || !customerId || !pickupAddress || !deliveryAddress) {
       return res.status(400).json({ success: false, message: "All fields are required" });
@@ -128,6 +128,11 @@ export const updateDeliveryStatus = async (req, res) => {
     // Enforce driver ownership
     if (delivery.driver && req.driver && delivery.driver.toString() !== req.driver && req.role !== "superadmin") {
       return res.status(403).json({ success: false, message: "Access denied: Not your assigned delivery" });
+    }
+
+    // Auto-assign if delivery had no assigned driver
+    if (!delivery.driver && req.driver) {
+      delivery.driver = req.driver;
     }
 
     // Update status

@@ -1,3 +1,4 @@
+import { API_URLS } from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
@@ -26,7 +27,7 @@ function DeleteOrder() {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const res = await axios.get(`http://localhost:5005/api/orders/${id}`, { headers });
+        const res = await axios.get(`${API_URLS.ORDER}/api/orders/${id}`, { headers });
         setOrder(res.data);
       } catch (err) {
         console.error("Error fetching order for deletion:", err);
@@ -45,7 +46,7 @@ function DeleteOrder() {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      await axios.delete(`http://localhost:5005/api/orders/${id}`, { headers });
+      await axios.delete(`${API_URLS.ORDER}/api/orders/${id}`, { headers });
       navigate("/orders");
     } catch (err) {
       console.error("Error canceling order:", err);

@@ -1,3 +1,4 @@
+import { API_URLS } from '../config/api';
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaSearch, FaArrowRight } from "react-icons/fa";
@@ -82,7 +83,7 @@ const Home = () => {
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
-        const res = await fetch("http://localhost:5002/api/restaurant");
+        const res = await fetch(`${API_URLS.RESTAURANT}/api/restaurant`);
         const data = await res.json();
         if (res.ok && Array.isArray(data)) {
           setRestaurants(data.slice(0, 8));

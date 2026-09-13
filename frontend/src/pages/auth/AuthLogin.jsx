@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -27,7 +28,7 @@ export default function AuthLogin() {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:4000/api/auth/login", credentials);
+      const res = await axios.post(`${API_URLS.AUTH}/api/auth/login`, credentials);
       if (res.data?.token) {
         localStorage.setItem("token", res.data.token);
         if (res.data.customer?.firstName) {

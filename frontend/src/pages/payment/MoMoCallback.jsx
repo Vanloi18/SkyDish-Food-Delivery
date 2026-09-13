@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useEffect, useState, useContext } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -36,7 +37,7 @@ const MoMoCallback = () => {
         }
 
         const response = await axios.get(
-          `http://localhost:5004/api/payment/momo/callback?${queryStr}`
+          `${API_URLS.PAYMENT}/api/payment/momo/callback?${queryStr}`
         );
 
         setResult(response.data);

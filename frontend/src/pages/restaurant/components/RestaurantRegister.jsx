@@ -1,3 +1,4 @@
+import { API_URLS } from '../../../config/api';
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -67,7 +68,7 @@ function RestaurantRegister() {
         formData.append("profilePicture", form.profilePicture);
       }
 
-      const res = await fetch("http://localhost:5002/api/restaurant/register", {
+      const res = await fetch(`${API_URLS.RESTAURANT}/api/restaurant/register`, {
         method: "POST",
         body: formData,
       });

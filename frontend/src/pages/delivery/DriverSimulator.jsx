@@ -1,3 +1,4 @@
+import { getDeliverySocketUrl } from '../../config/api';
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -19,7 +20,7 @@ export default function DriverSimulator() {
 
   useEffect(() => {
     try {
-      socket = io("http://localhost:5003");
+      socket = io(getDeliverySocketUrl(), { path: "/delivery-socket.io" });
     } catch (e) {
       console.warn("Socket init error:", e);
     }

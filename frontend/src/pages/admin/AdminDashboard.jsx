@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
@@ -99,22 +100,22 @@ const AdminDashboard = () => {
 
     try {
       // Fetch Restaurants
-      const restPromise = fetch("http://localhost:5002/api/superadmin/restaurants", {
+      const restPromise = fetch(`${API_URLS.RESTAURANT}/api/superadmin/restaurants`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((r) => (r.ok ? r.json() : []));
 
       // Fetch All Food Items
-      const foodPromise = fetch("http://localhost:5002/api/food-items/all").then((r) =>
+      const foodPromise = fetch(`${API_URLS.RESTAURANT}/api/food-items/all`).then((r) =>
         r.ok ? r.json() : []
       );
 
       // Fetch Orders
-      const orderPromise = fetch("http://localhost:5005/api/orders", {
+      const orderPromise = fetch(`${API_URLS.ORDER}/api/orders`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((r) => (r.ok ? r.json() : []));
 
       // Fetch Deliveries
-      const deliveryPromise = fetch("http://localhost:5003/api/delivery", {
+      const deliveryPromise = fetch(`${API_URLS.DELIVERY}/api/delivery`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((r) => (r.ok ? r.json() : []));
 
@@ -243,7 +244,7 @@ const AdminDashboard = () => {
     setSaveLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5002/api/superadmin/restaurant/${editingRestaurant}`, {
+      const res = await fetch(`${API_URLS.RESTAURANT}/api/superadmin/restaurant/${editingRestaurant}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -273,7 +274,7 @@ const AdminDashboard = () => {
     }
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5002/api/superadmin/restaurant/${id}`, {
+      const res = await fetch(`${API_URLS.RESTAURANT}/api/superadmin/restaurant/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

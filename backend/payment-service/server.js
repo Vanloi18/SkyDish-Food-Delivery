@@ -21,8 +21,8 @@ if (require.main === module) {
 
 const app = express();
 
-// Enable CORS for your frontend
-app.use(cors({ origin: "http://localhost:3000" }));
+// Enable CORS for frontend and external callers
+app.use(cors());
 
 // IMPORTANT: Mount the webhook route with raw body parsing BEFORE JSON parser middleware.
 app.use("/api/payment/webhook", express.raw({ type: "application/json" }), webhookRoutes);

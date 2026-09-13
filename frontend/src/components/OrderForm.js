@@ -1,3 +1,4 @@
+import { API_URLS } from '../config/api';
 import React, { useState, useContext } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -101,7 +102,7 @@ function OrderForm({ addOrder }) {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const res = await axios.post("http://localhost:5005/api/orders", payload, { headers });
+      const res = await axios.post(`${API_URLS.ORDER}/api/orders`, payload, { headers });
 
       if (addOrder) addOrder(res.data);
       clearCart();

@@ -1,3 +1,4 @@
+import { API_URLS, getOrderSocketUrl } from '../../../config/api';
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -103,7 +104,7 @@ export default function RestaurantDashboard() {
         navigate("/restaurant/login");
         return;
       }
-      const res = await axios.get("http://localhost:5002/api/restaurant/profile", {
+      const res = await axios.get(`${API_URLS.RESTAURANT}/api/restaurant/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data) {
@@ -123,7 +124,7 @@ export default function RestaurantDashboard() {
   const fetchFoodItems = useCallback(async () => {
     try {
       if (!token) return;
-      const res = await axios.get("http://localhost:5002/api/food-items/", {
+      const res = await axios.get(`${API_URLS.RESTAURANT}/api/food-items/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (Array.isArray(res.data)) {
@@ -139,7 +140,7 @@ export default function RestaurantDashboard() {
     try {
       const restToken = localStorage.getItem("restaurantToken") || localStorage.getItem("token");
       const headers = restToken ? { Authorization: `Bearer ${restToken}` } : {};
-      const res = await axios.get("http://localhost:5005/api/orders", { headers });
+      const res = await axios.get(`${API_URLS.ORDER}/api/orders`, { headers });
       const orderList = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
       setOrders(orderList);
     } catch (err) {
@@ -151,7 +152,7 @@ export default function RestaurantDashboard() {
   const fetchReviews = useCallback(async (rId) => {
     try {
       if (!rId) return;
-      const res = await axios.get(`http://localhost:5002/api/reviews/restaurant/${rId}`);
+      const res = await axios.get(`${API_URLS.RESTAURANT}/api/reviews/restaurant/${rId}`);
       if (res.data) {
         setReviewsData(res.data);
       }
@@ -164,8 +165,8 @@ export default function RestaurantDashboard() {
   const fetchCoupons = useCallback(async (rId) => {
     try {
       const url = rId
-        ? `http://localhost:5002/api/coupons/restaurant/${rId}`
-        : "http://localhost:5002/api/coupons";
+        ? `${API_URLS.RESTAURANT}/api/coupons/restaurant/${rId}`
+        : `${API_URLS.RESTAURANT}/api/coupons`;
       const res = await axios.get(url);
       if (Array.isArray(res.data)) {
         setCoupons(res.data);
@@ -179,8 +180,8 @@ export default function RestaurantDashboard() {
   const fetchNotifications = useCallback(async (rId) => {
     try {
       const url = rId
-        ? `http://localhost:5002/api/notifications?userId=${rId}&role=restaurant`
-        : "http://localhost:5002/api/notifications?role=restaurant";
+        ? `${API_URLS.RESTAURANT}/api/notifications?userId=${rId}&role=restaurant`
+        : `${API_URLS.RESTAURANT}/api/notifications?role=restaurant`;
       const res = await axios.get(url);
       if (res.data?.notifications) {
         setNotifications(res.data.notifications);
@@ -213,7 +214,7 @@ export default function RestaurantDashboard() {
 
     // Socket.IO for incoming orders
     try {
-      socket = io("http://localhost:5005", { autoConnect: false });
+      socket = io(getOrderSocketUrl(), { autoConnect: false });
       socket.connect();
 
       socket.on("updateOrder", (data) => {
@@ -249,7 +250,7 @@ export default function RestaurantDashboard() {
     try {
       const nextState = !availability;
       const res = await axios.put(
-        "http://localhost:5002/api/restaurant/availability",
+        `${API_URLS.RESTAURANT}/api/restaurant/availability`,
         { availability: nextState },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -266,7 +267,7 @@ export default function RestaurantDashboard() {
   const handleToggleFoodAvailability = async (foodId, currentStatus) => {
     try {
       const res = await axios.put(
-        `http://localhost:5002/api/food-items/availability/${foodId}`,
+        `${API_URLS.RESTAURANT}/api/food-items/availability/${foodId}`,
         { availability: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -291,7 +292,7 @@ export default function RestaurantDashboard() {
       if (isEditingFood) {
         // Edit Food Item
         await axios.put(
-          `http://localhost:5002/api/food-items/${foodForm.id}`,
+          `${API_URLS.RESTAURANT}/api/food-items/${foodForm.id}`,
           {
             name: foodForm.name,
             description: foodForm.description,
@@ -306,7 +307,7 @@ export default function RestaurantDashboard() {
       } else {
         // Create Food Item
         await axios.post(
-          "http://localhost:5002/api/food-items/create",
+          `${API_URLS.RESTAURANT}/api/food-items/create`,
           {
             name: foodForm.name,
             description: foodForm.description,
@@ -329,7 +330,7 @@ export default function RestaurantDashboard() {
   const handleConfirmDeleteFood = async () => {
     if (!foodToDelete) return;
     try {
-      await axios.delete(`http://localhost:5002/api/food-items/${foodToDelete._id}`, {
+      await axios.delete(`${API_URLS.RESTAURANT}/api/food-items/${foodToDelete._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       showAlert("success", "Đã xóa món ăn khỏi thực đơn.");
@@ -345,7 +346,7 @@ export default function RestaurantDashboard() {
   const handleUpdateOrderStatus = async (orderId, nextStatus) => {
     try {
       await axios.patch(
-        `http://localhost:5005/api/orders/${orderId}`,
+        `${API_URLS.ORDER}/api/orders/${orderId}`,
         { status: nextStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -367,7 +368,7 @@ export default function RestaurantDashboard() {
       return;
     }
     try {
-      await axios.post("http://localhost:5002/api/coupons/create", {
+      await axios.post(`${API_URLS.RESTAURANT}/api/coupons/create`, {
         ...couponForm,
         restaurantId: restaurant._id || "PLATFORM",
       });
@@ -383,7 +384,7 @@ export default function RestaurantDashboard() {
   // Toggle Coupon Status
   const handleToggleCoupon = async (couponId) => {
     try {
-      const res = await axios.put(`http://localhost:5002/api/coupons/${couponId}/deactivate`);
+      const res = await axios.put(`${API_URLS.RESTAURANT}/api/coupons/${couponId}/deactivate`);
       showAlert("success", res.data.message);
       await fetchCoupons(restaurant._id);
     } catch (err) {
@@ -396,7 +397,7 @@ export default function RestaurantDashboard() {
     if (!replyText.trim()) return;
     try {
       await axios.put(
-        `http://localhost:5002/api/reviews/${reviewId}/reply`,
+        `${API_URLS.RESTAURANT}/api/reviews/${reviewId}/reply`,
         { replyComment: replyText },
         { headers: { Authorization: `Bearer ${token}` } }
       );

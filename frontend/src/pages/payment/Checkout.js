@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useState, useEffect, useContext, useCallback, useMemo } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { 
@@ -76,7 +77,7 @@ const CheckoutForm = () => {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponFeedback, setCouponFeedback] = useState({ type: "", message: "" });
 
-  const API_BASE_URL = "http://localhost:5004";
+  const API_BASE_URL = API_URLS.PAYMENT;
 
   const [currentOrderId] = useState(() => `ORDER${Math.floor(10000 + Math.random() * 90000)}`);
   const [placedOrder, setPlacedOrder] = useState(null);
@@ -126,7 +127,7 @@ const CheckoutForm = () => {
     setCouponLoading(true);
     setCouponFeedback({ type: "", message: "" });
     try {
-      const res = await axios.post("http://localhost:5002/api/coupons/validate", {
+      const res = await axios.post(`${API_URLS.RESTAURANT}/api/coupons/validate`, {
         code: couponCode.trim(),
         orderAmount: subtotal,
         restaurantId: cartItems[0]?.restaurantId || "",
@@ -161,7 +162,7 @@ const CheckoutForm = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        "http://localhost:5005/api/orders",
+        `${API_URLS.ORDER}/api/orders`,
         {
           customerId: `${orderData.firstName} ${orderData.lastName}`,
           restaurantId: orderData.restaurantId,

@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -43,7 +44,7 @@ export default function AuthRegister() {
 
     try {
       const res = await axios.post(
-        "http://localhost:4000/api/auth/register/customer",
+        `${API_URLS.AUTH}/api/auth/register/customer`,
         form
       );
       if (res.data?.token) {

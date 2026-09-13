@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { 
@@ -52,8 +53,8 @@ function CustomerHome() {
     setError("");
     try {
       const [restRes, foodRes] = await Promise.all([
-        fetch("http://localhost:5002/api/restaurant").then((r) => r.ok ? r.json() : []),
-        fetch("http://localhost:5002/api/food-items/all").then((r) => r.ok ? r.json() : []),
+        fetch(`${API_URLS.RESTAURANT}/api/restaurant`).then((r) => r.ok ? r.json() : []),
+        fetch(`${API_URLS.RESTAURANT}/api/food-items/all`).then((r) => r.ok ? r.json() : []),
       ]);
 
       if (Array.isArray(restRes)) {

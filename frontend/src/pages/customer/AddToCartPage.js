@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -148,7 +149,7 @@ function AddToCartPage() {
                         <img
                           src={
                             item.image
-                              ? (item.image.startsWith("http") ? item.image : `http://localhost:5002${item.image}`)
+                              ? (item.image.startsWith("http") ? item.image : `${API_URLS.RESTAURANT}${item.image}`)
                               : "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&auto=format&fit=crop&q=80"
                           }
                           alt={item.name}

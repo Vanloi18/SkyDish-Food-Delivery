@@ -1,3 +1,4 @@
+import { API_URLS } from '../config/api';
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
@@ -42,7 +43,7 @@ function UpdateOrder({ addOrder }) {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const res = await axios.get(`http://localhost:5005/api/orders/${id}`, { headers });
+        const res = await axios.get(`${API_URLS.ORDER}/api/orders/${id}`, { headers });
         if (res.data) {
           setOrder({
             customerId: res.data.customerId || "",
@@ -122,7 +123,7 @@ function UpdateOrder({ addOrder }) {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const res = await axios.patch(`http://localhost:5005/api/orders/${id}`, payload, { headers });
+      const res = await axios.patch(`${API_URLS.ORDER}/api/orders/${id}`, payload, { headers });
       if (addOrder) addOrder(res.data);
       navigate("/orders");
     } catch (err) {

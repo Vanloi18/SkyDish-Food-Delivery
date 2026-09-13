@@ -1,3 +1,4 @@
+import { API_URLS } from '../../../config/api';
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -56,7 +57,7 @@ function SuperAdminDashboard() {
         return;
       }
 
-      const res = await fetch("http://localhost:5002/api/superadmin/restaurants", {
+      const res = await fetch(`${API_URLS.RESTAURANT}/api/superadmin/restaurants`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -97,7 +98,7 @@ function SuperAdminDashboard() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5002/api/superadmin/restaurant/${editingRestaurant}`, {
+      const res = await fetch(`${API_URLS.RESTAURANT}/api/superadmin/restaurant/${editingRestaurant}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -129,7 +130,7 @@ function SuperAdminDashboard() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5002/api/superadmin/restaurant/${id}`, {
+      const res = await fetch(`${API_URLS.RESTAURANT}/api/superadmin/restaurant/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

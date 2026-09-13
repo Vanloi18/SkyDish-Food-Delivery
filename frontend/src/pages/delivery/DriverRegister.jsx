@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -52,7 +53,7 @@ export default function DriverRegister() {
     setError("");
 
     try {
-      const res = await axios.post("http://localhost:5003/api/auth/register", form);
+      const res = await axios.post(`${API_URLS.DELIVERY}/api/delivery/auth/register`, form);
       if (res.data?.success) {
         setSuccessMsg("Đăng ký đối tác Shipper thành công! Đang chuyển hướng đến trang đăng nhập...");
         setTimeout(() => {

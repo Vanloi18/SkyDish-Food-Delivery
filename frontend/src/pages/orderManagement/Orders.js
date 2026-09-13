@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
@@ -17,7 +18,7 @@ function Orders() {
     const token = localStorage.getItem("token");
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-    axios.get("http://localhost:5005/api/orders", { headers })
+    axios.get(`${API_URLS.ORDER}/api/orders`, { headers })
       .then((response) => setOrders(Array.isArray(response.data) ? response.data : (Array.isArray(response.data?.data) ? response.data.data : [])))
       .catch((error) => console.error("Error fetching orders:", error))
       .finally(() => setLoading(false));
@@ -28,7 +29,7 @@ function Orders() {
     const token = localStorage.getItem("token");
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-    axios.delete(`http://localhost:5005/api/orders/${id}`, { headers })
+    axios.delete(`${API_URLS.ORDER}/api/orders/${id}`, { headers })
       .then(() => setOrders(orders.filter(order => order._id !== id)))
       .catch((error) => console.error("Error deleting order:", error));
   };

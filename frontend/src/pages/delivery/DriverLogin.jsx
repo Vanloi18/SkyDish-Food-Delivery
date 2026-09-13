@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -31,7 +32,7 @@ export default function DriverLogin() {
     setError("");
 
     try {
-      const res = await axios.post("http://localhost:5003/api/auth/login", form);
+      const res = await axios.post(`${API_URLS.DELIVERY}/api/delivery/auth/login`, form);
       if (res.data?.success && res.data?.token) {
         localStorage.setItem("driverToken", res.data.token);
         if (res.data.data?.id) {

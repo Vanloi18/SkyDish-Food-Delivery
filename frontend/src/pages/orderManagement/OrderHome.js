@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -45,7 +46,7 @@ function OrderHome() {
 
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get("http://localhost:5005/api/orders", { headers });
+      const response = await axios.get(`${API_URLS.ORDER}/api/orders`, { headers });
       const orderList = Array.isArray(response.data) ? response.data : (Array.isArray(response.data?.data) ? response.data.data : []);
       setOrders(orderList);
     } catch (err) {

@@ -1,3 +1,4 @@
+import { API_URLS } from '../../../config/api';
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -30,7 +31,7 @@ function RestaurantLogin() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:5002/api/restaurant/login", {
+      const res = await fetch(`${API_URLS.RESTAURANT}/api/restaurant/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

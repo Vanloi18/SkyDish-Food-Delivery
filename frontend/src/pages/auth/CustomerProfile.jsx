@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -37,7 +38,7 @@ export default function CustomerProfile() {
           return;
         }
 
-        const res = await axios.get("http://localhost:4000/api/auth/customer/profile", {
+        const res = await axios.get(`${API_URLS.AUTH}/api/auth/customer/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 

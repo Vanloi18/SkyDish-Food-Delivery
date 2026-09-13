@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useEffect, useState, useContext } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -36,7 +37,7 @@ const VNPayCallback = () => {
         }
 
         const response = await axios.get(
-          `http://localhost:5004/api/payment/vnpay/callback?${queryStr}`
+          `${API_URLS.PAYMENT}/api/payment/vnpay/callback?${queryStr}`
         );
 
         setResult(response.data);

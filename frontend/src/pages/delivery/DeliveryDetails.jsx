@@ -1,3 +1,4 @@
+import { API_URLS } from '../../config/api';
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -28,7 +29,7 @@ export default function DeliveryDetails() {
     setError("");
     try {
       const token = localStorage.getItem("driverToken") || localStorage.getItem("token");
-      const res = await axios.get(`http://localhost:5003/api/delivery/${id}`, {
+      const res = await axios.get(`${API_URLS.DELIVERY}/api/delivery/${id}`, {
         headers: { Authorization: token },
       });
       setDelivery(res.data?.delivery || res.data);
@@ -49,7 +50,7 @@ export default function DeliveryDetails() {
     try {
       const token = localStorage.getItem("driverToken") || localStorage.getItem("token");
       await axios.put(
-        `http://localhost:5003/api/delivery/${id}/status`,
+        `${API_URLS.DELIVERY}/api/delivery/${id}/status`,
         { status: newStatus },
         { headers: { Authorization: token } }
       );
