@@ -106,3 +106,16 @@
 | **Phase 04** | Super Admin Portal Modernization | **PASS** | [audit/ui-overhaul/phase-04/REPORT.md](ui-overhaul/phase-04/REPORT.md) |
 | **Phase 05** | Cross-Portal Visual Consistency | **PASS** | [audit/ui-overhaul/phase-05/REPORT.md](ui-overhaul/phase-05/REPORT.md) |
 | **Phase 06** | Final UI/UX Verification & Regression | **PASS** | [audit/ui-overhaul/phase-06/REPORT.md](ui-overhaul/phase-06/REPORT.md) |
+
+---
+
+## 8. UI SMOOTHNESS & NAVIGATION VERIFICATION
+
+| Item | Status | Commit | Evidence |
+| :--- | :---: | :--- | :--- |
+| Header navigation (no underline, active dot indicator) | **PASS** | `5d53402` | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
+| Partner dropdown smart auth-aware routing | **PASS** | `5d53402` | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
+| Category carousel (auto-scroll, drag, keyboard) | **PASS** | `9aa75d4` | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
+| No internal full-page reloads (grep: 0 hits) | **PASS** | `5d53402` | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
+| Restaurant skeleton loading state | **PASS** | `9aa75d4` | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
+| Build: npm run build — Exit code 0 | **PASS** | `5d53402` | Build output in REPORT.md |
