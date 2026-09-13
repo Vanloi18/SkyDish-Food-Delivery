@@ -111,14 +111,15 @@
 
 ## 8. UI SMOOTHNESS & NAVIGATION VERIFICATION
 
-| Item | Status | Commit | Evidence |
-| :--- | :---: | :--- | :--- |
-| Header navigation (no underline, active dot indicator) | **PASS** | `5d53402` | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
-| Partner dropdown smart auth-aware routing | **PASS** | `5d53402` | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
-| Category carousel (auto-scroll, drag, keyboard) | **PASS** | `9aa75d4` | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
-| No internal full-page reloads (grep: 0 hits) | **PASS** | `5d53402` | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
-| Restaurant skeleton loading state | **PASS** | `9aa75d4` | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
-| Build: npm run build — Exit code 0 | **PASS** | `5d53402` | Build output in REPORT.md |
+| Item | Status | Evidence |
+| :--- | :---: | :--- |
+| Header navigation (no underline, active dot indicator) | **PASS** | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
+| Partner dropdown smart auth-aware routing (JWT role & expiration guard) | **PASS** | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
+| Category carousel (desktop controls, drag, touch, keyboard, 3s idle resume, reduced-motion) | **PASS** | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
+| Restaurant loading explicit state machine (loading, success, empty, error + retry) | **PASS** | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
+| Smooth UX & internal navigation (0 location.reload hits, React Router) | **PASS** | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
+| Production Build (npm run build — Exit code 0, 0 errors) | **PASS** | [audit/ui-smoothness/REPORT.md](ui-smoothness/REPORT.md) |
+| Automated Verification Suite (41 / 41 checks passed, 100%) | **PASS** | `node scripts/verify-ui-smoothness.mjs` |
 
 ---
 
