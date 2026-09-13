@@ -75,3 +75,4 @@ Desktop.ini
 # Temporary Scratch Files
 *.tmp
 crs_extracted.txt
+audit/chrome-dev/
