@@ -56,7 +56,7 @@ export default function DeliveryDetails() {
       );
       fetchDelivery();
     } catch (err) {
-      alert("Lỗi khi cập nhật trạng thái");
+      setError("Lỗi khi cập nhật trạng thái");
     } finally {
       setUpdating(false);
     }

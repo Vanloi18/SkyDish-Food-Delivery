@@ -81,16 +81,39 @@
 
 .nav-link-item {
   font-size: var(--sd-font-size-sm);
-  font-weight: 600;
+  font-weight: var(--sd-weight-nav);
   color: var(--sd-text-secondary);
-  transition: color var(--sd-transition-fast);
-  padding: 0.4rem 0.6rem;
+  text-decoration: none;
+  transition: color var(--sd-transition-fast), background-color var(--sd-transition-fast);
+  padding: 0.4rem 0.65rem;
   border-radius: var(--sd-radius-sm);
+  position: relative;
 }
 
-.nav-link-item:hover, .nav-link-item.active {
+.nav-link-item:hover {
   color: var(--sd-primary);
   background-color: var(--sd-primary-light);
+  text-decoration: none;
+}
+
+.nav-link-item.active {
+  color: var(--sd-primary);
+  font-weight: var(--sd-weight-nav-active);
+  background-color: var(--sd-primary-light);
+  text-decoration: none;
+}
+
+/* Subtle active dot indicator below nav item (replaces underline) */
+.nav-link-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 2.5px;
+  border-radius: 9999px;
+  background-color: var(--sd-primary);
 }
 
 .header-right {
@@ -116,12 +139,14 @@
   border: 1px solid var(--sd-border);
   border-radius: var(--sd-radius-full);
   cursor: pointer;
+  text-decoration: none;
   transition: all var(--sd-transition-fast);
 }
 
 .portals-trigger-btn:hover {
   color: var(--sd-text-primary);
   border-color: #cbd5e1;
+  background-color: #e8edf3;
 }
 
 /* Cart Button */
@@ -229,17 +254,19 @@
   font-weight: 500;
   color: var(--sd-text-secondary);
   border-radius: var(--sd-radius-md);
-  transition: all var(--sd-transition-fast);
+  transition: background-color var(--sd-transition-fast), color var(--sd-transition-fast);
   cursor: pointer;
   border: none;
   width: 100%;
   text-align: left;
   background: none;
+  text-decoration: none;
 }
 
 .header_dropdown-item:hover {
   background-color: var(--sd-bg-muted);
   color: var(--sd-text-primary);
+  text-decoration: none;
 }
 
 .header_dropdown-item.logout {
@@ -249,6 +276,7 @@
 .header_dropdown-item.logout:hover {
   background-color: var(--sd-danger-light);
   color: var(--sd-danger-hover);
+  text-decoration: none;
 }
 
 @media (max-width: 640px) {

@@ -14,7 +14,7 @@ let socket;
 export default function DriverSimulator() {
   const navigate = useNavigate();
   const [isMoving, setIsMoving] = useState(false);
-  const [location, setLocation] = useState({ lat: 6.9271, lng: 79.8612 });
+  const [location, setLocation] = useState({ lat: 21.0285, lng: 105.8542 });
   const [orderId, setOrderId] = useState("ORDER-9901");
   const [coordsLog, setCoordsLog] = useState([]);
 
