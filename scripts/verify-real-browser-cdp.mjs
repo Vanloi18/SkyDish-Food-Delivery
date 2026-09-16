@@ -13,6 +13,7 @@ console.log("==================================================================\
 const CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const USER_DATA_DIR = path.resolve('audit/chrome-dev');
 const PORT = 9222;
+const BASE_URL = process.env.TEST_URL || 'http://localhost:3300';
 const JWT_SECRET = 'supersecretjwtkeyforfooddeliverymicroservices2025';
 
 const SCREENSHOT_DIRS = [
@@ -173,7 +174,7 @@ async function main() {
       pageTarget = targets.find(t => t.type === 'page');
     }
     if (!pageTarget) {
-      pageTarget = await httpJson(`http://127.0.0.1:${PORT}/json/new?http://localhost:3000`, 'PUT');
+      pageTarget = await httpJson(`http://127.0.0.1:${PORT}/json/new?${encodeURIComponent(BASE_URL)}`, 'PUT');
     }
 
     const client = new CDPClient(pageTarget.webSocketDebuggerUrl);
@@ -240,7 +241,7 @@ async function main() {
     // -------------------------------------------------------------------------
     console.log("\n[2/7] Testing Header Navigation & Typography (Desktop 1440x900)...");
     await setViewport(1440, 900);
-    await client.send('Page.navigate', { url: 'http://localhost:3000/' });
+    await client.send('Page.navigate', { url: `${BASE_URL}/` });
     await sleep(1500);
 
     await takeScreenshot('01-landing-header.png');
@@ -297,7 +298,7 @@ async function main() {
     // Re-open and test Click Outside
     await evaluate(`document.querySelector('.portals-trigger-btn').click()`);
     await sleep(300);
-    await evaluate(`document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 10, clientY: 10 }))`);
+    await evaluate(`document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))`);
     await sleep(300);
     isDropdownClosed = await evaluate(`!document.querySelector('.profile-dropdown-card')`);
     assert(isDropdownClosed, "Clicking outside the portals dropdown menu closes it");
@@ -307,7 +308,8 @@ async function main() {
     await evaluate(`document.querySelector('.portals-trigger-btn').click()`);
     await sleep(300);
     await evaluate(`(() => {
-      const btn = document.querySelector('button.header_dropdown-item');
+      const btn = Array.from(document.querySelectorAll('.profile-dropdown-card .header_dropdown-item'))
+        .find(el => el.textContent.includes('Đối tác nhà hàng') || el.getAttribute('aria-label') === 'Cổng đối tác nhà hàng');
       if (btn) btn.click();
     })()`);
     await sleep(800);
@@ -317,7 +319,7 @@ async function main() {
 
     // Route Guard Case B: Invalid/Malformed Token -> /restaurant/login & Token Purged
     await evaluate(`localStorage.setItem('restaurantToken', 'malformed_invalid_bogus_token_123')`);
-    await client.send('Page.navigate', { url: 'http://localhost:3000/restaurant/dashboard' });
+    await client.send('Page.navigate', { url: `${BASE_URL}/restaurant/dashboard` });
     await sleep(800);
 
     currentPath = await evaluate(`window.location.pathname`);
@@ -334,7 +336,7 @@ async function main() {
     });
 
     await evaluate(`localStorage.setItem('restaurantToken', '${expiredJwt}')`);
-    await client.send('Page.navigate', { url: 'http://localhost:3000/restaurant/dashboard' });
+    await client.send('Page.navigate', { url: `${BASE_URL}/restaurant/dashboard` });
     await sleep(800);
 
     currentPath = await evaluate(`window.location.pathname`);
@@ -350,13 +352,14 @@ async function main() {
     });
 
     await evaluate(`localStorage.setItem('restaurantToken', '${validJwt}')`);
-    await client.send('Page.navigate', { url: 'http://localhost:3000/' });
+    await client.send('Page.navigate', { url: `${BASE_URL}/` });
     await sleep(1000);
 
     await evaluate(`document.querySelector('.portals-trigger-btn').click()`);
     await sleep(300);
     await evaluate(`(() => {
-      const btn = document.querySelector('button.header_dropdown-item');
+      const btn = Array.from(document.querySelectorAll('.profile-dropdown-card .header_dropdown-item'))
+        .find(el => el.textContent.includes('Đối tác nhà hàng') || el.getAttribute('aria-label') === 'Cổng đối tác nhà hàng');
       if (btn) btn.click();
     })()`);
     await sleep(1000);
@@ -370,7 +373,7 @@ async function main() {
     // -------------------------------------------------------------------------
     console.log("\n[4/7] Testing Category Carousel Controls & Interactions (Viewport: 1024x768)...");
     await setViewport(1024, 768);
-    await client.send('Page.navigate', { url: 'http://localhost:3000/' });
+    await client.send('Page.navigate', { url: `${BASE_URL}/` });
     await sleep(1200);
 
     await takeScreenshot('03-category-carousel.png');
@@ -462,7 +465,7 @@ async function main() {
     // -------------------------------------------------------------------------
     console.log("\n[5/7] Testing Featured Restaurants & Customer Flow...");
     await setViewport(1440, 900);
-    await client.send('Page.navigate', { url: 'http://localhost:3000/' });
+    await client.send('Page.navigate', { url: `${BASE_URL}/` });
     await sleep(1200);
 
     await takeScreenshot('04-restaurant-discovery.png');
@@ -502,7 +505,7 @@ async function main() {
     assert(spaReloads === 0, `In-app search navigation executed with 0 full document reloads (SPA preserved)`);
 
     // Navigate to Checkout
-    await client.send('Page.navigate', { url: 'http://localhost:3000/checkout' });
+    await client.send('Page.navigate', { url: `${BASE_URL}/checkout` });
     await sleep(800);
     await takeScreenshot('05-checkout-form.png');
 
@@ -514,7 +517,7 @@ async function main() {
     // [6/7] RESPONSIVE VIEWPORTS & ZERO HORIZONTAL OVERFLOW
     // -------------------------------------------------------------------------
     console.log("\n[6/7] Testing Responsive Viewports (360px to 1440px)...");
-    await client.send('Page.navigate', { url: 'http://localhost:3000/' });
+    await client.send('Page.navigate', { url: `${BASE_URL}/` });
     await sleep(1000);
 
     const viewports = [
