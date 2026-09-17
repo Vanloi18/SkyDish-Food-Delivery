@@ -2,16 +2,19 @@ import express from 'express';
 import mongoose from 'mongoose';
 import FoodItem from '../models/FoodItem.js';
 import Restaurant from '../models/Restaurant.js';
-import authMiddleware from '../middleware/authMiddleware.js';
+import authMiddleware, { authorizeRoles } from '../middleware/authMiddleware.js';
 import upload from '../middleware/uploadMiddleware.js';
+import { isValidObjectId, validateFoodPayload } from '../utils/validation.js';
 
 const router = express.Router();
 
 // Create a new food item (Restaurant Admin only)
-router.post('/create', authMiddleware, upload.single('image'), async (req, res) => {
+router.post('/create', authMiddleware, authorizeRoles('restaurant'), upload.single('image'), async (req, res) => {
   const { name, description, price, category } = req.body;
 
   try {
+    const errors = validateFoodPayload(req.body);
+    if (Object.keys(errors).length) return res.status(400).json({ message: 'Invalid food item data', errors });
     const restaurant = await Restaurant.findById(req.user.id);
     if (!restaurant) {
       return res.status(404).json({ message: 'Restaurant not found' });
@@ -25,11 +28,12 @@ router.post('/create', authMiddleware, upload.single('image'), async (req, res) 
 
     const newFoodItem = new FoodItem({
       restaurant: restaurant._id,
-      name,
-      description,
+      name: name.trim(),
+      description: typeof description === 'string' ? description.trim() : '',
       price: Number(price),
       image,
-      category,
+      category: category.trim(),
+      availability: req.body.availability === undefined ? true : req.body.availability === true || req.body.availability === 'true',
     });
 
     await newFoodItem.save();
@@ -41,7 +45,7 @@ router.post('/create', authMiddleware, upload.single('image'), async (req, res) 
 });
 
 // Get all food items for a restaurant (Restaurant Admin only)
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', authMiddleware, authorizeRoles('restaurant'), async (req, res) => {
   try {
     const foodItems = await FoodItem.find({ restaurant: req.user.id });
     res.status(200).json(foodItems);
@@ -52,10 +56,13 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // Update a food item (Restaurant Admin only)
-router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
+router.put('/:id', authMiddleware, authorizeRoles('restaurant'), upload.single('image'), async (req, res) => {
   const { name, description, price, imageUrl, image, category, availability } = req.body;
 
   try {
+    if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid food item ID' });
+    const errors = validateFoodPayload(req.body, { partial: true });
+    if (Object.keys(errors).length) return res.status(400).json({ message: 'Invalid food item data', errors });
     const foodItem = await FoodItem.findById(req.params.id);
     if (!foodItem) {
       return res.status(404).json({ message: 'Food item not found' });
@@ -65,10 +72,10 @@ router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
       return res.status(403).json({ message: 'You are not authorized to modify this food item' });
     }
 
-    if (name) foodItem.name = name;
-    if (description !== undefined) foodItem.description = description;
+    if (name !== undefined) foodItem.name = name.trim();
+    if (description !== undefined) foodItem.description = description.trim();
     if (price !== undefined) foodItem.price = Number(price);
-    if (category) foodItem.category = category;
+    if (category !== undefined) foodItem.category = category.trim();
     if (typeof availability !== 'undefined') {
       foodItem.availability = availability === true || availability === 'true';
     }
@@ -96,8 +103,9 @@ router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
 });
 
 // Delete a food item (Restaurant Admin only)
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', authMiddleware, authorizeRoles('restaurant'), async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid food item ID' });
     const foodItem = await FoodItem.findById(req.params.id);
     if (!foodItem) {
       return res.status(404).json({ message: 'Food item not found' });
@@ -116,10 +124,11 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 // Update food item availability (Restaurant Admin only)
-router.put('/availability/:id', authMiddleware, async (req, res) => {
+router.put('/availability/:id', authMiddleware, authorizeRoles('restaurant'), async (req, res) => {
   const { availability } = req.body;
 
   try {
+    if (!isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid food item ID' });
     const foodItem = await FoodItem.findById(req.params.id);
     if (!foodItem) {
       return res.status(404).json({ message: 'Food item not found' });
@@ -207,6 +216,10 @@ router.get('/item/:id', async (req, res) => {
 router.get('/restaurant/:restaurantId', async (req, res) => {
   try {
     const { restaurantId } = req.params;
+
+    if (!isValidObjectId(restaurantId)) {
+      return res.status(400).json({ message: 'Invalid restaurant ID' });
+    }
 
     // Find food items for the given restaurant ID
     const foodItems = await FoodItem.find({ restaurant: restaurantId }).populate('restaurant', 'name location');

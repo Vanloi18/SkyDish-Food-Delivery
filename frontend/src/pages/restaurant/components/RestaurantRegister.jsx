@@ -47,6 +47,14 @@ function RestaurantRegister() {
       setError("Vui lòng điền đầy đủ các thông tin nhà hàng bắt buộc.");
       return;
     }
+    if (!/^\+?[0-9]{9,15}$/.test(form.contactNumber.trim())) {
+      setError("Số điện thoại phải gồm 9-15 chữ số.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setError("Mật khẩu phải có ít nhất 8 ký tự.");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -195,7 +203,8 @@ function RestaurantRegister() {
                 label="Mật khẩu"
                 name="password"
                 type="password"
-                placeholder="Tối thiểu 6 ký tự"
+                placeholder="Tối thiểu 8 ký tự"
+                minLength={8}
                 icon={FaLock}
                 value={form.password}
                 onChange={handleChange}

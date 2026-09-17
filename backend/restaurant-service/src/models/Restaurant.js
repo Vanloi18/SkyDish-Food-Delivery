@@ -7,18 +7,28 @@ const restaurantSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
+      minlength: 2,
+      maxlength: 120,
     },
     ownerName: {
       type: String,
       required: true,
+      trim: true,
+      minlength: 2,
+      maxlength: 80,
     },
     location: {
       type: String,
       required: true, 
+      trim: true,
+      maxlength: 300,
     },
     contactNumber: {
       type: String,
       required: true,
+      trim: true,
+      match: /^\+?[0-9]{9,15}$/,
     },
     profilePicture: {
       type: String, 
@@ -29,10 +39,14 @@ const restaurantSchema = new mongoose.Schema(
         type: String,
         required: true,
         unique: true,
+        lowercase: true,
+        trim: true,
+        match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
       },
       password: {
         type: String,
         required: true,
+        minlength: 8,
       },
     },
     availability: {

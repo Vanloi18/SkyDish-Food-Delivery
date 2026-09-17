@@ -10,14 +10,20 @@ const foodItemSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
+      minlength: 2,
+      maxlength: 120,
     },
     description: {
       type: String,
-      required: true,
+      default: '',
+      trim: true,
+      maxlength: 1000,
     },
     price: {
       type: Number,
       required: true,
+      min: 0,
     },
     image: {
       type: String,
@@ -26,6 +32,8 @@ const foodItemSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
+      trim: true,
+      maxlength: 80,
     },
     availability: {
       type: Boolean,
