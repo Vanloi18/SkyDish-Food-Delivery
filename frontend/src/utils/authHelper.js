@@ -70,10 +70,54 @@ export function getAuthCustomer() {
  */
 export function clearCustomerAuth() {
   localStorage.removeItem("token");
+  localStorage.removeItem("customerToken");
   localStorage.removeItem("customerName");
   localStorage.removeItem("customerEmail");
   localStorage.removeItem("customerId");
   localStorage.removeItem("customerPhone");
+}
+
+/**
+ * Validate an Administrator token (checks format, expiration, and superAdmin/admin role)
+ * @param {string} token
+ * @returns {boolean}
+ */
+export function validateAdminToken(token) {
+  if (!token || typeof token !== "string") return false;
+  const payload = parseJwtPayload(token);
+  if (!payload || typeof payload !== "object") return false;
+
+  // Check expiration (payload.exp in seconds)
+  if (payload.exp && typeof payload.exp === "number") {
+    if (payload.exp * 1000 <= Date.now()) {
+      return false; // Expired
+    }
+  }
+
+  // Strictly enforce superAdmin or admin role
+  const role = (payload.role || "").toLowerCase();
+  return role === "superadmin" || role === "admin";
+}
+
+/**
+ * Get valid, non-expired administrator token
+ * Looks up 'adminToken' first, falling back to 'token'
+ * @returns {string|null}
+ */
+export function getValidAdminToken() {
+  const token = localStorage.getItem("adminToken") || localStorage.getItem("token");
+  if (!token || !validateAdminToken(token)) {
+    return null;
+  }
+  return token;
+}
+
+/**
+ * Clear administrator authentication keys from localStorage
+ */
+export function clearAdminAuth() {
+  localStorage.removeItem("adminToken");
+  localStorage.removeItem("superAdminName");
 }
 
 /**
@@ -84,3 +128,4 @@ export function getAuthHeaders() {
   const token = getValidToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
+
