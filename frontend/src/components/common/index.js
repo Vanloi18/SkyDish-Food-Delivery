@@ -24,3 +24,4 @@ export { default as CategoryCard } from "./CategoryCard";
 export { default as StatCard } from "./StatCard";
 export { default as AuthPromptCard } from "./AuthPromptCard";
 export { default as DataTable } from "./DataTable";
+export { default as ImageUploadPreview } from "./ImageUploadPreview";

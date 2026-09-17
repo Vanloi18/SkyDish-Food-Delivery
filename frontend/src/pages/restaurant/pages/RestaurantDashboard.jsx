@@ -20,9 +20,13 @@ import {
   FaStar,
   FaTicketAlt,
   FaBell,
-  FaBars
+  FaBars,
+  FaBan,
+  FaExclamationTriangle
 } from "react-icons/fa";
 import { formatCurrency } from "../../../utils/currency";
+import { resolveImageUrl, handleImageError } from "../../../utils/imageHelper";
+import ImageUploadPreview from "../../../components/common/ImageUploadPreview";
 import AdminModal from "../../../components/admin/AdminModal";
 import "../../../styles/restaurant-partner.css";
 
@@ -57,6 +61,8 @@ export default function RestaurantDashboard() {
     price: "",
     category: "Phở & Bún",
     image: "",
+    imageFile: null,
+    imageRemoved: false,
     availability: true,
   });
 
@@ -67,6 +73,13 @@ export default function RestaurantDashboard() {
   // Order Details Modal
   const [isOrderDetailOpen, setOrderDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // Order Reject / Cancel Modal State
+  const [isRejectModalOpen, setRejectModalOpen] = useState(false);
+  const [orderToReject, setOrderToReject] = useState(null);
+  const [rejectReasonPreset, setRejectReasonPreset] = useState("Hết món / nguyên liệu chế biến");
+  const [rejectReasonCustom, setRejectReasonCustom] = useState("");
+  const [isSubmittingReject, setIsSubmittingReject] = useState(false);
 
   // Reviews State
   const [reviewsData, setReviewsData] = useState({ totalReviews: 0, averageRating: 5.0, distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }, reviews: [] });
@@ -89,6 +102,31 @@ export default function RestaurantDashboard() {
   const [notifications, setNotifications] = useState([]);
 
   const unreadNotificationsCount = useMemo(() => notifications.filter((n) => !n.isRead).length, [notifications]);
+
+  // Aggregate top-selling dishes dynamically from real fulfilled orders
+  const topSellingItems = useMemo(() => {
+    const validOrders = orders.filter((o) => o.status !== "Canceled");
+    const counts = {};
+    validOrders.forEach((o) => {
+      (o.items || []).forEach((item) => {
+        const key = item.foodId || item.name;
+        if (!key) return;
+        if (!counts[key]) {
+          counts[key] = {
+            id: key,
+            name: item.name || "Món ăn",
+            count: 0,
+            price: item.price || 0,
+          };
+        }
+        counts[key].count += item.quantity || 1;
+        if (item.price) counts[key].price = item.price;
+      });
+    });
+    return Object.values(counts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [orders]);
 
   const token = localStorage.getItem("restaurantToken") || localStorage.getItem("token");
 
@@ -282,47 +320,61 @@ export default function RestaurantDashboard() {
 
   // Save Food Item (Create or Edit)
   const handleSaveFoodItem = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!foodForm.name || !foodForm.price) {
       showAlert("danger", "Vui lòng nhập tên món và giá bán.");
       return;
     }
 
     try {
+      const formData = new FormData();
+      formData.append("name", foodForm.name.trim());
+      formData.append("description", foodForm.description ? foodForm.description.trim() : "");
+      formData.append("price", String(foodForm.price));
+      formData.append("category", foodForm.category || "Phở & Bún");
+      formData.append("availability", String(foodForm.availability));
+
+      if (foodForm.imageFile) {
+        formData.append("image", foodForm.imageFile);
+      } else if (foodForm.imageRemoved) {
+        formData.append("image", "");
+        formData.append("imageUrl", "");
+      } else if (foodForm.image) {
+        formData.append("image", foodForm.image);
+        formData.append("imageUrl", foodForm.image);
+      }
+
       if (isEditingFood) {
         // Edit Food Item
         await axios.put(
           `${API_URLS.RESTAURANT}/api/food-items/${foodForm.id}`,
+          formData,
           {
-            name: foodForm.name,
-            description: foodForm.description,
-            price: Number(foodForm.price),
-            category: foodForm.category,
-            imageUrl: foodForm.image,
-            availability: foodForm.availability,
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
         );
         showAlert("success", "Cập nhật món ăn thành công!");
       } else {
         // Create Food Item
         await axios.post(
           `${API_URLS.RESTAURANT}/api/food-items/create`,
+          formData,
           {
-            name: foodForm.name,
-            description: foodForm.description,
-            price: Number(foodForm.price),
-            category: foodForm.category,
-            image: foodForm.image,
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
         );
         showAlert("success", "Thêm món ăn mới thành công!");
       }
       setFoodModalOpen(false);
       await fetchFoodItems();
     } catch (err) {
-      showAlert("danger", "Lỗi lưu thông tin món ăn.");
+      showAlert("danger", err.response?.data?.message || "Lỗi lưu thông tin món ăn.");
     }
   };
 
@@ -342,21 +394,73 @@ export default function RestaurantDashboard() {
     }
   };
 
-  // Update Order Status
-  const handleUpdateOrderStatus = async (orderId, nextStatus) => {
+  // Update Order Status (Authoritative backend call & immediate state sync)
+  const handleUpdateOrderStatus = async (orderId, nextStatus, reason = null) => {
     try {
-      await axios.patch(
-        `${API_URLS.ORDER}/api/orders/${orderId}`,
-        { status: nextStatus },
+      const payload = { status: nextStatus };
+      if (reason) payload.cancellationReason = reason;
+
+      const res = await axios.patch(
+        `${API_URLS.ORDER}/api/orders/${orderId}/status`,
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      showAlert("success", `Đơn hàng đã được chuyển sang trạng thái '${nextStatus}'!`);
-      await fetchOrders();
-      if (selectedOrder) {
-        setSelectedOrder((prev) => ({ ...prev, status: nextStatus }));
+
+      const updatedOrder = res.data;
+      // Immediately sync state with the updated order returned by Order Service
+      setOrders((prev) =>
+        prev.map((o) => (o._id === orderId ? { ...o, ...updatedOrder } : o))
+      );
+      if (selectedOrder && selectedOrder._id === orderId) {
+        setSelectedOrder((prev) => ({ ...prev, ...updatedOrder }));
       }
+
+      const msg =
+        nextStatus === "Confirmed"
+          ? "Đơn hàng đã được xác nhận thành công!"
+          : nextStatus === "Canceled"
+          ? "Đơn hàng đã được từ chối / hủy."
+          : nextStatus === "Preparing"
+          ? "Đơn hàng đã chuyển sang giai đoạn chuẩn bị món."
+          : `Đơn hàng đã được chuyển sang trạng thái '${nextStatus}'!`;
+
+      showAlert("success", msg);
+      await fetchOrders();
+      return updatedOrder;
     } catch (err) {
-      showAlert("danger", "Không thể cập nhật trạng thái đơn hàng.");
+      const errMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Không thể cập nhật trạng thái đơn hàng.";
+      showAlert("danger", errMsg);
+      throw err;
+    }
+  };
+
+  // Open Reject / Cancel Order Modal
+  const handleOpenRejectModal = (order) => {
+    setOrderToReject(order);
+    setRejectReasonPreset("Hết món / nguyên liệu chế biến");
+    setRejectReasonCustom("");
+    setRejectModalOpen(true);
+  };
+
+  // Confirm Reject Order from Modal
+  const handleConfirmReject = async () => {
+    if (!orderToReject) return;
+    const finalReason =
+      rejectReasonPreset === "Lý do khác"
+        ? (rejectReasonCustom.trim() || "Lý do khác")
+        : rejectReasonPreset;
+    setIsSubmittingReject(true);
+    try {
+      await handleUpdateOrderStatus(orderToReject._id, "Canceled", finalReason);
+      setRejectModalOpen(false);
+      setOrderToReject(null);
+    } catch (e) {
+      // Alert already handled in handleUpdateOrderStatus
+    } finally {
+      setIsSubmittingReject(false);
     }
   };
 
@@ -422,6 +526,14 @@ export default function RestaurantDashboard() {
     return orders
       .filter((o) => o.status === "Delivered" || o.status === "Confirmed" || o.status === "Preparing")
       .reduce((sum, o) => sum + (Number(o.totalPrice) || 0), 0);
+  }, [orders]);
+
+  const pendingOrders = useMemo(() => {
+    return orders.filter((o) => o.status === "Pending");
+  }, [orders]);
+
+  const preparingOrders = useMemo(() => {
+    return orders.filter((o) => o.status === "Confirmed" || o.status === "Preparing");
   }, [orders]);
 
   const inProgressOrders = useMemo(() => {
@@ -675,6 +787,16 @@ export default function RestaurantDashboard() {
                     <div className="merchant-card-header">
                       <h3 className="merchant-card-title">
                         <FaClock style={{ color: "var(--merch-primary)" }} /> Đơn hàng cần xử lý ngay ({inProgressOrders.length})
+                        {pendingOrders.length > 0 && (
+                          <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", backgroundColor: "#fee2e2", color: "#dc2626", padding: "0.15rem 0.5rem", borderRadius: "9999px" }}>
+                            {pendingOrders.length} chờ duyệt
+                          </span>
+                        )}
+                        {preparingOrders.length > 0 && (
+                          <span style={{ marginLeft: "0.4rem", fontSize: "0.75rem", backgroundColor: "#eff6ff", color: "#2563eb", padding: "0.15rem 0.5rem", borderRadius: "9999px" }}>
+                            {preparingOrders.length} đang làm
+                          </span>
+                        )}
                       </h3>
                       <button
                         type="button"
@@ -713,8 +835,15 @@ export default function RestaurantDashboard() {
                                   {ord.paymentMethod === "BANK_TRANSFER" ? "Chuyển khoản (MB Bank)" : (ord.paymentMethod || "COD")}
                                 </td>
                                 <td style={{ padding: "0.85rem 0.5rem" }}>
-                                  <span style={{ padding: "0.2rem 0.55rem", borderRadius: "9999px", fontSize: "0.75rem", fontWeight: "600", backgroundColor: "#fff7ed", color: "#ea580c" }}>
-                                    {ord.status === "Pending" ? "Chờ xác nhận" : ord.status === "Confirmed" ? "Đã xác nhận" : "Đang chuẩn bị"}
+                                  <span style={{
+                                    padding: "0.2rem 0.55rem",
+                                    borderRadius: "9999px",
+                                    fontSize: "0.75rem",
+                                    fontWeight: "600",
+                                    backgroundColor: ord.status === "Delivered" ? "#ecfdf5" : ord.status === "Preparing" ? "#eff6ff" : ord.status === "Confirmed" ? "#f0fdf4" : ord.status === "Canceled" ? "#fef2f2" : "#fff7ed",
+                                    color: ord.status === "Delivered" ? "#047857" : ord.status === "Preparing" ? "#2563eb" : ord.status === "Confirmed" ? "#16a34a" : ord.status === "Canceled" ? "#dc2626" : "#ea580c",
+                                  }}>
+                                    {ord.status === "Pending" ? "Chờ xác nhận" : ord.status === "Confirmed" ? "Đã xác nhận" : ord.status === "Preparing" ? "Đang chuẩn bị" : ord.status === "Out for Delivery" ? "Đang giao" : ord.status === "Delivered" ? "Đã giao" : "Đã hủy"}
                                   </span>
                                 </td>
                                 <td style={{ padding: "0.85rem 0.5rem", textAlign: "right" }}>
@@ -729,22 +858,40 @@ export default function RestaurantDashboard() {
                                     Chi tiết
                                   </button>
                                   {ord.status === "Pending" && (
-                                    <button
-                                      type="button"
-                                      style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "var(--merch-primary)", color: "#ffffff", border: "none", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer" }}
-                                      onClick={() => handleUpdateOrderStatus(ord._id, "Confirmed")}
-                                    >
-                                      Xác nhận
-                                    </button>
+                                    <>
+                                      <button
+                                        type="button"
+                                        style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "var(--merch-primary)", color: "#ffffff", border: "none", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer", marginRight: "0.4rem" }}
+                                        onClick={() => handleUpdateOrderStatus(ord._id, "Confirmed")}
+                                      >
+                                        Xác nhận
+                                      </button>
+                                      <button
+                                        type="button"
+                                        style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+                                        onClick={() => handleOpenRejectModal(ord)}
+                                      >
+                                        <FaBan size={11} /> Từ chối
+                                      </button>
+                                    </>
                                   )}
                                   {ord.status === "Confirmed" && (
-                                    <button
-                                      type="button"
-                                      style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "#2563eb", color: "#ffffff", border: "none", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer" }}
-                                      onClick={() => handleUpdateOrderStatus(ord._id, "Preparing")}
-                                    >
-                                      Bắt đầu làm
-                                    </button>
+                                    <>
+                                      <button
+                                        type="button"
+                                        style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "#2563eb", color: "#ffffff", border: "none", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer", marginRight: "0.4rem" }}
+                                        onClick={() => handleUpdateOrderStatus(ord._id, "Preparing")}
+                                      >
+                                        Bắt đầu làm
+                                      </button>
+                                      <button
+                                        type="button"
+                                        style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer" }}
+                                        onClick={() => handleOpenRejectModal(ord)}
+                                      >
+                                        Hủy đơn
+                                      </button>
+                                    </>
                                   )}
                                 </td>
                               </tr>
@@ -832,16 +979,54 @@ export default function RestaurantDashboard() {
                                 </span>
                               </td>
                               <td style={{ padding: "0.85rem 0.5rem", textAlign: "right" }}>
-                                <button
-                                  type="button"
-                                  style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "#0f172a", color: "#ffffff", border: "none", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer" }}
-                                  onClick={() => {
-                                    setSelectedOrder(ord);
-                                    setOrderDetailOpen(true);
-                                  }}
-                                >
-                                  Xem chi tiết
-                                </button>
+                                <div style={{ display: "flex", gap: "0.35rem", justifyContent: "flex-end", alignItems: "center" }}>
+                                  <button
+                                    type="button"
+                                    style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "#0f172a", color: "#ffffff", border: "none", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer" }}
+                                    onClick={() => {
+                                      setSelectedOrder(ord);
+                                      setOrderDetailOpen(true);
+                                    }}
+                                  >
+                                    Xem chi tiết
+                                  </button>
+                                  {ord.status === "Pending" && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "var(--merch-primary)", color: "#ffffff", border: "none", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer" }}
+                                        onClick={() => handleUpdateOrderStatus(ord._id, "Confirmed")}
+                                      >
+                                        Xác nhận
+                                      </button>
+                                      <button
+                                        type="button"
+                                        style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+                                        onClick={() => handleOpenRejectModal(ord)}
+                                      >
+                                        <FaBan size={11} /> Từ chối
+                                      </button>
+                                    </>
+                                  )}
+                                  {ord.status === "Confirmed" && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "#2563eb", color: "#ffffff", border: "none", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer" }}
+                                        onClick={() => handleUpdateOrderStatus(ord._id, "Preparing")}
+                                      >
+                                        Bắt đầu làm
+                                      </button>
+                                      <button
+                                        type="button"
+                                        style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", backgroundColor: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer" }}
+                                        onClick={() => handleOpenRejectModal(ord)}
+                                      >
+                                        Hủy đơn
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -871,7 +1056,7 @@ export default function RestaurantDashboard() {
                         style={{ padding: "0.6rem 1.15rem", borderRadius: "8px", backgroundColor: "var(--merch-primary)", color: "#ffffff", border: "none", fontSize: "0.85rem", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.4rem" }}
                         onClick={() => {
                           setIsEditingFood(false);
-                          setFoodForm({ id: "", name: "", description: "", price: "", category: "Phở & Bún", image: "", availability: true });
+                          setFoodForm({ id: "", name: "", description: "", price: "", category: "Phở & Bún", image: "", imageFile: null, imageRemoved: false, availability: true });
                           setFoodModalOpen(true);
                         }}
                       >
@@ -919,9 +1104,10 @@ export default function RestaurantDashboard() {
                         {filteredFoodItems.map((food) => (
                           <div key={food._id} className="merchant-food-card">
                             <img
-                              src={food.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80"}
+                              src={resolveImageUrl(food.image, "food")}
                               alt={food.name}
                               className="merchant-food-img"
+                              onError={(e) => handleImageError(e, "food")}
                             />
                             <div className="merchant-food-body">
                               <h4 className="merchant-food-name">{food.name}</h4>
@@ -930,41 +1116,43 @@ export default function RestaurantDashboard() {
                               <div className="merchant-food-footer">
                                 <span className="merchant-food-price">{formatCurrency(food.price)}</span>
                                 <button
-                                  type="button"
-                                  style={{
-                                    padding: "0.25rem 0.6rem",
-                                    borderRadius: "12px",
-                                    fontSize: "0.75rem",
-                                    fontWeight: "600",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    backgroundColor: food.availability ? "#ecfdf5" : "#f1f5f9",
-                                    color: food.availability ? "#047857" : "#64748b",
-                                  }}
-                                  onClick={() => handleToggleFoodAvailability(food._id, food.availability)}
-                                >
-                                  {food.availability ? "🟢 Đang bán" : "⚪ Hết món"}
-                                </button>
-                              </div>
+                                   type="button"
+                                   style={{
+                                     padding: "0.25rem 0.6rem",
+                                     borderRadius: "12px",
+                                     fontSize: "0.75rem",
+                                     fontWeight: "600",
+                                     border: "none",
+                                     cursor: "pointer",
+                                     backgroundColor: food.availability ? "#ecfdf5" : "#f1f5f9",
+                                     color: food.availability ? "#047857" : "#64748b",
+                                   }}
+                                   onClick={() => handleToggleFoodAvailability(food._id, food.availability)}
+                                 >
+                                   {food.availability ? "🟢 Đang bán" : "⚪ Hết món"}
+                                 </button>
+                               </div>
 
                               <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", borderTop: "1px solid #f1f5f9", paddingTop: "0.6rem" }}>
                                 <button
-                                  type="button"
-                                  style={{ flex: 1, padding: "0.4rem", borderRadius: "6px", backgroundColor: "#f1f5f9", color: "#0f172a", border: "none", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}
-                                  onClick={() => {
-                                    setIsEditingFood(true);
-                                    setFoodForm({
-                                      id: food._id,
-                                      name: food.name,
-                                      description: food.description || "",
-                                      price: food.price,
-                                      category: food.category || "Phở & Bún",
-                                      image: food.image || "",
-                                      availability: food.availability,
-                                    });
-                                    setFoodModalOpen(true);
-                                  }}
-                                >
+                                   type="button"
+                                   style={{ flex: 1, padding: "0.4rem", borderRadius: "6px", backgroundColor: "#f1f5f9", color: "#0f172a", border: "none", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}
+                                   onClick={() => {
+                                     setIsEditingFood(true);
+                                     setFoodForm({
+                                       id: food._id,
+                                       name: food.name,
+                                       description: food.description || "",
+                                       price: food.price,
+                                       category: food.category || "Phở & Bún",
+                                       image: food.image || "",
+                                       imageFile: null,
+                                       imageRemoved: false,
+                                       availability: food.availability,
+                                     });
+                                     setFoodModalOpen(true);
+                                   }}
+                                 >
                                   <FaEdit size={12} /> Sửa
                                 </button>
                                 <button
@@ -1271,23 +1459,30 @@ export default function RestaurantDashboard() {
                       <div style={{ padding: "1.25rem", backgroundColor: "#fafafa", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
                         <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Tỷ lệ giao hoàn tất</span>
                         <h3 style={{ margin: "0.35rem 0 0 0", fontSize: "1.5rem", fontWeight: "800", color: "#059669" }}>
-                          {orders.length > 0 ? Math.round((completedOrders.length / orders.length) * 100) : 100}%
+                          {orders.length > 0 ? `${Math.round((completedOrders.length / orders.length) * 100)}%` : "—"}
                         </h3>
                       </div>
                     </div>
 
                     <h4 style={{ margin: "0 0 0.85rem 0", fontSize: "0.95rem" }}>Món ăn được đặt nhiều nhất</h4>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                      {foodItems.slice(0, 5).map((f, idx) => (
-                        <div key={f._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem 1rem", backgroundColor: "#ffffff", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                          <div>
-                            <span style={{ fontWeight: "700", marginRight: "0.5rem" }}>#{idx + 1}</span>
-                            <strong>{f.name}</strong>
+                    {topSellingItems.length === 0 ? (
+                      <div style={{ textAlign: "center", padding: "1.5rem", color: "#64748b", fontSize: "0.85rem", backgroundColor: "#fafafa", borderRadius: "8px", border: "1px dashed #cbd5e1" }}>
+                        Chưa có dữ liệu đặt món.
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                        {topSellingItems.map((f, idx) => (
+                          <div key={f.id || idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem 1rem", backgroundColor: "#ffffff", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                            <div>
+                              <span style={{ fontWeight: "700", marginRight: "0.5rem", color: "var(--merch-primary)" }}>#{idx + 1}</span>
+                              <strong>{f.name}</strong>
+                              <span style={{ marginLeft: "0.75rem", fontSize: "0.8rem", color: "#64748b" }}>({f.count} lượt đặt)</span>
+                            </div>
+                            <span style={{ fontWeight: "700", color: "var(--merch-primary)" }}>{formatCurrency(f.price)}</span>
                           </div>
-                          <span style={{ fontWeight: "700", color: "var(--merch-primary)" }}>{formatCurrency(f.price)}</span>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1403,6 +1598,7 @@ export default function RestaurantDashboard() {
                 type="number"
                 required
                 min={0}
+                step="any"
                 value={foodForm.price}
                 onChange={(e) => setFoodForm({ ...foodForm, price: e.target.value })}
                 style={{ width: "100%", padding: "0.6rem 0.85rem", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.85rem" }}
@@ -1428,14 +1624,24 @@ export default function RestaurantDashboard() {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#64748b", marginBottom: "0.3rem" }}>Link hình ảnh món</label>
-            <input
-              type="text"
-              value={foodForm.image}
-              onChange={(e) => setFoodForm({ ...foodForm, image: e.target.value })}
-              style={{ width: "100%", padding: "0.6rem 0.85rem", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.85rem" }}
-              placeholder="https://images.unsplash.com/..."
+            <ImageUploadPreview
+              currentImageUrl={foodForm.image}
+              onFileSelect={(file) => setFoodForm((prev) => ({ ...prev, imageFile: file, imageRemoved: false }))}
+              onRemove={() => setFoodForm((prev) => ({ ...prev, imageFile: null, image: "", imageRemoved: true }))}
+              label="Hình ảnh món ăn"
+              type="food"
             />
+            <div style={{ marginTop: "0.5rem" }}>
+              <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "600", color: "#94a3b8", marginBottom: "0.2rem" }}>Hoặc nhập liên kết hình ảnh (tùy chọn)</label>
+              <input
+                type="text"
+                value={foodForm.imageFile ? "" : foodForm.image}
+                disabled={!!foodForm.imageFile}
+                onChange={(e) => setFoodForm({ ...foodForm, image: e.target.value, imageRemoved: false })}
+                style={{ width: "100%", padding: "0.5rem 0.85rem", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.8rem" }}
+                placeholder="https://..."
+              />
+            </div>
           </div>
         </form>
       </AdminModal>
@@ -1477,20 +1683,72 @@ export default function RestaurantDashboard() {
         title={`Chi tiết đơn hàng #${selectedOrder?._id?.slice(-6) || selectedOrder?.orderId}`}
         maxWidth="540px"
         footer={
-          <button
-            type="button"
-            style={{ padding: "0.5rem 1.25rem", borderRadius: "6px", backgroundColor: "#0f172a", color: "#ffffff", border: "none", fontSize: "0.85rem", fontWeight: "700", cursor: "pointer" }}
-            onClick={() => setOrderDetailOpen(false)}
-          >
-            Đóng
-          </button>
+          <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+            <div>
+              {selectedOrder?.status === "Pending" && (
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    type="button"
+                    style={{ padding: "0.5rem 1rem", borderRadius: "6px", backgroundColor: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", fontSize: "0.82rem", fontWeight: "700", cursor: "pointer" }}
+                    onClick={() => {
+                      setOrderDetailOpen(false);
+                      handleOpenRejectModal(selectedOrder);
+                    }}
+                  >
+                    Từ chối đơn
+                  </button>
+                  <button
+                    type="button"
+                    style={{ padding: "0.5rem 1rem", borderRadius: "6px", backgroundColor: "var(--merch-primary)", color: "#ffffff", border: "none", fontSize: "0.82rem", fontWeight: "700", cursor: "pointer" }}
+                    onClick={async () => {
+                      await handleUpdateOrderStatus(selectedOrder._id, "Confirmed");
+                      setOrderDetailOpen(false);
+                    }}
+                  >
+                    Xác nhận đơn
+                  </button>
+                </div>
+              )}
+              {selectedOrder?.status === "Confirmed" && (
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    type="button"
+                    style={{ padding: "0.5rem 1rem", borderRadius: "6px", backgroundColor: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", fontSize: "0.82rem", fontWeight: "700", cursor: "pointer" }}
+                    onClick={() => {
+                      setOrderDetailOpen(false);
+                      handleOpenRejectModal(selectedOrder);
+                    }}
+                  >
+                    Hủy đơn
+                  </button>
+                  <button
+                    type="button"
+                    style={{ padding: "0.5rem 1rem", borderRadius: "6px", backgroundColor: "#2563eb", color: "#ffffff", border: "none", fontSize: "0.82rem", fontWeight: "700", cursor: "pointer" }}
+                    onClick={async () => {
+                      await handleUpdateOrderStatus(selectedOrder._id, "Preparing");
+                      setOrderDetailOpen(false);
+                    }}
+                  >
+                    Bắt đầu làm món
+                  </button>
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              style={{ padding: "0.5rem 1.25rem", borderRadius: "6px", backgroundColor: "#0f172a", color: "#ffffff", border: "none", fontSize: "0.85rem", fontWeight: "700", cursor: "pointer" }}
+              onClick={() => setOrderDetailOpen(false)}
+            >
+              Đóng
+            </button>
+          </div>
         }
       >
         {selectedOrder && (
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem", fontSize: "0.85rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.6rem" }}>
               <span style={{ color: "#64748b" }}>Khách hàng:</span>
-              <strong style={{ color: "#0f172a" }}>{selectedOrder.customerId || "Khách Hàng"}</strong>
+              <strong style={{ color: "#0f172a" }}>{selectedOrder.customerName || selectedOrder.customerId || "Khách Hàng"}</strong>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.6rem" }}>
@@ -1500,15 +1758,59 @@ export default function RestaurantDashboard() {
 
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.6rem" }}>
               <span style={{ color: "#64748b" }}>Thanh toán:</span>
-              <strong style={{ color: "#0f172a" }}>{selectedOrder.paymentMethod || "COD"}</strong>
+              <strong style={{ color: "#0f172a" }}>
+                {selectedOrder.paymentMethod === "BANK_TRANSFER" ? "Chuyển khoản (MB Bank)" : (selectedOrder.paymentMethod || "COD")} ({selectedOrder.paymentStatus === "Completed" ? "Đã thanh toán" : selectedOrder.paymentStatus === "Failed" ? "Thất bại/Đã hủy" : "Chờ thanh toán"})
+              </strong>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.6rem" }}>
               <span style={{ color: "#64748b" }}>Trạng thái:</span>
-              <span style={{ padding: "0.2rem 0.6rem", borderRadius: "9999px", fontSize: "0.75rem", fontWeight: "700", backgroundColor: "#fff7ed", color: "#ea580c" }}>
-                {selectedOrder.status}
+              <span style={{
+                padding: "0.2rem 0.6rem",
+                borderRadius: "9999px",
+                fontSize: "0.75rem",
+                fontWeight: "700",
+                backgroundColor: selectedOrder.status === "Delivered" ? "#ecfdf5" : selectedOrder.status === "Preparing" ? "#eff6ff" : selectedOrder.status === "Confirmed" ? "#f0fdf4" : selectedOrder.status === "Canceled" ? "#fef2f2" : "#fff7ed",
+                color: selectedOrder.status === "Delivered" ? "#047857" : selectedOrder.status === "Preparing" ? "#2563eb" : selectedOrder.status === "Confirmed" ? "#16a34a" : selectedOrder.status === "Canceled" ? "#dc2626" : "#ea580c"
+              }}>
+                {selectedOrder.status === "Pending" ? "Chờ xác nhận" : selectedOrder.status === "Confirmed" ? "Đã xác nhận" : selectedOrder.status === "Preparing" ? "Đang chuẩn bị" : selectedOrder.status === "Out for Delivery" ? "Đang giao" : selectedOrder.status === "Delivered" ? "Đã giao" : "Đã hủy"}
               </span>
             </div>
+
+            {selectedOrder.status === "Canceled" && (
+              <div style={{ padding: "0.75rem", backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#dc2626", fontWeight: "700", marginBottom: "0.25rem" }}>
+                  <FaExclamationTriangle size={14} /> Thông tin hủy đơn:
+                </div>
+                <div style={{ fontSize: "0.82rem", color: "#991b1b" }}>
+                  <strong>Lý do:</strong> {selectedOrder.cancellationReason || "Không nêu lý do"}
+                </div>
+                {selectedOrder.cancelledBy && (
+                  <div style={{ fontSize: "0.82rem", color: "#991b1b" }}>
+                    <strong>Hủy bởi:</strong> {selectedOrder.cancelledBy}
+                  </div>
+                )}
+                {selectedOrder.cancelledAt && (
+                  <div style={{ fontSize: "0.82rem", color: "#991b1b" }}>
+                    <strong>Thời gian:</strong> {new Date(selectedOrder.cancelledAt).toLocaleString("vi-VN")}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedOrder.items && selectedOrder.items.length > 0 && (
+              <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "0.6rem" }}>
+                <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#64748b", display: "block", marginBottom: "0.4rem" }}>Danh sách món:</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  {selectedOrder.items.map((item, idx) => (
+                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem" }}>
+                      <span>{item.name} <span style={{ color: "#94a3b8" }}>x{item.quantity}</span></span>
+                      <strong style={{ color: "#0f172a" }}>{formatCurrency((item.price || 0) * (item.quantity || 1))}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.05rem", fontWeight: "800", borderTop: "2px solid #f1f5f9", paddingTop: "0.75rem" }}>
               <span>Tổng tiền thanh toán:</span>
@@ -1516,6 +1818,73 @@ export default function RestaurantDashboard() {
             </div>
           </div>
         )}
+      </AdminModal>
+
+      {/* 3.1 Reject / Cancel Order Modal */}
+      <AdminModal
+        isOpen={isRejectModalOpen}
+        onClose={() => !isSubmittingReject && setRejectModalOpen(false)}
+        title={`Từ chối / Hủy đơn hàng #${orderToReject?._id?.slice(-6) || orderToReject?.orderId}`}
+        maxWidth="480px"
+        footer={
+          <>
+            <button
+              type="button"
+              disabled={isSubmittingReject}
+              style={{ padding: "0.5rem 1rem", borderRadius: "6px", backgroundColor: "#f1f5f9", color: "#475569", border: "none", fontSize: "0.85rem", fontWeight: "600", cursor: "pointer" }}
+              onClick={() => setRejectModalOpen(false)}
+            >
+              Quay lại
+            </button>
+            <button
+              type="button"
+              disabled={isSubmittingReject}
+              style={{ padding: "0.5rem 1.25rem", borderRadius: "6px", backgroundColor: "#dc2626", color: "#ffffff", border: "none", fontSize: "0.85rem", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.4rem" }}
+              onClick={handleConfirmReject}
+            >
+              {isSubmittingReject ? "Đang xử lý..." : "Xác nhận từ chối / hủy"}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <p style={{ margin: 0, fontSize: "0.9rem", color: "#334155", lineHeight: "1.5" }}>
+            Bạn đang từ chối hoặc hủy đơn hàng <strong>#{orderToReject?._id?.slice(-6)}</strong> của khách hàng <strong>{orderToReject?.customerName || orderToReject?.customerId}</strong> (Tổng tiền: <strong>{formatCurrency(orderToReject?.totalPrice || 0)}</strong>).
+          </p>
+
+          <div>
+            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#64748b", marginBottom: "0.3rem" }}>
+              Lý do từ chối / hủy đơn *
+            </label>
+            <select
+              value={rejectReasonPreset}
+              onChange={(e) => setRejectReasonPreset(e.target.value)}
+              style={{ width: "100%", padding: "0.6rem 0.85rem", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.85rem", backgroundColor: "#ffffff" }}
+            >
+              <option value="Hết món / nguyên liệu chế biến">Quán hết món hoặc nguyên liệu chế biến</option>
+              <option value="Quán đang quá tải, không kịp chuẩn bị">Quán đang quá tải, không kịp chuẩn bị món</option>
+              <option value="Quán sắp đến giờ đóng cửa">Quán sắp đến giờ đóng cửa</option>
+              <option value="Không liên lạc được với khách hàng">Không liên lạc được với khách hàng để xác nhận</option>
+              <option value="Khách hàng yêu cầu hủy đơn">Khách hàng liên hệ yêu cầu hủy đơn</option>
+              <option value="Lý do khác">Lý do khác (Nhập chi tiết bên dưới)</option>
+            </select>
+          </div>
+
+          {rejectReasonPreset === "Lý do khác" && (
+            <div>
+              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#64748b", marginBottom: "0.3rem" }}>
+                Chi tiết lý do khác *
+              </label>
+              <textarea
+                rows={3}
+                value={rejectReasonCustom}
+                onChange={(e) => setRejectReasonCustom(e.target.value)}
+                style={{ width: "100%", padding: "0.6rem 0.85rem", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.85rem", resize: "none" }}
+                placeholder="Nhập lý do cụ thể..."
+              />
+            </div>
+          )}
+        </div>
       </AdminModal>
 
       {/* 4. Create Coupon Modal */}

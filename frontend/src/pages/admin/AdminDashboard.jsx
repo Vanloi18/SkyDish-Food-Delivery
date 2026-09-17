@@ -1050,7 +1050,9 @@ const AdminDashboard = () => {
                 </div>
                 <div className="admin-kpi-card">
                   <span className="admin-kpi-title">Tỷ lệ hoàn thành</span>
-                  <h3 className="admin-kpi-value" style={{ color: "#10b981" }}>98.5%</h3>
+                  <h3 className="admin-kpi-value" style={{ color: "#10b981" }}>
+                    {orders.length > 0 ? `${Math.round((orders.filter((o) => o.status === "Delivered").length / orders.length) * 100)}%` : "—"}
+                  </h3>
                   <span className="admin-kpi-trend">Dựa trên đơn hoàn tất</span>
                 </div>
               </div>

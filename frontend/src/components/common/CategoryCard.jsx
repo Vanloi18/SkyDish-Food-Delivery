@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { resolveImageUrl, handleImageError } from "../../utils/imageHelper";
 
 export default function CategoryCard({ category, onClick }) {
   if (!category) return null;
@@ -27,11 +28,9 @@ export default function CategoryCard({ category, onClick }) {
       {/* Category Image Cover */}
       <div style={{ position: "relative", height: "130px", width: "100%", overflow: "hidden", backgroundColor: "#f1f5f9" }}>
         <img
-          src={image}
+          src={resolveImageUrl(image, "food")}
           alt={name}
-          onError={(e) => {
-            e.target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&auto=format&fit=crop&q=80";
-          }}
+          onError={(e) => handleImageError(e, "food")}
           style={{
             width: "100%",
             height: "100%",

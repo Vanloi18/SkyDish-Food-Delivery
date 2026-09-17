@@ -1,4 +1,3 @@
-import { API_URLS } from '../../config/api';
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -9,6 +8,7 @@ import {
   FaRegHeart 
 } from "react-icons/fa";
 import Badge from "./Badge";
+import { resolveImageUrl, handleImageError } from "../../utils/imageHelper";
 
 export default function RestaurantCard({ 
   restaurant, 
@@ -25,11 +25,9 @@ export default function RestaurantCard({
   const location = restaurant.location || "Trung tâm thành phố";
   const availability = restaurant.availability !== false; // default true
   
-  // Format image URL
+  // Format image URL safely with neutral SVG fallback
   const rawImage = restaurant.profilePicture || restaurant.imageURL || restaurant.image;
-  const imageSrc = rawImage
-    ? (rawImage.startsWith("http") ? rawImage : `${API_URLS.RESTAURANT}${rawImage}`)
-    : "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop&q=80";
+  const imageSrc = resolveImageUrl(rawImage, "restaurant");
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
@@ -67,9 +65,7 @@ export default function RestaurantCard({
         <img
           src={imageSrc}
           alt={name}
-          onError={(e) => {
-            e.target.src = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop&q=80";
-          }}
+          onError={(e) => handleImageError(e, "restaurant")}
           style={{
             width: "100%",
             height: "100%",

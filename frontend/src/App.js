@@ -66,6 +66,7 @@ function App() {
 
           {/* Customer Authentication */}
           <Route path="/auth/login" element={<AuthLogin />} />
+          <Route path="/customer/login" element={<Navigate to="/auth/login" replace />} />
           <Route path="/auth/register" element={<AuthRegister />} />
 
           {/* Customer Protected Profile */}

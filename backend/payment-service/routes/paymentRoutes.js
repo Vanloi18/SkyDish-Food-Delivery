@@ -147,22 +147,25 @@ router.post("/momo/create", async (req, res) => {
     return res.status(200).json(result);
   } catch (error) {
     console.error("❌ MoMo creation error:", error.message || error);
-    return res.status(500).json({ error: "MoMo payment initialization failed. Please try again." });
+    const status = error.statusCode || 500;
+    return res.status(status).json({
+      error: error.message || "MoMo payment initialization failed. Please try again.",
+      missingVars: error.missingVars,
+      resultCode: error.resultCode,
+    });
   }
 });
 
 router.post("/momo/ipn", async (req, res) => {
   try {
     const result = await verifyMoMoNotification(req.body);
-    return res.status(200).json({
-      partnerCode: req.body.partnerCode,
-      orderId: req.body.orderId,
-      requestId: req.body.requestId,
-      amount: req.body.amount,
-      responseTime: req.body.responseTime || Date.now(),
-      message: result.isSuccess ? "Success" : "Failed",
-      resultCode: result.isSuccess ? 0 : 99,
-    });
+    if (!result.isValid) {
+      console.warn("❌ MoMo IPN rejected:", result.error);
+      return res.status(400).json({ error: result.error, code: result.code });
+    }
+
+    // According to MoMo v2 specification, acknowledge IPN with HTTP 204 No Content
+    return res.status(204).send();
   } catch (error) {
     console.error("❌ MoMo IPN error:", error.message || error);
     return res.status(500).json({ error: "MoMo IPN processing error" });
@@ -171,26 +174,25 @@ router.post("/momo/ipn", async (req, res) => {
 
 router.get("/momo/callback", async (req, res) => {
   try {
-    const { orderId, resultCode, message, transId, amount } = req.query;
-    const isSuccess = Number(resultCode) === 0;
-
-    let payment = await Payment.findOne({ orderId });
-    if (payment) {
-      payment.status = isSuccess ? "Paid" : "Failed";
-      if (transId) payment.providerTransactionId = String(transId);
-      payment.providerResponse = req.query;
-      await payment.save();
+    const result = await verifyMoMoNotification(req.query);
+    if (!result.isValid) {
+      return res.status(400).json({
+        isValid: false,
+        isSuccess: false,
+        orderId: req.query.orderId,
+        error: result.error,
+        message: result.error,
+      });
     }
 
     return res.status(200).json({
       isValid: true,
-      isSuccess,
-      orderId,
-      amount: Number(amount) || payment?.amount || 0,
-      transId,
-      message: isSuccess
-        ? "Thanh toán MoMo thành công!"
-        : `Giao dịch MoMo không thành công: ${message || "Đã hủy"}`,
+      isSuccess: result.isSuccess,
+      orderId: result.orderId,
+      amount: result.amount,
+      transId: result.transId,
+      isAlreadyPaid: result.isAlreadyPaid || false,
+      message: result.message,
     });
   } catch (error) {
     console.error("❌ MoMo return callback error:", error.message || error);

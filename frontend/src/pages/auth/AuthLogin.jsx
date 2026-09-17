@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
-import { FaEnvelope, FaLock, FaUtensils, FaExclamationCircle, FaSignInAlt } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaUtensils, FaExclamationCircle, FaSignInAlt, FaInfoCircle } from "react-icons/fa";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import Input from "../../components/common/Input";
@@ -16,6 +16,9 @@ export default function AuthLogin() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const noticeMessage = searchParams.get("message");
 
   const handleChange = (e) => {
     setCredentials((c) => ({ ...c, [e.target.name]: e.target.value }));
@@ -31,13 +34,19 @@ export default function AuthLogin() {
       const res = await axios.post(`${API_URLS.AUTH}/api/auth/login`, credentials);
       if (res.data?.token) {
         localStorage.setItem("token", res.data.token);
-        if (res.data.customer?.firstName) {
-          localStorage.setItem("customerName", `${res.data.customer.firstName} ${res.data.customer.lastName || ""}`.trim());
+        const customer = res.data.data?.customer || res.data.customer;
+        if (customer?.firstName) {
+          localStorage.setItem("customerName", `${customer.firstName} ${customer.lastName || ""}`.trim());
+        }
+        if (customer?.phone) {
+          localStorage.setItem("customerPhone", customer.phone);
+        }
+        if (customer?.id || customer?._id) {
+          localStorage.setItem("customerId", customer.id || customer._id);
         }
         if (credentials.email) {
           localStorage.setItem("customerEmail", credentials.email);
         }
-        const searchParams = new URLSearchParams(location.search);
         const redirectTarget = searchParams.get("redirect") || "/customer/home";
         navigate(redirectTarget);
       } else {
@@ -73,6 +82,30 @@ export default function AuthLogin() {
               Đăng nhập để theo dõi đơn hàng, lưu món yêu thích và giao hàng nhanh
             </p>
           </div>
+
+          {noticeMessage && (
+            <motion.div
+              className="auth-notice-banner"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                backgroundColor: "#eff6ff",
+                border: "1px solid #bfdbfe",
+                color: "#1d4ed8",
+                padding: "0.75rem 1rem",
+                borderRadius: "0.5rem",
+                marginBottom: "1rem",
+                fontSize: "0.9rem",
+                fontWeight: "500"
+              }}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <FaInfoCircle size={18} />
+              <span>{noticeMessage}</span>
+            </motion.div>
+          )}
 
           {error && (
             <motion.div

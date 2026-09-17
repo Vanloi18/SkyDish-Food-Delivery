@@ -9,13 +9,26 @@ const protect = (req, res, next) => {
         token = token.trim();
     }
 
-    if (!token) {
-        return res.status(401).json({ message: "No token, authorization denied" });
+    if (!token || token === "null" || token === "undefined") {
+        return res.status(401).json({
+            success: false,
+            message: "Vui lòng đăng nhập để đặt hàng.",
+            error: "No token, authorization denied"
+        });
     }
 
     try {
         const secret = process.env.JWT_SECRET || 'supersecretjwtkeyforfooddeliverymicroservices2025';
         const decoded = jwt.verify(token, secret);
+
+        if (!decoded || (!decoded.id && !decoded._id)) {
+            return res.status(401).json({
+                success: false,
+                message: "Vui lòng đăng nhập để đặt hàng.",
+                error: "Invalid token: missing user identity"
+            });
+        }
+        decoded.id = decoded.id || decoded._id;
 
         // Normalize roles for seamless RBAC
         if (!decoded.role) {
@@ -28,7 +41,12 @@ const protect = (req, res, next) => {
         req.user = decoded;
         next();
     } catch (error) {
-        res.status(401).json({ message: "Invalid token" });
+        const isExpired = error.name === "TokenExpiredError";
+        return res.status(401).json({
+            success: false,
+            message: "Vui lòng đăng nhập để đặt hàng.",
+            error: isExpired ? "Token expired" : "Invalid token"
+        });
     }
 };
 

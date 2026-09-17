@@ -19,6 +19,11 @@ async function processCodPayment({
     throw { status: 400, message: "Phone number is required for Cash on Delivery." };
   }
 
+  // Enforce authenticated identity - Guests strictly forbidden
+  if (!userId || userId === "GUEST") {
+    throw { status: 401, message: "Vui lòng đăng nhập để đặt hàng." };
+  }
+
   // Idempotency: Check if a payment record already exists for this order
   let payment = await Payment.findOne({ orderId });
   if (payment) {
@@ -40,7 +45,7 @@ async function processCodPayment({
 
   payment = new Payment({
     orderId,
-    userId: userId || "GUEST",
+    userId: String(userId),
     amount,
     currency: currency || "vnd",
     paymentMethod: "COD",
@@ -55,16 +60,26 @@ async function processCodPayment({
   // Synchronize with Order Service if items and restaurantId are provided
   if (items && items.length > 0) {
     try {
+      const jwt = require("jsonwebtoken");
       const orderServiceUrl = process.env.ORDER_SERVICE_URL || "http://127.0.0.1:5005";
-      await axios.post(`${orderServiceUrl}/api/orders`, {
-        customerId: userId,
-        restaurantId: restaurantId || "restaurant_1",
-        items,
-        totalPrice: amount,
-        paymentMethod: "COD",
-        paymentStatus: "Pending",
-        deliveryAddress: deliveryAddress || "Customer Address",
-      }, { timeout: 3000 });
+      const jwtSecret = process.env.JWT_SECRET || "supersecretjwtkeyforfooddeliverymicroservices2025";
+      const systemToken = jwt.sign({ id: String(userId), role: "customer" }, jwtSecret, { expiresIn: "1h" });
+      await axios.post(
+        `${orderServiceUrl}/api/orders`,
+        {
+          customerId: String(userId),
+          restaurantId: restaurantId || "restaurant_1",
+          items,
+          totalPrice: amount,
+          paymentMethod: "COD",
+          paymentStatus: "Pending",
+          deliveryAddress: deliveryAddress || "Customer Address",
+        },
+        {
+          headers: { Authorization: `Bearer ${systemToken}` },
+          timeout: 3000,
+        }
+      );
     } catch (orderErr) {
       console.warn("Order service sync notice:", orderErr.message);
     }

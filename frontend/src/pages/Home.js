@@ -5,6 +5,7 @@ import { FaSearch, FaArrowRight, FaChevronLeft, FaChevronRight } from "react-ico
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import RestaurantCard from "../components/common/RestaurantCard";
+import { handleImageError } from "../utils/imageHelper";
 import "../styles/home.css";
 
 const categories = [
@@ -310,6 +311,7 @@ function CategoryCarousel({ onCategoryClick }) {
                 className="category-carousel-img"
                 loading="lazy"
                 draggable={false}
+                onError={(e) => handleImageError(e, "food")}
               />
             </div>
             <span className="category-carousel-name">{cat.name}</span>
@@ -521,7 +523,7 @@ const Home = () => {
                 </p>
               </div>
               <Link to="/customer/home" className="landing-section-link">
-                Xem tất cả ({restaurantStatus === "success" && restaurants.length > 0 ? `${restaurants.length} nhà hàng` : "Xem thêm"}) <FaArrowRight size={12} />
+                Xem tất cả nhà hàng <FaArrowRight size={12} />
               </Link>
             </div>
 

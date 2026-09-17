@@ -313,3 +313,16 @@
   color: #92400e;
   line-height: 1.5;
 }
+
+@keyframes sdSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sd-spin {
+  animation: sdSpin 1s linear infinite;
+}

@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 const router = express.Router();
 
 router.get("/health", (req, res) => res.status(200).json({ status: "ok", service: "restaurant-service", timestamp: new Date().toISOString() }));
@@ -12,7 +13,10 @@ import upload from '../middleware/uploadMiddleware.js';
 // Register a new restaurant (with admin email and password)
 router.post('/register', upload.single('profilePicture'), async (req, res) => {
   const { name, ownerName, location, contactNumber, email, password } = req.body;
-  const profilePicture = req.file ? `/uploads/${req.file.filename}` : '';
+  let profilePicture = req.file ? `/uploads/${req.file.filename}` : (req.body.profilePicture || '');
+  if (typeof profilePicture === 'string' && /^[a-zA-Z]:[\\\/]/.test(profilePicture.trim().replace(/^["']|["']$/g, ''))) {
+    profilePicture = '';
+  }
 
   try {
     const existingRestaurant = await Restaurant.findOne({
@@ -95,9 +99,15 @@ router.put('/update', authMiddleware, upload.single('profilePicture'), async (re
     if (location) restaurant.location = location;
     if (contactNumber) restaurant.contactNumber = contactNumber;
 
-    // Update profile picture if a file is uploaded
+    // Update profile picture if a file is uploaded or url provided
     if (req.file) {
       restaurant.profilePicture = `/uploads/${req.file.filename}`;
+    } else if (req.body.profilePicture !== undefined) {
+      let pic = req.body.profilePicture || '';
+      if (typeof pic === 'string') {
+        const trimmed = pic.trim().replace(/^["']|["']$/g, '');
+        restaurant.profilePicture = /^[a-zA-Z]:[\\\/]/.test(trimmed) ? '' : trimmed;
+      }
     }
 
     await restaurant.save();
@@ -146,13 +156,26 @@ router.get('/', async (req, res) => {
 // Get a single restaurant by ID (Public)
 router.get('/:id', async (req, res) => {
   try {
-    const restaurant = await Restaurant.findById(req.params.id).select('-admin.password');
+    const { id } = req.params;
+    if (!id || id === 'undefined' || id === 'null' || !id.trim()) {
+      return res.status(400).json({ message: 'Invalid restaurant ID' });
+    }
+
+    let restaurant = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      restaurant = await Restaurant.findById(id).select('-admin.password');
+    }
+
+    if (!restaurant) {
+      restaurant = await Restaurant.findOne({ name: id.trim() }).select('-admin.password');
+    }
+
     if (!restaurant) {
       return res.status(404).json({ message: 'Restaurant not found' });
     }
     res.status(200).json(restaurant);
   } catch (err) {
-    console.error(err);
+    console.error('Error fetching restaurant:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });

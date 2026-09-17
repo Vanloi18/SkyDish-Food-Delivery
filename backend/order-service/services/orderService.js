@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Order from "../models/orderModel.js";
 import FoodItem from "../models/foodItemModel.js";
 import Coupon from "../models/couponModel.js";
+import { sendOrderConfirmationEmail } from "./emailService.js";
 
 /**
  * Helper to check ownership or admin role
@@ -35,10 +36,25 @@ export const checkOrderOwnership = (order, user) => {
 export const createOrderService = async (orderData, authenticatedUser) => {
     const { items, deliveryAddress, paymentMethod, paymentStatus, couponCode } = orderData;
 
-    // 1. Enforce authenticated identity
-    const customerId = (authenticatedUser && authenticatedUser.id) ? String(authenticatedUser.id) : (orderData.customerId || "anonymous");
-    const customerName = (authenticatedUser && authenticatedUser.name) ? authenticatedUser.name : (orderData.customerName || orderData.customerId || "Customer");
-    const customerEmail = (authenticatedUser && authenticatedUser.email) ? authenticatedUser.email : (orderData.customerEmail || "");
+    // 1. Enforce authenticated identity - Guests are strictly forbidden from creating orders
+    if (!authenticatedUser || !authenticatedUser.id) {
+        const error = new Error("Vui lòng đăng nhập để đặt hàng.");
+        error.statusCode = 401;
+        throw error;
+    }
+
+    // Enforce role: Only Customer or Admin can create customer orders
+    const role = authenticatedUser.role === "superAdmin" ? "admin" : (authenticatedUser.role || "customer");
+    if (role !== "customer" && role !== "admin") {
+        const error = new Error("Tài khoản hiện tại không có quyền đặt hàng với vai trò khách hàng.");
+        error.statusCode = 403;
+        throw error;
+    }
+
+    // CRITICAL SECURITY: Never trust customerId from client body! Always derive from authenticated JWT
+    const customerId = String(authenticatedUser.id);
+    const customerName = authenticatedUser.name || orderData.customerName || "Customer";
+    const customerEmail = authenticatedUser.email || orderData.customerEmail || "";
     const customerPhone = orderData.phone || orderData.customerPhone || "";
 
     // 2. Validate items
@@ -214,6 +230,12 @@ export const createOrderService = async (orderData, authenticatedUser) => {
         if (useTransaction && session) {
             await session.commitTransaction();
         }
+
+        // Send order confirmation email asynchronously (failure never rolls back order)
+        sendOrderConfirmationEmail(order).catch((mailErr) => {
+            console.warn("Notice: Order confirmation email dispatch notice:", mailErr.message);
+        });
+
         return order;
     } catch (txError) {
         if (useTransaction && session) {
@@ -318,6 +340,11 @@ export const updateOrderDetailsService = async (orderId, updateData, user) => {
         throw error;
     }
 
+    // If client provided status, delegate to status service
+    if (updateData.status) {
+        await updateOrderStatusService(orderId, updateData.status, user, updateData);
+    }
+
     const order = await Order.findById(orderId);
     if (!order) {
         const error = new Error("Không tìm thấy đơn hàng.");
@@ -333,18 +360,23 @@ export const updateOrderDetailsService = async (orderId, updateData, user) => {
         throw error;
     }
 
-    // State machine check: cannot update if already delivered or canceled
-    if (order.status === "Delivered" || order.status === "Canceled" || order.status === "Out for Delivery") {
-        const error = new Error(`Không thể thay đổi đơn hàng khi đang ở trạng thái "${order.status}".`);
-        error.statusCode = 400;
-        throw error;
-    }
-
+    let hasDetailsUpdate = false;
     if (updateData.deliveryAddress) {
+        if (order.status === "Delivered" || order.status === "Canceled" || order.status === "Out for Delivery" || order.status === "Delivering") {
+            const error = new Error(`Không thể thay đổi địa chỉ đơn hàng khi đang ở trạng thái "${order.status}".`);
+            error.statusCode = 400;
+            throw error;
+        }
         order.deliveryAddress = updateData.deliveryAddress.trim();
+        hasDetailsUpdate = true;
     }
 
     if (updateData.items && Array.isArray(updateData.items)) {
+        if (order.status === "Delivered" || order.status === "Canceled" || order.status === "Out for Delivery" || order.status === "Delivering") {
+            const error = new Error(`Không thể thay đổi món ăn khi đang ở trạng thái "${order.status}".`);
+            error.statusCode = 400;
+            throw error;
+        }
         let subtotal = 0;
         const verifiedItems = [];
 
@@ -380,16 +412,19 @@ export const updateOrderDetailsService = async (orderId, updateData, user) => {
         order.items = verifiedItems;
         order.subtotal = subtotal;
         order.totalPrice = Math.max(0, subtotal + (order.deliveryFee || 15000) - (order.discount || 0));
+        hasDetailsUpdate = true;
     }
 
-    await order.save();
+    if (hasDetailsUpdate) {
+        await order.save();
+    }
     return order;
 };
 
 /**
  * Service: Update order status with Role authorization & Transition check
  */
-export const updateOrderStatusService = async (orderId, newStatus, user) => {
+export const updateOrderStatusService = async (orderId, newStatus, user, updateData = {}) => {
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
         const error = new Error("Mã đơn hàng không hợp lệ.");
         error.statusCode = 400;
@@ -412,23 +447,58 @@ export const updateOrderStatusService = async (orderId, newStatus, user) => {
 
     const role = user?.role === "superAdmin" ? "admin" : (user?.role || "customer");
 
-    // Only Restaurant, Driver, or Admin can move order through fulfillment states
-    if (role === "customer" && newStatus !== "Canceled") {
-        const error = new Error("Khách hàng chỉ có quyền yêu cầu hủy đơn hàng, không thể thay đổi trạng thái giao hàng.");
-        error.statusCode = 403;
-        throw error;
-    }
-
-    if (role === "restaurant") {
-        const isOwner = String(order.restaurantId) === String(user.restaurantId || user.id);
-        if (!isOwner) {
-            const error = new Error("Nhà hàng không có quyền cập nhật đơn của nhà hàng khác.");
+    // 1. Role-specific validation
+    if (role === "customer") {
+        if (newStatus !== "Canceled") {
+            const error = new Error("Khách hàng chỉ có quyền yêu cầu hủy đơn hàng, không thể thay đổi trạng thái giao hàng.");
+            error.statusCode = 403;
+            throw error;
+        }
+        if (order.status !== "Pending") {
+            const error = new Error("Khách hàng chỉ có thể hủy đơn khi đơn hàng đang ở trạng thái 'Chờ xác nhận'.");
+            error.statusCode = 400;
+            throw error;
+        }
+        const isCustomerOwner =
+            String(order.customerId) === String(user.id) ||
+            (user.email && order.customerEmail === user.email) ||
+            (user.name && order.customerId === user.name);
+        if (!isCustomerOwner) {
+            const error = new Error("Bạn không có quyền hủy đơn hàng của người khác.");
             error.statusCode = 403;
             throw error;
         }
     }
 
-    // State machine check
+    if (role === "restaurant") {
+        const isOwner =
+            String(order.restaurantId) === String(user.restaurantId || user.id) ||
+            (user.name && order.restaurantName === user.name);
+        if (!isOwner) {
+            const error = new Error("Nhà hàng không có quyền cập nhật đơn của nhà hàng khác.");
+            error.statusCode = 403;
+            throw error;
+        }
+
+        // Restaurant allowed business transitions:
+        if (order.status === "Pending" && !["Confirmed", "Canceled"].includes(newStatus)) {
+            const error = new Error(`Từ trạng thái "Chờ xác nhận", nhà hàng chỉ có thể "Xác nhận" hoặc "Từ chối" đơn hàng.`);
+            error.statusCode = 400;
+            throw error;
+        }
+        if (order.status === "Confirmed" && !["Preparing", "Canceled"].includes(newStatus)) {
+            const error = new Error(`Từ trạng thái "Đã xác nhận", nhà hàng chỉ có thể chuyển sang "Đang chuẩn bị" hoặc "Hủy đơn".`);
+            error.statusCode = 400;
+            throw error;
+        }
+        if (order.status === "Preparing" && !["Out for Delivery", "Delivering", "Canceled"].includes(newStatus)) {
+            const error = new Error(`Từ trạng thái "Đang chuẩn bị", đơn hàng chỉ có thể chuyển sang giao hàng hoặc hủy.`);
+            error.statusCode = 400;
+            throw error;
+        }
+    }
+
+    // 2. Terminal state & in-flight delivery guards
     if (order.status === "Delivered" && newStatus !== "Delivered") {
         const error = new Error("Đơn hàng đã được giao thành công, không thể thay đổi trạng thái.");
         error.statusCode = 400;
@@ -441,7 +511,23 @@ export const updateOrderStatusService = async (orderId, newStatus, user) => {
         throw error;
     }
 
+    if ((order.status === "Out for Delivery" || order.status === "Delivering") && newStatus === "Canceled") {
+        const error = new Error("Không thể hủy đơn hàng khi shipper đang đi giao.");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    // 3. Apply state transition
     order.status = newStatus;
+    if (newStatus === "Canceled") {
+        order.cancellationReason = updateData.cancellationReason || ("Đơn hàng bị từ chối / hủy bởi " + (role === "restaurant" ? "nhà hàng" : role === "customer" ? "khách hàng" : "quản trị viên"));
+        order.cancelledBy = role;
+        order.cancelledAt = new Date();
+        if (order.paymentMethod === "COD") {
+            order.paymentStatus = "Failed";
+        }
+    }
+
     await order.save();
     return order;
 };
@@ -449,35 +535,6 @@ export const updateOrderStatusService = async (orderId, newStatus, user) => {
 /**
  * Service: Cancel order with Ownership verification
  */
-export const cancelOrderService = async (orderId, user) => {
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-        const error = new Error("Mã đơn hàng không hợp lệ.");
-        error.statusCode = 400;
-        throw error;
-    }
-
-    const order = await Order.findById(orderId);
-    if (!order) {
-        const error = new Error("Không tìm thấy đơn hàng.");
-        error.statusCode = 404;
-        throw error;
-    }
-
-    // Ownership check
-    const hasAccess = checkOrderOwnership(order, user);
-    if (!hasAccess) {
-        const error = new Error("Bạn không có quyền hủy đơn hàng của người khác.");
-        error.statusCode = 403;
-        throw error;
-    }
-
-    if (order.status === "Delivered" || order.status === "Out for Delivery" || order.status === "Delivering") {
-        const error = new Error(`Không thể hủy đơn hàng khi đang giao hoặc đã hoàn tất ("${order.status}").`);
-        error.statusCode = 400;
-        throw error;
-    }
-
-    order.status = "Canceled";
-    await order.save();
-    return order;
+export const cancelOrderService = async (orderId, user, reason = null) => {
+    return await updateOrderStatusService(orderId, "Canceled", user, { cancellationReason: reason });
 };

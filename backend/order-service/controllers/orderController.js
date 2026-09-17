@@ -18,7 +18,7 @@ export const createOrder = async (req, res) => {
         res.status(statusCode).json({
             success: false,
             error: error.message || "Lỗi máy chủ nội bộ",
-            code: statusCode === 400 ? "BAD_REQUEST" : statusCode === 403 ? "FORBIDDEN" : statusCode === 404 ? "NOT_FOUND" : "INTERNAL_ERROR"
+            code: statusCode === 400 ? "BAD_REQUEST" : statusCode === 401 ? "UNAUTHORIZED" : statusCode === 403 ? "FORBIDDEN" : statusCode === 404 ? "NOT_FOUND" : "INTERNAL_ERROR"
         });
     }
 };
@@ -90,7 +90,7 @@ export const updateOrderStatus = async (req, res) => {
         if (!status) {
             return res.status(400).json({ success: false, error: "Trạng thái đơn hàng là bắt buộc." });
         }
-        const order = await updateOrderStatusService(req.params.id, status, req.user);
+        const order = await updateOrderStatusService(req.params.id, status, req.user, req.body);
         res.status(200).json(order);
     } catch (error) {
         const statusCode = error.statusCode || 500;

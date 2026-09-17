@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Delivery from "../models/Delivery.js";
 import { geocodeAddress } from "../utils/geocode.js";
 
@@ -138,6 +139,39 @@ export const updateDeliveryStatus = async (req, res) => {
     // Update status
     delivery.status = status;
     await delivery.save();
+
+    // Synchronize corresponding Order in shared MongoDB database
+    try {
+      if (delivery.orderId) {
+        let orderStatus = null;
+        if (status === "Picked-up") {
+          orderStatus = "Out for Delivery";
+        } else if (status === "Delivered") {
+          orderStatus = "Delivered";
+        }
+
+        if (orderStatus) {
+          const db = mongoose.connection.db;
+          if (db) {
+            const ordersCol = db.collection("orders");
+            const filter = mongoose.Types.ObjectId.isValid(delivery.orderId)
+              ? { $or: [{ _id: new mongoose.Types.ObjectId(delivery.orderId) }, { _id: delivery.orderId }] }
+              : { _id: delivery.orderId };
+
+            const updateDoc = {
+              $set: {
+                status: orderStatus,
+                updatedAt: new Date(),
+                ...(orderStatus === "Delivered" ? { paymentStatus: "Paid" } : {})
+              }
+            };
+            await ordersCol.updateOne(filter, updateDoc);
+          }
+        }
+      }
+    } catch (syncErr) {
+      console.warn("Notice: Order synchronization from delivery status failed:", syncErr.message);
+    }
 
     res.json({
       success: true,

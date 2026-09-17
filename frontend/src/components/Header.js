@@ -19,6 +19,7 @@ import { CartContext } from "../pages/contexts/CartContext";
 import Sidebar from "./Sidebar";
 import Button from "./common/Button";
 import { validateRestaurantToken } from "../layouts/RestaurantPartnerLayout/RestaurantPartnerGuard";
+import { getValidToken, getAuthCustomer, clearCustomerAuth } from "../utils/authHelper";
 import "../styles/header.css";
 
 function Header() {
@@ -79,12 +80,14 @@ function Header() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    setLoggedIn(!!token);
+    const validToken = getValidToken();
+    const customer = getAuthCustomer();
+    const isCustomerLoggedIn = !!(validToken && customer);
+    setLoggedIn(isCustomerLoggedIn);
 
-    if (token) {
-      const cachedName = localStorage.getItem("customerName") || "Khách hàng";
-      const cachedEmail = localStorage.getItem("customerEmail") || "";
+    if (isCustomerLoggedIn) {
+      const cachedName = customer.name || localStorage.getItem("customerName") || "Khách hàng";
+      const cachedEmail = customer.email || localStorage.getItem("customerEmail") || "";
       setUserProfile({ name: cachedName, email: cachedEmail });
       fetchNotifications();
     } else {
@@ -126,9 +129,7 @@ function Header() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("customerName");
-    localStorage.removeItem("customerEmail");
+    clearCustomerAuth();
     setLoggedIn(false);
     setShowProfileDropdown(false);
     navigate("/auth/login");
@@ -149,6 +150,31 @@ function Header() {
     } else {
       navigate("/restaurant/login");
     }
+  };
+
+  const handleShipperClick = () => {
+    setShowPortalsDropdown(false);
+    const driverToken = localStorage.getItem("driverToken");
+    if (driverToken) {
+      navigate("/delivery/dashboard");
+    } else {
+      navigate("/delivery/login");
+    }
+  };
+
+  const handleAdminClick = () => {
+    setShowPortalsDropdown(false);
+    const superAdminName = localStorage.getItem("superAdminName");
+    if (superAdminName) {
+      navigate("/superadmin/dashboard");
+    } else {
+      navigate("/superadmin/login");
+    }
+  };
+
+  const handleCustomerClick = () => {
+    setShowPortalsDropdown(false);
+    navigate("/customer/home");
   };
 
   const isActive = (path) => location.pathname === path;
@@ -218,20 +244,20 @@ function Header() {
               {showPortalsDropdown && (
                 <motion.div
                   className="profile-dropdown-card"
-                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   style={{ width: "230px" }}
                 >
-                  <Link
-                    to="/customer/home"
+                  <button
+                    type="button"
                     className="header_dropdown-item"
-                    onClick={() => setShowPortalsDropdown(false)}
+                    onClick={handleCustomerClick}
+                    aria-label="Cổng khách hàng"
                   >
                     <FaUtensils style={{ color: "var(--sd-primary)" }} /> Khách hàng
-                  </Link>
-                  {/* Smart auth-aware: dashboard if restaurantToken exists, else login */}
+                  </button>
                   <button
                     type="button"
                     className="header_dropdown-item"
@@ -240,20 +266,22 @@ function Header() {
                   >
                     <FaStore style={{ color: "#3b82f6" }} /> Đối tác nhà hàng
                   </button>
-                  <Link
-                    to="/delivery/dashboard"
+                  <button
+                    type="button"
                     className="header_dropdown-item"
-                    onClick={() => setShowPortalsDropdown(false)}
+                    onClick={handleShipperClick}
+                    aria-label="Cổng đối tác shipper"
                   >
                     <FaMotorcycle style={{ color: "#10b981" }} /> Shipper
-                  </Link>
-                  <Link
-                    to="/superadmin/login"
+                  </button>
+                  <button
+                    type="button"
                     className="header_dropdown-item"
-                    onClick={() => setShowPortalsDropdown(false)}
+                    onClick={handleAdminClick}
+                    aria-label="Cổng quản trị viên"
                   >
                     <FaShieldAlt style={{ color: "#8b5cf6" }} /> Quản trị viên
-                  </Link>
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -280,10 +308,10 @@ function Header() {
               {showNotifDropdown && (
                 <motion.div
                   className="profile-dropdown-card"
-                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   style={{ width: "320px", right: 0, left: "auto", padding: "0.75rem", maxHeight: "400px", overflowY: "auto" }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.5rem", marginBottom: "0.5rem" }}>
@@ -402,10 +430,10 @@ function Header() {
                 {showProfileDropdown && (
                   <motion.div
                     className="profile-dropdown-card"
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: "easeOut" }}
                   >
                     <div className="dropdown-user-header">
                       <p className="dropdown-user-name">

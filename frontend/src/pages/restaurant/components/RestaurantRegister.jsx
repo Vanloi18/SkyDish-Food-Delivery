@@ -9,7 +9,6 @@ import {
   FaPhone, 
   FaEnvelope, 
   FaLock, 
-  FaImage, 
   FaCheckCircle,
   FaExclamationCircle 
 } from "react-icons/fa";
@@ -17,6 +16,7 @@ import Header from "../../../components/Header";
 import Footer from "../../../components/Footer";
 import Input from "../../../components/common/Input";
 import Button from "../../../components/common/Button";
+import ImageUploadPreview from "../../../components/common/ImageUploadPreview";
 import "../../../styles/auth.css";
 
 function RestaurantRegister() {
@@ -39,11 +39,6 @@ function RestaurantRegister() {
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     if (error) setError("");
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    setForm({ ...form, profilePicture: file });
   };
 
   const handleSubmit = async (e) => {
@@ -210,48 +205,16 @@ function RestaurantRegister() {
 
             {/* Profile Picture Upload */}
             <div style={{ marginBottom: "1.5rem" }}>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "0.4rem",
-                  fontSize: "var(--sd-font-size-sm)",
-                  fontWeight: "600",
-                  color: "var(--sd-text-primary)",
+              <ImageUploadPreview
+                label="Ảnh bìa / Logo nhà hàng"
+                hint="Chọn ảnh logo hoặc biển hiệu nhà hàng (.jpg, .png)"
+                value={form.profilePicture}
+                type="restaurant"
+                height="160px"
+                onChange={(file) => {
+                  setForm({ ...form, profilePicture: file });
                 }}
-              >
-                Ảnh bìa / Logo nhà hàng
-              </label>
-              <div
-                style={{
-                  border: "1px dashed var(--sd-border)",
-                  borderRadius: "var(--sd-radius-md)",
-                  padding: "1rem",
-                  textAlign: "center",
-                  backgroundColor: "var(--sd-bg-muted)",
-                }}
-              >
-                <input
-                  type="file"
-                  id="restaurantLogo"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  style={{ display: "none" }}
-                />
-                <label
-                  htmlFor="restaurantLogo"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    color: "var(--sd-primary)",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    fontSize: "var(--sd-font-size-sm)",
-                  }}
-                >
-                  <FaImage /> {form.profilePicture ? form.profilePicture.name : "Chọn tệp hình ảnh..."}
-                </label>
-              </div>
+              />
             </div>
 
             <div style={{ marginTop: "1.5rem" }}>

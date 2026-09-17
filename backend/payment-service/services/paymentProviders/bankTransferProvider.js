@@ -48,6 +48,10 @@ async function createBankTransferPayment({
     throw { status: 400, message: "Order ID is required." };
   }
 
+  if (!userId || userId === "GUEST") {
+    throw { status: 401, message: "Unauthorized: Guest payments are strictly prohibited. Please login." };
+  }
+
   const config = getBankTransferConfig();
   const validAmount = Math.max(0, Math.round(Number(amount) || 0));
   // Normalize payment note for VietQR: preserve letters, digits, dashes, and underscores
@@ -96,7 +100,7 @@ async function createBankTransferPayment({
   } else {
     payment = new Payment({
       orderId,
-      userId: userId || "GUEST",
+      userId: String(userId),
       amount: validAmount,
       currency: currency || "vnd",
       paymentMethod: "BANK_TRANSFER",
@@ -112,16 +116,24 @@ async function createBankTransferPayment({
   // Synchronize order with Order Service if items are provided
   if (items && items.length > 0) {
     try {
+      const jwt = require("jsonwebtoken");
+      const jwtSecret = process.env.JWT_SECRET || 'supersecretjwtkeyforfooddeliverymicroservices2025';
+      const systemToken = jwt.sign({ id: String(userId), role: "customer" }, jwtSecret, { expiresIn: "1h" });
       const orderServiceUrl = process.env.ORDER_SERVICE_URL || "http://127.0.0.1:5005";
       await axios.post(`${orderServiceUrl}/api/orders`, {
-        customerId: userId,
+        customerId: String(userId),
         restaurantId: restaurantId || "restaurant_1",
         items,
         totalPrice: validAmount,
         paymentMethod: "BANK_TRANSFER",
         paymentStatus: "Pending",
         deliveryAddress: deliveryAddress || "Hà Nội",
-      }, { timeout: 3000 });
+      }, {
+        headers: {
+          Authorization: `Bearer ${systemToken}`,
+        },
+        timeout: 4000
+      });
     } catch (orderErr) {
       console.warn("Order service sync notice (Bank Transfer):", orderErr.message);
     }

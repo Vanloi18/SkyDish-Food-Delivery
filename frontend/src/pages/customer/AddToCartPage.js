@@ -1,4 +1,3 @@
-import { API_URLS } from '../../config/api';
 import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -20,6 +19,8 @@ import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
 import EmptyState from "../../components/common/EmptyState";
 import { formatCurrency } from "../../utils/currency";
+import { resolveImageUrl, handleImageError } from "../../utils/imageHelper";
+import { getValidToken } from "../../utils/authHelper";
 
 function AddToCartPage() {
   const { 
@@ -36,9 +37,9 @@ function AddToCartPage() {
   const navigate = useNavigate();
 
   const handleProceedToCheckout = () => {
-    const token = localStorage.getItem("token");
+    const token = getValidToken();
     if (!token) {
-      navigate("/auth/login?redirect=/checkout");
+      navigate(`/auth/login?redirect=/checkout&message=${encodeURIComponent("Vui lòng đăng nhập để đặt hàng.")}`);
       return;
     }
     navigate("/checkout");
@@ -147,15 +148,9 @@ function AddToCartPage() {
                       {/* Dish Thumbnail & Info */}
                       <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
                         <img
-                          src={
-                            item.image
-                              ? (item.image.startsWith("http") ? item.image : `${API_URLS.RESTAURANT}${item.image}`)
-                              : "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&auto=format&fit=crop&q=80"
-                          }
+                          src={resolveImageUrl(item.image, "food")}
                           alt={item.name}
-                          onError={(e) => {
-                            e.target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&auto=format&fit=crop&q=80";
-                          }}
+                          onError={(e) => handleImageError(e, "food")}
                           style={{
                             width: "72px",
                             height: "72px",

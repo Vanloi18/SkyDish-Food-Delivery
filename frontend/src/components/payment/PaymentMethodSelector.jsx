@@ -1,7 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { 
-  FaCreditCard, 
   FaMoneyBillWave, 
   FaQrcode, 
   FaShieldAlt,
@@ -44,15 +43,6 @@ const PAYMENT_METHODS = [
     badge: "Tiện lợi",
     badgeColor: "#10b981",
     color: "#059669",
-  },
-  {
-    id: "STRIPE",
-    title: "Thẻ Quốc tế (Stripe)",
-    description: "Thanh toán an toàn qua thẻ Visa, MasterCard hoặc thẻ quốc tế",
-    icon: FaCreditCard,
-    badge: "Quốc tế",
-    badgeColor: "#3b82f6",
-    color: "#6366f1",
   },
 ];
 

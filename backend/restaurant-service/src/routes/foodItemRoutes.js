@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import FoodItem from '../models/FoodItem.js';
 import Restaurant from '../models/Restaurant.js';
 import authMiddleware from '../middleware/authMiddleware.js';
@@ -7,7 +8,7 @@ import upload from '../middleware/uploadMiddleware.js';
 const router = express.Router();
 
 // Create a new food item (Restaurant Admin only)
-router.post('/create', authMiddleware,upload.single('image'), async (req, res) => {
+router.post('/create', authMiddleware, upload.single('image'), async (req, res) => {
   const { name, description, price, category } = req.body;
 
   try {
@@ -16,12 +17,18 @@ router.post('/create', authMiddleware,upload.single('image'), async (req, res) =
       return res.status(404).json({ message: 'Restaurant not found' });
     }
 
+    let image = req.file ? `/uploads/${req.file.filename}` : (req.body.image || req.body.imageUrl || '');
+    // Sanitize: Reject local Windows or desktop paths
+    if (typeof image === 'string' && /^[a-zA-Z]:[\\\/]/.test(image.trim().replace(/^["']|["']$/g, ''))) {
+      image = '';
+    }
+
     const newFoodItem = new FoodItem({
       restaurant: restaurant._id,
       name,
       description,
-      price,
-      image: req.file ? `/uploads/${req.file.filename}` : (req.body.image || ''),
+      price: Number(price),
+      image,
       category,
     });
 
@@ -46,7 +53,7 @@ router.get('/', authMiddleware, async (req, res) => {
 
 // Update a food item (Restaurant Admin only)
 router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
-  const { name, description, price, imageUrl, category, availability } = req.body;
+  const { name, description, price, imageUrl, image, category, availability } = req.body;
 
   try {
     const foodItem = await FoodItem.findById(req.params.id);
@@ -59,13 +66,25 @@ router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
     }
 
     if (name) foodItem.name = name;
-    if (description) foodItem.description = description;
-    if (price) foodItem.price = price;
+    if (description !== undefined) foodItem.description = description;
+    if (price !== undefined) foodItem.price = Number(price);
     if (category) foodItem.category = category;
-    if (typeof availability !== 'undefined') foodItem.availability = availability;
+    if (typeof availability !== 'undefined') {
+      foodItem.availability = availability === true || availability === 'true';
+    }
 
     if (req.file) {
       foodItem.image = `/uploads/${req.file.filename}`;
+    } else if (image !== undefined || imageUrl !== undefined) {
+      let candidate = (image !== undefined ? image : imageUrl) || '';
+      if (typeof candidate === 'string') {
+        const trimmed = candidate.trim().replace(/^["']|["']$/g, '');
+        if (/^[a-zA-Z]:[\\\/]/.test(trimmed)) {
+          foodItem.image = '';
+        } else {
+          foodItem.image = trimmed;
+        }
+      }
     }
 
     await foodItem.save();
@@ -155,6 +174,31 @@ router.get('/all', async (req, res) => {
     res.status(200).json(foodItems);
   } catch (err) {
     console.error(err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// Get a single food item with populated restaurant (Public)
+router.get('/item/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id || id === 'undefined' || id === 'null' || !id.trim()) {
+      return res.status(400).json({ message: 'Invalid food item ID' });
+    }
+
+    let item = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      item = await FoodItem.findById(id).populate('restaurant', 'name location profilePicture contactNumber');
+    }
+    if (!item) {
+      item = await FoodItem.findOne({ name: id.trim() }).populate('restaurant', 'name location profilePicture contactNumber');
+    }
+    if (!item) {
+      return res.status(404).json({ message: 'Food item not found' });
+    }
+    res.status(200).json(item);
+  } catch (err) {
+    console.error('Error fetching food item detail:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });

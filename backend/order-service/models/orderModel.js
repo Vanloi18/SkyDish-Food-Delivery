@@ -32,7 +32,11 @@ const orderSchema = new mongoose.Schema(
             enum: ["Pending", "Confirmed", "Preparing", "Out for Delivery", "Delivering", "Delivered", "Canceled"],
             default: "Pending"
         },
-        deliveryAddress: { type: String, required: true }
+        deliveryAddress: { type: String, required: true },
+        cancellationReason: { type: String, default: null },
+        cancelledBy: { type: String, default: null },
+        cancelledAt: { type: Date, default: null },
+        emailConfirmationSent: { type: Boolean, default: false }
     },
     { timestamps: true }
 );

@@ -1,18 +1,8 @@
 import { API_URLS } from '../../config/api';
 import React, { useState, useEffect, useContext, useCallback, useMemo } from "react";
-import { loadStripe } from "@stripe/stripe-js";
-import { 
-  Elements, 
-  useStripe, 
-  useElements, 
-  CardNumberElement, 
-  CardExpiryElement, 
-  CardCvcElement 
-} from "@stripe/react-stripe-js";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { 
-  FaCreditCard, 
   FaCheckCircle, 
   FaExclamationCircle, 
   FaShieldAlt, 
@@ -26,7 +16,9 @@ import {
   FaUniversity,
   FaCopy,
   FaShoppingCart,
-  FaUtensils
+  FaUtensils,
+  FaMapMarkerAlt,
+  FaSpinner
 } from "react-icons/fa";
 import { CartContext } from "../contexts/CartContext";
 import Header from "../../components/Header";
@@ -34,30 +26,64 @@ import Footer from "../../components/Footer";
 import Button from "../../components/common/Button";
 import PaymentMethodSelector from "../../components/payment/PaymentMethodSelector";
 import { formatCurrency } from "../../utils/currency";
+import { getValidToken, getAuthCustomer, clearCustomerAuth, getAuthHeaders } from "../../utils/authHelper";
 import "../../styles/checkout.css";
-
-const stripePromise = loadStripe(
-  process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || ""
-);
 
 const API_BASE_URL = API_URLS.PAYMENT;
 
 const CheckoutForm = () => {
-  const stripe = useStripe();
-  const elements = useElements();
-
+  const navigate = useNavigate();
   const { cartItems, subtotal, deliveryFee, clearCart } = useContext(CartContext);
 
+  const authCustomer = useMemo(() => getAuthCustomer(), []);
+
+  // Enforce customer authentication: Guests are strictly blocked from Checkout
+  useEffect(() => {
+    const validToken = getValidToken();
+    const customer = getAuthCustomer();
+    const isAuthorized = validToken && customer && (customer.role === "customer" || customer.role === "admin" || !customer.role);
+    if (!isAuthorized) {
+      if (validToken) clearCustomerAuth();
+      navigate(`/auth/login?redirect=/checkout&message=${encodeURIComponent("Vui lòng đăng nhập để đặt hàng.")}`, { replace: true });
+    }
+  }, [navigate]);
+
+  const checkAuthOrRedirect = useCallback(() => {
+    const validToken = getValidToken();
+    const customer = getAuthCustomer();
+    const isAuthorized = validToken && customer && (customer.role === "customer" || customer.role === "admin" || !customer.role);
+    if (!isAuthorized) {
+      if (validToken) clearCustomerAuth();
+      navigate(`/auth/login?redirect=/checkout&message=${encodeURIComponent("Vui lòng đăng nhập để đặt hàng.")}`, { replace: true });
+      return false;
+    }
+    return true;
+  }, [navigate]);
+
   const [paymentMethod, setPaymentMethod] = useState("VNPAY");
-  const [clientSecret, setClientSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState("");
   const [disablePayment, setDisablePayment] = useState(false);
-  const [deliveryAddress, setDeliveryAddress] = useState(
-    localStorage.getItem("customerAddress") || "11B Tràng Tiền, Quận Hoàn Kiếm, Hà Nội"
-  );
-  
+
+  // Structured delivery address
+  const [addrCity, setAddrCity] = useState(localStorage.getItem("addr_city") || "");
+  const [addrDistrict, setAddrDistrict] = useState(localStorage.getItem("addr_district") || "");
+  const [addrWard, setAddrWard] = useState(localStorage.getItem("addr_ward") || "");
+  const [addrDetail, setAddrDetail] = useState(localStorage.getItem("addr_detail") || "");
+
+  // Computed full address string
+  const deliveryAddress = useMemo(() => {
+    const parts = [addrDetail, addrWard, addrDistrict, addrCity].filter(Boolean);
+    return parts.join(", ");
+  }, [addrDetail, addrWard, addrDistrict, addrCity]);
+
+  // Persist address parts to localStorage on change
+  useEffect(() => { localStorage.setItem("addr_city", addrCity); }, [addrCity]);
+  useEffect(() => { localStorage.setItem("addr_district", addrDistrict); }, [addrDistrict]);
+  useEffect(() => { localStorage.setItem("addr_ward", addrWard); }, [addrWard]);
+  useEffect(() => { localStorage.setItem("addr_detail", addrDetail); }, [addrDetail]);
+
   // VNPay & MoMo specific states
   const [vnpBankCode, setVnpBankCode] = useState("");
   const [vnpayMode, setVnpayMode] = useState("QR"); // "QR" | "REDIRECT"
@@ -82,10 +108,127 @@ const CheckoutForm = () => {
   const [currentOrderId] = useState(() => `ORDER${Math.floor(10000 + Math.random() * 90000)}`);
   const [placedOrder, setPlacedOrder] = useState(null);
 
-  const customerName = localStorage.getItem("customerName") || "Nguyễn Văn Khách";
-  const customerEmail = localStorage.getItem("customerEmail") || "khachhang@skydish.com";
-  const customerPhone = localStorage.getItem("customerPhone") || "+84901234567";
-  const [firstName, lastName] = customerName.split(" ");
+  const customerName = authCustomer?.name || localStorage.getItem("customerName") || "";
+  const customerEmail = authCustomer?.email || localStorage.getItem("customerEmail") || "";
+  const customerPhone = authCustomer?.phone || localStorage.getItem("customerPhone") || "";
+  const [firstName, lastName] = customerName ? customerName.split(" ") : ["", ""];
+
+  // Restaurant info resolution state
+  const [restaurantInfo, setRestaurantInfo] = useState({
+    id: "",
+    name: "",
+    location: "",
+    loading: false,
+    error: null,
+  });
+
+  // Effect to authoritatively resolve restaurant details from cart item, restaurant-service, or food item
+  useEffect(() => {
+    let isMounted = true;
+
+    const resolveRestaurant = async () => {
+      if (!cartItems || cartItems.length === 0) {
+        if (isMounted) {
+          setRestaurantInfo({ id: "", name: "", location: "", loading: false, error: null });
+        }
+        return;
+      }
+
+      const firstItem = cartItems[0];
+      const extractedId =
+        firstItem.restaurantId ||
+        (typeof firstItem.restaurant === "object" ? firstItem.restaurant?._id : firstItem.restaurant) ||
+        "";
+      const extractedName =
+        firstItem.restaurantName ||
+        (typeof firstItem.restaurant === "object" ? firstItem.restaurant?.name : "") ||
+        "";
+      const foodId = firstItem._id || firstItem.foodId || "";
+
+      // 1. Immediately adopt known name from cart item so UI displays without waiting
+      if (extractedName && isMounted) {
+        setRestaurantInfo((prev) => ({
+          ...prev,
+          id: extractedId || prev.id,
+          name: extractedName,
+          loading: false,
+          error: null,
+        }));
+      }
+
+      // 2. If valid restaurantId is present, fetch authoritative info from restaurant-service
+      if (extractedId && extractedId !== "undefined" && extractedId !== "null") {
+        if (isMounted && !extractedName) {
+          setRestaurantInfo((prev) => ({ ...prev, loading: true }));
+        }
+        try {
+          const res = await axios.get(`${API_URLS.RESTAURANT}/api/restaurant/${extractedId}`);
+          if (isMounted && res.data) {
+            setRestaurantInfo({
+              id: res.data._id || extractedId,
+              name: res.data.name || extractedName || "Nhà hàng đối tác SkyDish",
+              location: res.data.location || "",
+              loading: false,
+              error: null,
+            });
+            return;
+          }
+        } catch (err) {
+          console.warn("Could not fetch restaurant by ID:", extractedId, err.message);
+          if (extractedName && isMounted) {
+            setRestaurantInfo({
+              id: extractedId,
+              name: extractedName,
+              location: "",
+              loading: false,
+              error: null,
+            });
+            return;
+          }
+        }
+      }
+
+      // 3. Fallback: If restaurantId was missing or not found, query food item detail
+      if (foodId && foodId !== "undefined" && foodId !== "null") {
+        if (isMounted && !extractedName) {
+          setRestaurantInfo((prev) => ({ ...prev, loading: true }));
+        }
+        try {
+          const res = await axios.get(`${API_URLS.RESTAURANT}/api/food-items/item/${foodId}`);
+          if (isMounted && res.data?.restaurant) {
+            const rest = res.data.restaurant;
+            setRestaurantInfo({
+              id: typeof rest === "object" ? rest._id : rest,
+              name: typeof rest === "object" ? rest.name : extractedName || "Nhà hàng đối tác SkyDish",
+              location: typeof rest === "object" ? rest.location : "",
+              loading: false,
+              error: null,
+            });
+            return;
+          }
+        } catch (err) {
+          console.warn("Could not fetch food item relation:", foodId, err.message);
+        }
+      }
+
+      // 4. Fallback: clear loading state unconditionally so it never hangs
+      if (isMounted) {
+        setRestaurantInfo((prev) => ({
+          id: extractedId || prev.id || "",
+          name: prev.name || extractedName || (cartItems.length > 0 ? "Nhà hàng đối tác SkyDish" : ""),
+          location: prev.location || "",
+          loading: false,
+          error: prev.name || extractedName ? null : "Không thể xác định thông tin nhà hàng",
+        }));
+      }
+    };
+
+    resolveRestaurant();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cartItems]);
 
   // Pure authoritative total calculation: Subtotal + Delivery Fee - Coupon Discount
   const calculatedTotal = useMemo(() => {
@@ -93,26 +236,45 @@ const CheckoutForm = () => {
     return Math.max(0, total - couponDiscount);
   }, [subtotal, deliveryFee, couponDiscount]);
 
+  const effectiveRestaurantId = useMemo(() => {
+    return (
+      restaurantInfo.id ||
+      cartItems[0]?.restaurantId ||
+      (typeof cartItems[0]?.restaurant === "object" ? cartItems[0]?.restaurant?._id : cartItems[0]?.restaurant) ||
+      ""
+    );
+  }, [restaurantInfo.id, cartItems]);
+
+  const effectiveRestaurantName = useMemo(() => {
+    return (
+      restaurantInfo.name ||
+      cartItems[0]?.restaurantName ||
+      (typeof cartItems[0]?.restaurant === "object" ? cartItems[0]?.restaurant?.name : "") ||
+      ""
+    );
+  }, [restaurantInfo.name, cartItems]);
+
   const orderData = useMemo(() => ({
     orderId: currentOrderId,
-    userId: localStorage.getItem("customerId") || "USER67890",
+    userId: authCustomer?.id || "",
     amount: calculatedTotal,
     currency: "vnd",
-    firstName: firstName || "Khách",
-    lastName: lastName || "hàng",
+    firstName: firstName || "",
+    lastName: lastName || "",
     email: customerEmail,
     phone: customerPhone,
     deliveryAddress,
     items: cartItems.map((it) => ({
-      foodId: it._id || it.name,
+      foodId: it._id || it.foodId || it.name,
       name: it.name,
       quantity: it.quantity || 1,
       price: Number(it.price) || 0,
     })),
-    restaurantId: cartItems[0]?.restaurantId || "Pizza 4P's Tràng Tiền",
+    restaurantId: effectiveRestaurantId,
+    restaurantName: effectiveRestaurantName,
     couponCode: appliedCoupon?.code || null,
     discountAmount: couponDiscount,
-  }), [currentOrderId, calculatedTotal, firstName, lastName, customerEmail, customerPhone, deliveryAddress, cartItems, appliedCoupon, couponDiscount]);
+  }), [currentOrderId, calculatedTotal, firstName, lastName, customerEmail, customerPhone, deliveryAddress, cartItems, appliedCoupon, couponDiscount, effectiveRestaurantId, effectiveRestaurantName, authCustomer]);
 
   const handleApplyCoupon = async (e) => {
     if (e) e.preventDefault();
@@ -130,8 +292,8 @@ const CheckoutForm = () => {
       const res = await axios.post(`${API_URLS.RESTAURANT}/api/coupons/validate`, {
         code: couponCode.trim(),
         orderAmount: subtotal,
-        restaurantId: cartItems[0]?.restaurantId || "",
-        customerId: localStorage.getItem("customerId") || "customer",
+        restaurantId: effectiveRestaurantId || cartItems[0]?.restaurantId || "",
+        customerId: authCustomer?.id || "",
       });
       if (res.data.valid) {
         setAppliedCoupon(res.data);
@@ -157,17 +319,24 @@ const CheckoutForm = () => {
     setCouponFeedback({ type: "", message: "" });
   };
 
-  // Order creation helper
+  // Order creation helper — always sends Bearer token and rejects unauthenticated guests
   const createOrderInOrderService = useCallback(async (method, status = "Pending") => {
+    const validToken = getValidToken();
+    if (!validToken) {
+      clearCustomerAuth();
+      navigate(`/auth/login?redirect=/checkout&message=${encodeURIComponent("Vui lòng đăng nhập để đặt hàng.")}`, { replace: true });
+      throw new Error("Vui lòng đăng nhập để đặt hàng.");
+    }
+
     try {
-      const token = localStorage.getItem("token");
-      await axios.post(
+      const res = await axios.post(
         `${API_URLS.ORDER}/api/orders`,
         {
-          customerId: `${orderData.firstName} ${orderData.lastName}`,
           restaurantId: orderData.restaurantId,
+          restaurantName: orderData.restaurantName,
           items: orderData.items.map((it) => ({
             foodId: it.foodId,
+            name: it.name,
             quantity: it.quantity,
             price: it.price,
           })),
@@ -176,35 +345,23 @@ const CheckoutForm = () => {
           paymentMethod: method,
           status: status === "Paid" ? "Confirmed" : "Pending",
         },
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
+        { headers: { Authorization: `Bearer ${validToken}` } }
       );
+      return res.data;
     } catch (err) {
-      console.warn("Order creation notice:", err.response?.data?.message || err.message);
+      if (err.response?.status === 401) {
+        clearCustomerAuth();
+        navigate(`/auth/login?redirect=/checkout&message=${encodeURIComponent("Vui lòng đăng nhập để đặt hàng.")}`, { replace: true });
+      }
+      throw err;
     }
-  }, [orderData]);
+  }, [orderData, navigate]);
 
-  // 1. Initialize Stripe
-  const createStripeIntent = useCallback(async () => {
-    if (paymentMethod !== "STRIPE") return;
-    try {
-      const response = await axios.post(`${API_BASE_URL}/api/payment/process`, orderData);
-      if (response.data.paymentStatus === "Paid" || response.data.disablePayment) {
-        setMessage("Đơn hàng này đã được xử lý và thanh toán thành công.");
-        setDisablePayment(true);
-        return;
-      }
-      if (response.data.clientSecret) {
-        setClientSecret(response.data.clientSecret);
-      }
-    } catch (err) {
-      console.warn("Stripe init note:", err.response?.data || err.message);
-    }
-  }, [orderData, paymentMethod]);
+
 
   // 2. Initialize VNPay QR
   const generateVNPayQR = useCallback(async () => {
+    if (!checkAuthOrRedirect()) return;
     try {
       setLoading(true);
       setError(null);
@@ -216,7 +373,7 @@ const CheckoutForm = () => {
         phone: orderData.phone,
         bankCode: vnpBankCode,
         language: "vn",
-      });
+      }, { headers: getAuthHeaders() });
       if (res.data.paymentUrl) {
         setVnpayQrUrl(res.data.paymentUrl);
         setPollingActive(true);
@@ -226,10 +383,11 @@ const CheckoutForm = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderData, vnpBankCode]);
+  }, [orderData, vnpBankCode, checkAuthOrRedirect]);
 
   // 3. Initialize MoMo QR
   const generateMoMoQR = useCallback(async () => {
+    if (!checkAuthOrRedirect()) return;
     try {
       setLoading(true);
       setError(null);
@@ -239,7 +397,7 @@ const CheckoutForm = () => {
         amount: orderData.amount,
         email: orderData.email,
         phone: orderData.phone,
-      });
+      }, { headers: getAuthHeaders() });
       if (res.data.payUrl) {
         setMomoQrUrl(res.data.payUrl);
         setPollingActive(true);
@@ -249,10 +407,11 @@ const CheckoutForm = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderData]);
+  }, [orderData, checkAuthOrRedirect]);
 
   // 4. Initialize Bank Transfer / VietQR
   const generateBankTransferQR = useCallback(async () => {
+    if (!checkAuthOrRedirect()) return;
     try {
       setBankTransferLoading(true);
       setError(null);
@@ -265,7 +424,7 @@ const CheckoutForm = () => {
         items: orderData.items,
         restaurantId: orderData.restaurantId,
         deliveryAddress: orderData.deliveryAddress,
-      });
+      }, { headers: getAuthHeaders() });
       if (res.data.bankDetails) {
         setBankDetails(res.data.bankDetails);
       }
@@ -274,16 +433,17 @@ const CheckoutForm = () => {
     } finally {
       setBankTransferLoading(false);
     }
-  }, [orderData]);
+  }, [orderData, checkAuthOrRedirect]);
 
   // Customer clicked "Tôi đã chuyển khoản"
   const handleConfirmBankTransfer = async () => {
+    if (!checkAuthOrRedirect()) return;
     try {
       setLoading(true);
       setError(null);
       const res = await axios.post(`${API_BASE_URL}/api/payment/bank-transfer/confirm-request`, {
         orderId: orderData.orderId,
-      });
+      }, { headers: getAuthHeaders() });
       setCustomerReportedTransfer(true);
       setPollingActive(true);
       setMessage(res.data.message || "Đã ghi nhận yêu cầu xác nhận thanh toán. Đơn hàng sẽ được xác nhận sau khi hệ thống kiểm tra giao dịch.");
@@ -304,18 +464,16 @@ const CheckoutForm = () => {
     setTimeout(() => setCopyFeedback(""), 2500);
   };
 
-  // Automatic provider init on method change
+  // Automatic provider init on method change (STRIPE removed)
   useEffect(() => {
-    if (paymentMethod === "STRIPE") {
-      createStripeIntent();
-    } else if (paymentMethod === "VNPAY" && vnpayMode === "QR") {
+    if (paymentMethod === "VNPAY" && vnpayMode === "QR") {
       generateVNPayQR();
     } else if (paymentMethod === "MOMO" && momoMode === "QR") {
       generateMoMoQR();
     } else if (paymentMethod === "BANK_TRANSFER") {
       generateBankTransferQR();
     }
-  }, [paymentMethod, vnpayMode, momoMode, createStripeIntent, generateVNPayQR, generateMoMoQR, generateBankTransferQR]);
+  }, [paymentMethod, vnpayMode, momoMode, generateVNPayQR, generateMoMoQR, generateBankTransferQR]);
 
   // Automatic polling effect for QR modes
   useEffect(() => {
@@ -323,7 +481,7 @@ const CheckoutForm = () => {
     if (pollingActive && !disablePayment) {
       interval = setInterval(async () => {
         try {
-          const res = await axios.get(`${API_BASE_URL}/api/payment/status/${orderData.orderId}`);
+          const res = await axios.get(`${API_BASE_URL}/api/payment/status/${orderData.orderId}`, { headers: getAuthHeaders() });
           if (res.data.paymentStatus === "Paid") {
             await createOrderInOrderService(paymentMethod, "Paid");
             const snapshot = {
@@ -335,6 +493,7 @@ const CheckoutForm = () => {
               totalAmount: orderData.amount,
               paymentMethod,
               restaurantId: orderData.restaurantId,
+              restaurantName: orderData.restaurantName || effectiveRestaurantName,
               deliveryAddress: orderData.deliveryAddress,
               appliedCoupon,
             };
@@ -352,12 +511,12 @@ const CheckoutForm = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [pollingActive, disablePayment, orderData, paymentMethod, cartItems, subtotal, deliveryFee, couponDiscount, appliedCoupon, clearCart, createOrderInOrderService]);
+  }, [pollingActive, disablePayment, orderData, paymentMethod, cartItems, subtotal, deliveryFee, couponDiscount, appliedCoupon, clearCart, createOrderInOrderService, effectiveRestaurantName]);
 
   // Status Polling for QR Modes
   const checkPaymentStatus = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/payment/status/${orderData.orderId}`);
+      const res = await axios.get(`${API_BASE_URL}/api/payment/status/${orderData.orderId}`, { headers: getAuthHeaders() });
       if (res.data.paymentStatus === "Paid") {
         await createOrderInOrderService(paymentMethod, "Paid");
         const snapshot = {
@@ -369,6 +528,7 @@ const CheckoutForm = () => {
           totalAmount: orderData.amount,
           paymentMethod,
           restaurantId: orderData.restaurantId,
+          restaurantName: orderData.restaurantName || effectiveRestaurantName,
           deliveryAddress: orderData.deliveryAddress,
           appliedCoupon,
         };
@@ -387,83 +547,12 @@ const CheckoutForm = () => {
     }
   };
 
-  // Stripe Submission Handler
-  const handleStripeSubmit = async (event) => {
-    event.preventDefault();
-    if (!stripe || !elements || loading || disablePayment) {
-      if (!stripe || !elements) setError("Cổng Stripe đang khởi tạo. Vui lòng đợi trong giây lát.");
-      return;
-    }
 
-    setLoading(true);
-    setError(null);
-    setMessage("");
-
-    const cardElement = elements.getElement(CardNumberElement);
-    const { error: pmError, paymentMethod: stripePM } = await stripe.createPaymentMethod({
-      type: "card",
-      card: cardElement,
-      billing_details: {
-        name: `${orderData.firstName} ${orderData.lastName}`,
-        email: orderData.email,
-      },
-    });
-
-    if (pmError) {
-      setError(pmError.message);
-      setLoading(false);
-      return;
-    }
-
-    const snapshot = {
-      orderId: orderData.orderId,
-      items: [...cartItems],
-      subtotal,
-      deliveryFee,
-      couponDiscount,
-      totalAmount: orderData.amount,
-      paymentMethod: "STRIPE",
-      restaurantId: orderData.restaurantId,
-      deliveryAddress: orderData.deliveryAddress,
-      appliedCoupon,
-    };
-
-    if (!clientSecret || !clientSecret.includes("_secret_")) {
-      await createOrderInOrderService("STRIPE", "Paid");
-      setPlacedOrder(snapshot);
-      setMessage("🎉 Thanh toán thành công! Đơn hàng của bạn đã được tiếp nhận.");
-      setDisablePayment(true);
-      clearCart();
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: stripePM.id,
-      });
-
-      if (confirmError) {
-        setError(confirmError.message);
-      } else if (paymentIntent?.status === "succeeded") {
-        await createOrderInOrderService("STRIPE", "Paid");
-        setPlacedOrder(snapshot);
-        setMessage("🎉 Thanh toán thành công! Món ăn thơm ngon đang được chuẩn bị.");
-        setDisablePayment(true);
-        clearCart();
-      } else {
-        setError("Thanh toán không thể hoàn tất. Vui lòng thử lại.");
-      }
-    } catch (err) {
-      setError("Đã xảy ra lỗi trong quá trình xác nhận thanh toán. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // VNPay Redirect Submission Handler
   const handleVNPayRedirect = async (event) => {
     event.preventDefault();
+    if (!checkAuthOrRedirect()) return;
     if (loading || disablePayment) return;
     setLoading(true);
     setError(null);
@@ -477,7 +566,7 @@ const CheckoutForm = () => {
         phone: orderData.phone,
         bankCode: vnpBankCode,
         language: "vn",
-      });
+      }, { headers: getAuthHeaders() });
       if (response.data.paymentUrl) {
         window.location.href = response.data.paymentUrl;
       } else {
@@ -485,7 +574,8 @@ const CheckoutForm = () => {
         setLoading(false);
       }
     } catch (err) {
-      setError("Không thể kết nối đến cổng thanh toán VNPay. Vui lòng chọn phương thức khác.");
+      const msg = err.response?.data?.error || "Không thể kết nối đến cổng thanh toán VNPay. Vui lòng chọn phương thức khác.";
+      setError(msg);
       setLoading(false);
     }
   };
@@ -493,6 +583,7 @@ const CheckoutForm = () => {
   // MoMo Redirect Submission Handler
   const handleMoMoRedirect = async (event) => {
     event.preventDefault();
+    if (!checkAuthOrRedirect()) return;
     if (loading || disablePayment) return;
     setLoading(true);
     setError(null);
@@ -504,7 +595,7 @@ const CheckoutForm = () => {
         amount: orderData.amount,
         email: orderData.email,
         phone: orderData.phone,
-      });
+      }, { headers: getAuthHeaders() });
       if (response.data.payUrl) {
         window.location.href = response.data.payUrl;
       } else {
@@ -512,7 +603,8 @@ const CheckoutForm = () => {
         setLoading(false);
       }
     } catch (err) {
-      setError("Không thể kết nối đến dịch vụ MoMo. Vui lòng chọn phương thức khác.");
+      const msg = err.response?.data?.error || "Không thể kết nối đến dịch vụ MoMo. Vui lòng chọn phương thức khác.";
+      setError(msg);
       setLoading(false);
     }
   };
@@ -520,15 +612,30 @@ const CheckoutForm = () => {
   // Cash on Delivery (COD) Submission Handler
   const handleCODSubmit = async (event) => {
     event.preventDefault();
+    if (!checkAuthOrRedirect()) return;
     if (loading || disablePayment) return;
+
+    // Validate delivery address before submitting
+    if (!deliveryAddress.trim()) {
+      setError("Vui lòng nhập đầy đủ địa chỉ giao hàng trước khi đặt hàng.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setMessage("");
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/payment/cod/process`, orderData);
+      // 1. Create order in order-service first with verified JWT
+      await createOrderInOrderService("COD", "Pending");
+
+      // 2. Process COD in payment-service
+      const response = await axios.post(
+        `${API_BASE_URL}/api/payment/cod/process`,
+        orderData,
+        { headers: getAuthHeaders() }
+      );
       if (response.data.success || response.data.paymentStatus === "Pending") {
-        await createOrderInOrderService("COD", "Pending");
         const snapshot = {
           orderId: orderData.orderId,
           items: [...cartItems],
@@ -538,6 +645,7 @@ const CheckoutForm = () => {
           totalAmount: orderData.amount,
           paymentMethod: "COD",
           restaurantId: orderData.restaurantId,
+          restaurantName: orderData.restaurantName || effectiveRestaurantName,
           deliveryAddress: orderData.deliveryAddress,
           appliedCoupon,
         };
@@ -549,30 +657,31 @@ const CheckoutForm = () => {
         setError(response.data.message || "Không thể đặt hàng theo phương thức COD.");
       }
     } catch (err) {
-      setError("Lỗi xử lý đơn hàng. Vui lòng kiểm tra lại kết nối mạng.");
+      if (err.response?.status === 401 || !getValidToken()) {
+        clearCustomerAuth();
+        navigate(`/auth/login?redirect=/checkout&message=${encodeURIComponent("Vui lòng đăng nhập để đặt hàng.")}`, { replace: true });
+        return;
+      }
+      const serverMsg = err.response?.data?.error || err.response?.data?.message;
+      if (serverMsg) {
+        setError(serverMsg);
+      } else {
+        setError("Không thể đặt hàng lúc này. Vui lòng thử lại.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const cardElementOptions = {
-    style: {
-      base: {
-        fontSize: "15px",
-        color: "#1e293b",
-        fontFamily: '"Inter", sans-serif',
-        "::placeholder": { color: "#94a3b8" },
-      },
-      invalid: { color: "#ef4444" },
-    },
-  };
 
   const displayedItems = placedOrder ? placedOrder.items : cartItems;
   const displayedSubtotal = placedOrder ? placedOrder.subtotal : subtotal;
   const displayedDeliveryFee = placedOrder ? placedOrder.deliveryFee : deliveryFee;
   const displayedDiscount = placedOrder ? placedOrder.couponDiscount : couponDiscount;
   const displayedTotal = placedOrder ? placedOrder.totalAmount : calculatedTotal;
-  const displayedRestaurant = placedOrder ? placedOrder.restaurantId : orderData.restaurantId;
+  const displayedRestaurantName = placedOrder
+    ? (placedOrder.restaurantName || placedOrder.restaurantId)
+    : (restaurantInfo.name || cartItems[0]?.restaurantName || "");
   const displayedAddress = placedOrder ? placedOrder.deliveryAddress : deliveryAddress;
 
   if (cartItems.length === 0 && !placedOrder) {
@@ -612,7 +721,7 @@ const CheckoutForm = () => {
         {/* Receipt Breakdown */}
         <div style={{ backgroundColor: "#fafafa", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "1.25rem", textAlign: "left", marginBottom: "1.75rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.75rem", fontSize: "0.85rem", color: "#64748b" }}>
-            <span>Nhà hàng: <strong style={{ color: "#0f172a" }}>{placedOrder.restaurantId}</strong></span>
+            <span>Nhà hàng: <strong style={{ color: "#0f172a" }}>{placedOrder.restaurantName || placedOrder.restaurantId || "Nhà hàng đối tác SkyDish"}</strong></span>
             <span>Phương thức: <strong style={{ color: "#0f172a" }}>{placedOrder.paymentMethod === "COD" ? "Tiền mặt (COD)" : placedOrder.paymentMethod === "BANK_TRANSFER" ? "Chuyển khoản (MB Bank)" : placedOrder.paymentMethod}</strong></span>
           </div>
 
@@ -1112,45 +1221,7 @@ const CheckoutForm = () => {
           </form>
         )}
 
-        {/* =========================================================================
-            4. STRIPE INTERNATIONAL CARD FLOW
-            ========================================================================= */}
-        {paymentMethod === "STRIPE" && (
-          <form onSubmit={handleStripeSubmit} style={{ marginTop: "1.5rem" }}>
-            <div className="stripe-field-wrapper">
-              <label className="stripe-field-label">Số thẻ thanh toán</label>
-              <div className="stripe-input-box">
-                <CardNumberElement options={cardElementOptions} />
-              </div>
-            </div>
-
-            <div className="checkout-two-col">
-              <div className="stripe-field-wrapper">
-                <label className="stripe-field-label">Hạn thẻ (MM / YY)</label>
-                <div className="stripe-input-box">
-                  <CardExpiryElement options={cardElementOptions} />
-                </div>
-              </div>
-              <div className="stripe-field-wrapper">
-                <label className="stripe-field-label">Mã bảo mật CVC</label>
-                <div className="stripe-input-box">
-                  <CardCvcElement options={cardElementOptions} />
-                </div>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              icon={FaCreditCard}
-              disabled={!stripe || disablePayment || loading}
-              style={{ width: "100%", marginTop: "0.5rem" }}
-            >
-              {loading ? "Đang xử lý..." : `Thanh toán thẻ (${formatCurrency(displayedTotal)})`}
-            </Button>
-          </form>
-        )}
+        {/* International card (Stripe) has been removed from Customer Checkout */}
 
         {/* Alerts & Feedback */}
         {error && (
@@ -1172,23 +1243,93 @@ const CheckoutForm = () => {
         </h2>
 
         {/* Restaurant name */}
-        <p style={{ margin: "0 0 1rem 0", fontSize: "0.875rem", color: "var(--sd-text-secondary)" }}>
-          Nhà hàng: <strong style={{ color: "var(--sd-text-primary)" }}>{displayedRestaurant}</strong>
-        </p>
+        <div style={{ margin: "0 0 1rem 0", fontSize: "0.875rem", color: "var(--sd-text-secondary)", display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+          <span>Nhà hàng:</span>
+          {restaurantInfo.loading ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", color: "var(--sd-primary)", fontWeight: "600", fontSize: "0.85rem" }}>
+              <FaSpinner className="sd-spin" size={13} /> Đang tải thông tin...
+            </span>
+          ) : displayedRestaurantName ? (
+            <strong style={{ color: "var(--sd-text-primary)", fontWeight: "700" }}>
+              {displayedRestaurantName}
+            </strong>
+          ) : restaurantInfo.error ? (
+            <span style={{ color: "var(--sd-danger)", fontSize: "0.82rem", fontWeight: "500" }}>
+              {restaurantInfo.error}
+            </span>
+          ) : cartItems.length > 0 ? (
+            <strong style={{ color: "var(--sd-text-primary)", fontWeight: "700" }}>
+              Nhà hàng đối tác SkyDish
+            </strong>
+          ) : (
+            <span style={{ color: "var(--sd-text-muted)" }}>Chưa có món trong giỏ</span>
+          )}
+        </div>
 
-        {/* Delivery Address Box */}
+        {/* Structured Delivery Address Form */}
         <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "600", color: "var(--sd-text-secondary)", marginBottom: "0.35rem" }}>
-            Địa chỉ giao hàng
+          <label style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "0.8rem", fontWeight: "700", color: "var(--sd-text-secondary)", marginBottom: "0.5rem" }}>
+            <FaMapMarkerAlt style={{ color: "var(--sd-primary)" }} /> Địa chỉ giao hàng
           </label>
-          <input
-            type="text"
-            className="stripe-input-box"
-            style={{ width: "100%", fontSize: "0.85rem" }}
-            value={displayedAddress}
-            disabled={!!placedOrder}
-            onChange={(e) => setDeliveryAddress(e.target.value)}
-          />
+          {placedOrder ? (
+            <p style={{ fontSize: "0.85rem", color: "var(--sd-text-primary)", margin: 0, padding: "0.6rem 0.75rem", backgroundColor: "#f8fafc", borderRadius: "8px", border: "1px solid var(--sd-border)" }}>
+              {displayedAddress}
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.55rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Tỉnh / Thành phố *</label>
+                  <input
+                    type="text"
+                    className="stripe-input-box"
+                    style={{ width: "100%", fontSize: "0.83rem" }}
+                    placeholder="VD: Hà Nội"
+                    value={addrCity}
+                    onChange={(e) => setAddrCity(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Quận / Huyện *</label>
+                  <input
+                    type="text"
+                    className="stripe-input-box"
+                    style={{ width: "100%", fontSize: "0.83rem" }}
+                    placeholder="VD: Hoàn Kiếm"
+                    value={addrDistrict}
+                    onChange={(e) => setAddrDistrict(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Phường / Xã</label>
+                <input
+                  type="text"
+                  className="stripe-input-box"
+                  style={{ width: "100%", fontSize: "0.83rem" }}
+                  placeholder="VD: Phường Tràng Tiền"
+                  value={addrWard}
+                  onChange={(e) => setAddrWard(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Địa chỉ chi tiết (số nhà, tên đường) *</label>
+                <input
+                  type="text"
+                  className="stripe-input-box"
+                  style={{ width: "100%", fontSize: "0.83rem" }}
+                  placeholder="VD: 11B Tràng Tiền"
+                  value={addrDetail}
+                  onChange={(e) => setAddrDetail(e.target.value)}
+                />
+              </div>
+              {deliveryAddress && (
+                <p style={{ fontSize: "0.75rem", color: "#64748b", margin: "0.1rem 0 0 0" }}>
+                  ↳ <em>{deliveryAddress}</em>
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Items List */}
@@ -1302,11 +1443,7 @@ const CheckoutForm = () => {
           </div>
         </div>
 
-        <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
-          <Link to="/orders" style={{ fontSize: "0.85rem", color: "var(--sd-primary)", fontWeight: "600", textDecoration: "none" }}>
-            Xem lịch sử đơn hàng →
-          </Link>
-        </div>
+        {/* Order history link only shown after order is placed (see placedOrder view above) */}
       </div>
     </div>
   );
@@ -1335,9 +1472,7 @@ export default function Checkout() {
             </Link>
           </div>
 
-          <Elements stripe={stripePromise}>
-            <CheckoutForm />
-          </Elements>
+          <CheckoutForm />
         </div>
       </main>
       <Footer />

@@ -22,6 +22,7 @@ import Button from "../../components/common/Button";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";
 import EmptyState from "../../components/common/EmptyState";
 import { formatCurrency } from "../../utils/currency";
+import { resolveImageUrl, handleImageError } from "../../utils/imageHelper";
 
 function FoodItemList() {
   const { restaurantId } = useParams();
@@ -80,7 +81,19 @@ function FoodItemList() {
   };
 
   const handleAddToCart = (food) => {
-    addToCart(food, 1);
+    // Explicitly attach restaurantId and restaurantName so Cart & Checkout can resolve them instantly.
+    const targetRestId =
+      restaurantId ||
+      (typeof food.restaurant === "object" ? food.restaurant?._id : food.restaurant) ||
+      food.restaurantId ||
+      "";
+    const targetRestName =
+      restaurant?.name ||
+      (typeof food.restaurant === "object" ? food.restaurant?.name : "") ||
+      food.restaurantName ||
+      "";
+
+    addToCart({ ...food, restaurantId: targetRestId, restaurantName: targetRestName }, 1);
     setAddedItemToast(food.name);
     setTimeout(() => setAddedItemToast(null), 2500);
   };
@@ -182,9 +195,21 @@ function FoodItemList() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  overflow: "hidden",
+                  border: "1px solid var(--sd-border)",
+                  flexShrink: 0,
                 }}
               >
-                <FaUtensils size={32} />
+                {restaurant?.profilePicture ? (
+                  <img
+                    src={resolveImageUrl(restaurant.profilePicture, "restaurant")}
+                    alt={restaurant.name || "Nhà hàng"}
+                    onError={(e) => handleImageError(e, "restaurant")}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <FaUtensils size={32} />
+                )}
               </div>
 
               <div>
@@ -313,15 +338,9 @@ function FoodItemList() {
                     {/* Food Image */}
                     <div style={{ position: "relative", height: "180px", backgroundColor: "#f1f5f9" }}>
                       <img
-                        src={
-                          food.image
-                            ? (food.image.startsWith("http") ? food.image : `${API_URLS.RESTAURANT}${food.image}`)
-                            : "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80"
-                        }
+                        src={resolveImageUrl(food.image, "food")}
                         alt={food.name}
-                        onError={(e) => {
-                          e.target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80";
-                        }}
+                        onError={(e) => handleImageError(e, "food")}
                         style={{
                           width: "100%",
                           height: "100%",

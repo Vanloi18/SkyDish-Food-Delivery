@@ -53,6 +53,12 @@ async function createVNPayUrl({
   const vnpUrl = process.env.VNPAY_PAYMENT_URL || "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
   const returnUrl = process.env.VNPAY_RETURN_URL || "http://localhost:3000/payment/vnpay/callback";
 
+  if (!userId || userId === "GUEST") {
+    const error = new Error("Unauthorized: Guest payments are strictly prohibited. Please login.");
+    error.status = 401;
+    throw error;
+  }
+
   // Check if existing payment is already paid
   let payment = await Payment.findOne({ orderId });
   if (payment && payment.status === "Paid") {
@@ -96,7 +102,7 @@ async function createVNPayUrl({
   if (!payment) {
     payment = new Payment({
       orderId,
-      userId: userId || "GUEST",
+      userId: String(userId),
       amount,
       currency: "vnd",
       paymentMethod: "VNPAY",

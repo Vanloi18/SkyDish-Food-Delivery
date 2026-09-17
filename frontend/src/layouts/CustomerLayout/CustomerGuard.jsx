@@ -1,5 +1,6 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { getValidToken, getAuthCustomer, clearCustomerAuth } from "../../utils/authHelper";
 
 /**
  * Customer Authentication Route Guard
@@ -17,11 +18,25 @@ import { Navigate, useLocation } from "react-router-dom";
  */
 export default function CustomerGuard({ children }) {
   const location = useLocation();
-  const token = localStorage.getItem("token");
+  const token = getValidToken();
+  const customer = getAuthCustomer();
 
-  if (!token) {
+  // If token is missing, expired, or belongs to a non-customer role (e.g. driver)
+  const isAuthorized = token && customer && (customer.role === "customer" || customer.role === "admin" || !customer.role);
+
+  if (!isAuthorized) {
+    if (token && !isAuthorized) {
+      clearCustomerAuth();
+    }
     const redirectTarget = encodeURIComponent(location.pathname + location.search);
-    return <Navigate to={`/auth/login?redirect=${redirectTarget}`} replace />;
+    return (
+      <Navigate
+        to={`/auth/login?redirect=${redirectTarget}&message=${encodeURIComponent(
+          "Vui lòng đăng nhập để đặt hàng."
+        )}`}
+        replace
+      />
+    );
   }
 
   return children;

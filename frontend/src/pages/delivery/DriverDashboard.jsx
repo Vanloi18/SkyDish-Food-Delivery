@@ -93,8 +93,8 @@ export default function DriverDashboard() {
       const headers = driverToken ? { Authorization: `Bearer ${driverToken}` } : {};
       const res = await axios.get(`${API_URLS.ORDER}/api/orders`, { headers });
       const allOrders = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
-      // Available orders are those not canceled and not yet delivered
-      const available = allOrders.filter(o => o.status !== "Delivered" && o.status !== "Canceled");
+      // Available orders are those confirmed/preparing and not yet delivered or canceled
+      const available = allOrders.filter(o => o.status !== "Pending" && o.status !== "Delivered" && o.status !== "Canceled");
       setAvailableOrders(available);
     } catch (err) {
       console.warn("Fetch available orders note:", err.message);
@@ -235,6 +235,18 @@ export default function DriverDashboard() {
 
       if (res.data?.success) {
         showAlert("success", `Cập nhật trạng thái '${nextStatus}' thành công!`);
+        // Optional client-side sync to order-service if orderId is found
+        const targetDel = myDeliveries.find((d) => d._id === deliveryId);
+        if (targetDel && targetDel.orderId) {
+          const mappedOrderStatus = nextStatus === "Delivered" ? "Delivered" : (nextStatus === "Picked-up" ? "Out for Delivery" : null);
+          if (mappedOrderStatus) {
+            axios.patch(
+              `${API_URLS.ORDER}/api/orders/${targetDel.orderId}/status`,
+              { status: mappedOrderStatus },
+              { headers: { Authorization: `Bearer ${token}` } }
+            ).catch(() => {});
+          }
+        }
         await fetchDeliveries();
       } else {
         showAlert("danger", "Không thể cập nhật trạng thái đơn giao.");

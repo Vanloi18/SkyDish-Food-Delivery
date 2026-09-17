@@ -7,6 +7,7 @@ const isDevStandalone =
   typeof window !== 'undefined' &&
   window.location.hostname === 'localhost' &&
   window.location.port !== '3000' &&
+  window.location.port !== '3300' &&
   window.location.port !== '80' &&
   window.location.port !== '' &&
   !window.location.hostname.includes('ngrok');
