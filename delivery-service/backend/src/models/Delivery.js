@@ -8,7 +8,9 @@ const deliverySchema = new mongoose.Schema({
   },
   orderId: {
     type: String,
-    required: true
+    required: true,
+    unique: true,
+    index: true
   },
   customerId: {
     type: String,
@@ -50,7 +52,7 @@ const deliverySchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["assigned", "Picked-up", "To be delivered","Delivered"],
+    enum: ["assigned", "To be delivered", "Picked-up", "Delivered"],
     default: "assigned"
   }
 }, { timestamps: true });
