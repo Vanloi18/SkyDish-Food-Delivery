@@ -1,4 +1,4 @@
-import { getDeliverySocketUrl } from '../../config/api';
+import { getDeliverySocketOptions, getDeliverySocketUrl } from '../../config/api';
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -20,7 +20,12 @@ export default function DriverSimulator() {
 
   useEffect(() => {
     try {
-      socket = io(getDeliverySocketUrl(), { path: "/delivery-socket.io" });
+      const token = localStorage.getItem("driverToken") || localStorage.getItem("token");
+      if (!token) {
+        navigate("/delivery/login");
+        return undefined;
+      }
+      socket = io(getDeliverySocketUrl(), getDeliverySocketOptions(token));
     } catch (e) {
       console.warn("Socket init error:", e);
     }
@@ -28,7 +33,7 @@ export default function DriverSimulator() {
     return () => {
       if (socket) socket.disconnect();
     };
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     let interval;
@@ -46,7 +51,8 @@ export default function DriverSimulator() {
           if (socket) {
             socket.emit("location-update", {
               orderId,
-              ...next,
+              latitude: next.lat,
+              longitude: next.lng,
             });
           }
 

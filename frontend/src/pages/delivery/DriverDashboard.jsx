@@ -1,4 +1,4 @@
-import { API_URLS, getDeliverySocketUrl } from '../../config/api';
+import { API_URLS, getDeliverySocketOptions, getDeliverySocketUrl } from '../../config/api';
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,12 +38,12 @@ export default function DriverDashboard() {
 
   // Driver Profile & Status
   const [driverProfile, setDriverProfile] = useState({
-    name: localStorage.getItem("driverName") || "Nguyễn Văn Shipper",
-    email: localStorage.getItem("driverEmail") || "shipper@skydish.com",
-    phone: "0901234567",
-    vehicleType: "Xe máy (Honda Wave Alpha)",
-    vehiclePlate: "29A-888.99",
-    area: "Hà Nội (Hoàn Kiếm, Hai Bà Trưng, Ba Đình)",
+    name: localStorage.getItem("driverName") || "Shipper",
+    email: localStorage.getItem("driverEmail") || "",
+    phone: "",
+    vehicleType: "",
+    vehiclePlate: "",
+    area: "Chưa cập nhật",
   });
   const [isOnline, setIsOnline] = useState(true);
 
@@ -77,7 +77,7 @@ export default function DriverDashboard() {
     try {
       if (!token) return;
       const res = await axios.get(`${API_URLS.DELIVERY}/api/delivery`, {
-        headers: { Authorization: token },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const list = res.data?.deliveries || (Array.isArray(res.data) ? res.data : []);
       setMyDeliveries(list);
@@ -91,11 +91,8 @@ export default function DriverDashboard() {
     try {
       const driverToken = localStorage.getItem("driverToken") || localStorage.getItem("token");
       const headers = driverToken ? { Authorization: `Bearer ${driverToken}` } : {};
-      const res = await axios.get(`${API_URLS.ORDER}/api/orders`, { headers });
-      const allOrders = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
-      // Available orders are those confirmed/preparing and not yet delivered or canceled
-      const available = allOrders.filter(o => o.status !== "Pending" && o.status !== "Delivered" && o.status !== "Canceled");
-      setAvailableOrders(available);
+      const res = await axios.get(`${API_URLS.DELIVERY}/api/delivery/available`, { headers });
+      setAvailableOrders(Array.isArray(res.data?.orders) ? res.data.orders : []);
     } catch (err) {
       console.warn("Fetch available orders note:", err.message);
     }
@@ -106,21 +103,19 @@ export default function DriverDashboard() {
     try {
       if (!token) return;
       const res = await axios.get(`${API_URLS.DELIVERY}/api/delivery/auth/profile`, {
-        headers: { Authorization: token },
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.data?.success && res.data?.driver) {
-        const d = res.data.driver;
+      if (res.data?.success && (res.data?.driver || res.data?.data)) {
+        const d = res.data.driver || res.data.data;
         setDriverProfile({
-          name: d.name || "Nguyễn Văn Shipper",
-          email: d.email || "shipper@skydish.com",
-          phone: d.phone || "0901234567",
-          vehicleType: d.vehicleType ? `${d.vehicleType} (Xe máy)` : "Xe máy (Honda Wave Alpha)",
-          vehiclePlate: d.vehiclePlate || "29A-888.99",
-          area: "Hà Nội (Hoàn Kiếm, Hai Bà Trưng, Ba Đình)",
+          name: d.name || "Shipper",
+          email: d.email || "",
+          phone: d.phone || "",
+          vehicleType: d.vehicleType || "",
+          vehiclePlate: d.vehicleNumber || "",
+          area: d.location?.coordinates?.length === 2 ? d.location.coordinates.join(", ") : "Chưa cập nhật",
         });
-        if (d.isAvailable !== undefined) {
-          setIsOnline(d.isAvailable);
-        }
+        setIsOnline(d.status !== "offline");
       }
     } catch (err) {
       console.warn("Fetch driver profile note:", err.message);
@@ -143,13 +138,8 @@ export default function DriverDashboard() {
 
     // Socket.IO Realtime Connection
     try {
-      socket = io(getDeliverySocketUrl(), { path: "/delivery-socket.io", autoConnect: false });
+      socket = io(getDeliverySocketUrl(), { ...getDeliverySocketOptions(token), autoConnect: false });
       socket.connect();
-
-      const driverId = localStorage.getItem("driverId");
-      if (driverId) {
-        socket.emit("join-driver-room", driverId);
-      }
 
       socket.on("new-delivery", (deliveryData) => {
         setMyDeliveries((prev) => [deliveryData, ...prev]);
@@ -164,6 +154,9 @@ export default function DriverDashboard() {
           },
           ...prev
         ]);
+      });
+      socket.on("delivery-status", (deliveryData) => {
+        setMyDeliveries((prev) => prev.map((item) => item._id === deliveryData._id ? deliveryData : item));
       });
     } catch (e) {
       console.warn("Socket initialization note:", e);
@@ -181,10 +174,19 @@ export default function DriverDashboard() {
   };
 
   // Toggle Online/Offline
-  const handleToggleOnline = () => {
+  const handleToggleOnline = async () => {
     const nextStatus = !isOnline;
-    setIsOnline(nextStatus);
-    showAlert("success", nextStatus ? "🟢 Bạn đã chuyển sang trạng thái Đang hoạt động." : "⚪ Bạn đã tạm nghỉ nhận đơn.");
+    try {
+      await axios.put(
+        `${API_URLS.DELIVERY}/api/delivery/driver/availability`,
+        { available: nextStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setIsOnline(nextStatus);
+      showAlert("success", nextStatus ? "🟢 Bạn đã chuyển sang trạng thái Đang hoạt động." : "⚪ Bạn đã tạm nghỉ nhận đơn.");
+    } catch (err) {
+      showAlert("danger", err.response?.data?.message || "Không thể cập nhật trạng thái hoạt động.");
+    }
   };
 
   // Accept Order Handler
@@ -200,11 +202,9 @@ export default function DriverDashboard() {
         `${API_URLS.DELIVERY}/api/delivery/create`,
         {
           orderId: order._id || order.orderId || `ORD_${Date.now()}`,
-          customerId: order.customerId || "Khách Hàng SkyDish",
-          pickupAddress: order.restaurantId ? `${order.restaurantId}, Hà Nội` : "11B Tràng Tiền, Hoàn Kiếm, Hà Nội",
-          deliveryAddress: order.deliveryAddress || "45 Phố Huế, Hai Bà Trưng, Hà Nội",
+          pickupAddress: order.restaurantName || order.restaurantId,
         },
-        { headers: { Authorization: token } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (res.data?.success) {
@@ -230,23 +230,11 @@ export default function DriverDashboard() {
       const res = await axios.put(
         `${API_URLS.DELIVERY}/api/delivery/${deliveryId}/status`,
         { status: nextStatus },
-        { headers: { Authorization: token } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (res.data?.success) {
         showAlert("success", `Cập nhật trạng thái '${nextStatus}' thành công!`);
-        // Optional client-side sync to order-service if orderId is found
-        const targetDel = myDeliveries.find((d) => d._id === deliveryId);
-        if (targetDel && targetDel.orderId) {
-          const mappedOrderStatus = nextStatus === "Delivered" ? "Delivered" : (nextStatus === "Picked-up" ? "Out for Delivery" : null);
-          if (mappedOrderStatus) {
-            axios.patch(
-              `${API_URLS.ORDER}/api/orders/${targetDel.orderId}/status`,
-              { status: mappedOrderStatus },
-              { headers: { Authorization: `Bearer ${token}` } }
-            ).catch(() => {});
-          }
-        }
         await fetchDeliveries();
       } else {
         showAlert("danger", "Không thể cập nhật trạng thái đơn giao.");
@@ -476,7 +464,7 @@ export default function DriverDashboard() {
                           <div className="shipper-step-pin dropoff"><FaMapMarkerAlt size={11} /></div>
                           <div className="shipper-step-info">
                             <span className="shipper-step-label">Địa chỉ giao</span>
-                            <p className="shipper-step-addr">{ord.deliveryAddress || "11B Tràng Tiền, Hoàn Kiếm, Hà Nội"}</p>
+                            <p className="shipper-step-addr">{ord.deliveryAddress || "Chưa có địa chỉ giao hàng"}</p>
                           </div>
                         </div>
                       </div>
@@ -577,7 +565,7 @@ export default function DriverDashboard() {
                             <div className="shipper-step-pin dropoff"><FaMapMarkerAlt size={11} /></div>
                             <div className="shipper-step-info">
                               <span className="shipper-step-label">Địa chỉ giao</span>
-                              <p className="shipper-step-addr">{ord.deliveryAddress || "11B Tràng Tiền, Hoàn Kiếm, Hà Nội"}</p>
+                              <p className="shipper-step-addr">{ord.deliveryAddress || "Chưa có địa chỉ giao hàng"}</p>
                             </div>
                           </div>
                         </div>
@@ -710,13 +698,9 @@ export default function DriverDashboard() {
                               )}
 
                               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "0.25rem" }}>
-                                <a
-                                  href="tel:0901234567"
-                                  style={{ textDecoration: "none" }}
-                                  className="shipper-action-btn outline"
-                                >
-                                  <FaPhoneAlt size={12} /> Gọi khách
-                                </a>
+                                <button type="button" disabled className="shipper-action-btn outline">
+                                  <FaPhoneAlt size={12} /> Chưa có SĐT
+                                </button>
                                 <button
                                   type="button"
                                   className="shipper-action-btn outline"
@@ -785,18 +769,18 @@ export default function DriverDashboard() {
                   <div style={{ marginBottom: "1rem" }}>
                     <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Điểm đón (Nhà hàng)</span>
                     <p style={{ margin: "0.2rem 0 0.5rem 0", fontSize: "0.85rem", fontWeight: "600" }}>
-                      {activeDelivery ? (activeDelivery.pickupAddressString || activeDelivery.pickupAddress) : "Pizza 4P's Tràng Tiền, 11B Tràng Tiền, Hoàn Kiếm, Hà Nội"}
+                      {activeDelivery ? (activeDelivery.pickupAddressString || activeDelivery.pickupAddress) : "Chưa có đơn giao đang hoạt động"}
                     </p>
 
                     <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Điểm giao (Khách hàng)</span>
                     <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.85rem", fontWeight: "600" }}>
-                      {activeDelivery ? (activeDelivery.deliveryAddressString || activeDelivery.deliveryAddress) : "45 Phố Huế, Quận Hai Bà Trưng, Hà Nội"}
+                      {activeDelivery ? (activeDelivery.deliveryAddressString || activeDelivery.deliveryAddress) : "Chưa có đơn giao đang hoạt động"}
                     </p>
                   </div>
 
                   <div style={{ display: "flex", gap: "0.5rem" }}>
                     <a
-                      href="https://maps.google.com/?q=11B+Trang+Tien+Hanoi"
+                      href={activeDelivery ? `https://maps.google.com/?q=${encodeURIComponent(activeDelivery.pickupAddressString || activeDelivery.pickupAddress || "")}` : undefined}
                       target="_blank"
                       rel="noreferrer"
                       className="shipper-action-btn primary"

@@ -43,4 +43,9 @@ export const getDeliverySocketUrl = () => {
   return 'http://localhost:5003';
 };
 
+export const getDeliverySocketOptions = (token) => ({
+  path: isDevStandalone ? '/socket.io' : '/delivery-socket.io',
+  auth: { token },
+});
+
 export default API_URLS;

@@ -1,5 +1,7 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Coupon from '../models/Coupon.js';
+import authMiddleware, { authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -122,7 +124,7 @@ router.get('/restaurant/:restaurantId', async (req, res) => {
 });
 
 // 4. Create a new coupon (Merchant or Admin)
-router.post('/create', async (req, res) => {
+router.post('/create', authMiddleware, authorizeRoles('restaurant', 'superAdmin'), async (req, res) => {
   try {
     const {
       code,
@@ -146,6 +148,7 @@ router.post('/create', async (req, res) => {
       return res.status(400).json({ message: `Mã giảm giá '${cleanCode}' đã tồn tại trong hệ thống.` });
     }
 
+    const ownerRestaurantId = req.user.role === 'restaurant' ? req.user.id : (restaurantId || 'PLATFORM');
     const newCoupon = new Coupon({
       code: cleanCode,
       description: description || `Ưu đãi ${cleanCode}`,
@@ -153,7 +156,7 @@ router.post('/create', async (req, res) => {
       discountValue: Number(discountValue),
       minOrderValue: Number(minOrderValue) || 0,
       maxDiscount: Number(maxDiscount) || 0,
-      restaurantId: restaurantId || 'PLATFORM',
+      restaurantId: ownerRestaurantId,
       usageLimit: Number(usageLimit) || 1000,
       endAt: endAt ? new Date(endAt) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
     });
@@ -167,11 +170,17 @@ router.post('/create', async (req, res) => {
 });
 
 // 5. Toggle / Deactivate coupon
-router.put('/:id/deactivate', async (req, res) => {
+router.put('/:id/deactivate', authMiddleware, authorizeRoles('restaurant', 'superAdmin'), async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Mã coupon không hợp lệ.' });
+    }
     const coupon = await Coupon.findById(req.params.id);
     if (!coupon) {
       return res.status(404).json({ message: 'Không tìm thấy mã giảm giá.' });
+    }
+    if (req.user.role === 'restaurant' && coupon.restaurantId !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn không có quyền cập nhật coupon của nhà hàng khác.' });
     }
 
     coupon.isActive = !coupon.isActive;
@@ -188,12 +197,19 @@ router.put('/:id/deactivate', async (req, res) => {
 });
 
 // 6. Delete coupon
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authMiddleware, authorizeRoles('restaurant', 'superAdmin'), async (req, res) => {
   try {
-    const coupon = await Coupon.findByIdAndDelete(req.params.id);
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Mã coupon không hợp lệ.' });
+    }
+    const coupon = await Coupon.findById(req.params.id);
     if (!coupon) {
       return res.status(404).json({ message: 'Không tìm thấy mã giảm giá.' });
     }
+    if (req.user.role === 'restaurant' && coupon.restaurantId !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn không có quyền xóa coupon của nhà hàng khác.' });
+    }
+    await coupon.deleteOne();
     res.status(200).json({ message: 'Đã xóa mã giảm giá.' });
   } catch (err) {
     console.error('Error deleting coupon:', err);

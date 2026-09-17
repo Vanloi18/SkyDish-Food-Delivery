@@ -1,4 +1,4 @@
-import { API_URLS, getOrderSocketUrl } from '../../../config/api';
+import { API_URLS, getDeliverySocketOptions, getDeliverySocketUrl, getOrderSocketUrl } from '../../../config/api';
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +31,7 @@ import AdminModal from "../../../components/admin/AdminModal";
 import "../../../styles/restaurant-partner.css";
 
 let socket;
+let deliverySocket;
 
 export default function RestaurantDashboard() {
   const navigate = useNavigate();
@@ -252,7 +253,7 @@ export default function RestaurantDashboard() {
 
     // Socket.IO for incoming orders
     try {
-      socket = io(getOrderSocketUrl(), { autoConnect: false });
+      socket = io(getOrderSocketUrl(), { auth: { token }, autoConnect: false });
       socket.connect();
 
       socket.on("updateOrder", (data) => {
@@ -260,6 +261,8 @@ export default function RestaurantDashboard() {
       });
 
       socket.on("new-order", (newOrder) => {
+        const currentRestaurantId = restaurant._id?.toString();
+        if (currentRestaurantId && newOrder.restaurantId?.toString() !== currentRestaurantId) return;
         setOrders((prev) => [newOrder, ...prev]);
         setNotifications((prev) => [
           {
@@ -274,12 +277,19 @@ export default function RestaurantDashboard() {
         ]);
         showAlert("success", "🔔 Quán vừa nhận được đơn hàng mới từ khách!");
       });
+
+      deliverySocket = io(getDeliverySocketUrl(), { ...getDeliverySocketOptions(token), autoConnect: false });
+      deliverySocket.connect();
+      deliverySocket.on("order-status-updated", ({ orderId, status }) => {
+        setOrders((prev) => prev.map((order) => order._id === orderId ? { ...order, status } : order));
+      });
     } catch (e) {
       console.warn("Socket.io init notice:", e);
     }
 
     return () => {
       if (socket) socket.disconnect();
+      if (deliverySocket) deliverySocket.disconnect();
     };
   }, [token, navigate, fetchRestaurantProfile, fetchFoodItems, fetchOrders, fetchReviews, fetchCoupons, fetchNotifications, restaurant._id]);
 
@@ -472,10 +482,11 @@ export default function RestaurantDashboard() {
       return;
     }
     try {
-      await axios.post(`${API_URLS.RESTAURANT}/api/coupons/create`, {
-        ...couponForm,
-        restaurantId: restaurant._id || "PLATFORM",
-      });
+      await axios.post(
+        `${API_URLS.RESTAURANT}/api/coupons/create`,
+        { ...couponForm, restaurantId: restaurant._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       showAlert("success", "Tạo mã khuyến mãi thành công!");
       setCouponModalOpen(false);
       setCouponForm({ code: "", description: "", discountType: "fixed", discountValue: 20000, minOrderValue: 100000, usageLimit: 500 });
@@ -488,7 +499,11 @@ export default function RestaurantDashboard() {
   // Toggle Coupon Status
   const handleToggleCoupon = async (couponId) => {
     try {
-      const res = await axios.put(`${API_URLS.RESTAURANT}/api/coupons/${couponId}/deactivate`);
+      const res = await axios.put(
+        `${API_URLS.RESTAURANT}/api/coupons/${couponId}/deactivate`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       showAlert("success", res.data.message);
       await fetchCoupons(restaurant._id);
     } catch (err) {
@@ -958,7 +973,7 @@ export default function RestaurantDashboard() {
                               <td style={{ padding: "0.85rem 0.5rem", fontWeight: "700" }}>#{ord._id?.slice(-6) || ord.orderId}</td>
                               <td style={{ padding: "0.85rem 0.5rem" }}>{ord.customerId || "Khách Hàng"}</td>
                               <td style={{ padding: "0.85rem 0.5rem", color: "#64748b", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {ord.deliveryAddress || "Hà Nội"}
+                                {ord.deliveryAddress || "Chưa có địa chỉ"}
                               </td>
                               <td style={{ padding: "0.85rem 0.5rem", fontWeight: "700", color: "var(--merch-primary)" }}>{formatCurrency(ord.totalPrice || 0)}</td>
                               <td style={{ padding: "0.85rem 0.5rem" }}>
@@ -1213,7 +1228,7 @@ export default function RestaurantDashboard() {
                         </label>
                         <input
                           type="text"
-                          value={restaurant.ownerName || "Ban Quản Trị"}
+                          value={restaurant.ownerName || "Chưa có dữ liệu"}
                           disabled
                           style={{ width: "100%", padding: "0.65rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: "#f8fafc" }}
                         />
@@ -1225,7 +1240,7 @@ export default function RestaurantDashboard() {
                         </label>
                         <input
                           type="text"
-                          value={restaurant.location || "11B Tràng Tiền, Quận Hoàn Kiếm, Hà Nội"}
+                          value={restaurant.location || "Chưa có dữ liệu"}
                           disabled
                           style={{ width: "100%", padding: "0.65rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: "#f8fafc" }}
                         />
@@ -1753,7 +1768,7 @@ export default function RestaurantDashboard() {
 
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.6rem" }}>
               <span style={{ color: "#64748b" }}>Địa chỉ giao:</span>
-              <strong style={{ color: "#0f172a", textAlign: "right", maxWidth: "300px" }}>{selectedOrder.deliveryAddress || "Hà Nội"}</strong>
+              <strong style={{ color: "#0f172a", textAlign: "right", maxWidth: "300px" }}>{selectedOrder.deliveryAddress || "Chưa có địa chỉ"}</strong>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.6rem" }}>
