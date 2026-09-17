@@ -19,7 +19,7 @@ const generateToken = (driverOrId) => {
 const validateLoginInput = (email, password) => {
   const errors = {};
   
-  if (!validator.isEmail(email)) {
+  if (typeof email !== 'string' || !validator.isEmail(email)) {
     errors.email = 'Invalid email format';
   }
 
@@ -48,7 +48,8 @@ export const loginDriver = async (req, res) => {
     }
 
     // Find Driver
-    const driver = await Driver.findOne({ email }).select('+password');
+    const normalizedEmail = email.trim().toLowerCase();
+    const driver = await Driver.findOne({ email: normalizedEmail }).select('+password');
     if (!driver) {
       console.log(`Login attempt failed - driver not found: ${email}`);
       return res.status(401).json({
@@ -109,9 +110,22 @@ export const registerDriver = async (req, res) => {
       });
     }
 
+    const errors = {};
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedPhone = String(phone).trim();
+    const normalizedVehicleNumber = String(vehicleNumber).trim().toUpperCase();
+    if (!validator.isEmail(normalizedEmail)) errors.email = 'Invalid email format';
+    if (typeof password !== 'string' || password.length < 8) errors.password = 'Password must be at least 8 characters';
+    if (!/^[0-9]{10,15}$/.test(normalizedPhone)) errors.phone = 'Phone number must contain 10-15 digits';
+    if (!['bike', 'car', 'truck'].includes(vehicleType)) errors.vehicleType = 'Vehicle type must be bike, car, or truck';
+    if (!/^[A-Z0-9-]{3,15}$/.test(normalizedVehicleNumber)) errors.vehicleNumber = 'Invalid vehicle number format';
+    if (Object.keys(errors).length) {
+      return res.status(400).json({ success: false, message: 'Invalid driver registration data', errors });
+    }
+
     // Check for Existing Driver
     const existingDriver = await Driver.findOne({ 
-      $or: [{ email }, { phone }, { vehicleNumber }] 
+      $or: [{ email: normalizedEmail }, { phone: normalizedPhone }, { vehicleNumber: normalizedVehicleNumber }]
     });
     
     if (existingDriver) {
@@ -125,12 +139,12 @@ export const registerDriver = async (req, res) => {
 
     // Create New Driver
     const driver = await Driver.create({
-      name,
-      email,
+      name: name.trim(),
+      email: normalizedEmail,
       password,
-      phone,
+      phone: normalizedPhone,
       vehicleType,
-      vehicleNumber
+      vehicleNumber: normalizedVehicleNumber
     });
 
     // Generate Token
@@ -155,7 +169,8 @@ export const registerDriver = async (req, res) => {
 
   } catch (err) {
     console.error('Registration Error:', err);
-    res.status(500).json({ 
+    const status = err?.code === 11000 ? 409 : err?.name === 'ValidationError' ? 400 : 500;
+    res.status(status).json({
       success: false, 
       message: 'Registration failed',
       error: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -176,7 +191,8 @@ export const getDriverProfile = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: driver
+      data: driver,
+      driver
     });
     
   } catch (err) {

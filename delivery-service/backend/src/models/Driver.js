@@ -55,6 +55,8 @@ const DriverSchema = new mongoose.Schema({
   vehicleNumber: {
     type: String,
     required: [true, 'Vehicle number is required'],
+    unique: true,
+    trim: true,
     uppercase: true,
     validate: {
       validator: (num) => /^[A-Z0-9-]{3,15}$/.test(num),

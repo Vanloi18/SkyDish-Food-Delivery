@@ -14,7 +14,7 @@ const authMiddleware = (req, res, next) => {
     const decoded = jwt.verify(rawToken, secret);
     req.driver = decoded.id;
     req.user = decoded;
-    req.role = decoded.role || 'driver';
+    req.role = decoded.role;
     next();
   } catch (err) {
     res.status(401).json({ message: "Token is not valid" });
@@ -22,3 +22,11 @@ const authMiddleware = (req, res, next) => {
 };
 
 export default authMiddleware;
+
+export const authorizeRoles = (...roles) => (req, res, next) => {
+  const normalizedRole = req.role === 'superAdmin' ? 'admin' : req.role;
+  if (!normalizedRole || !roles.includes(normalizedRole)) {
+    return res.status(403).json({ success: false, message: 'Access denied: Unauthorized role' });
+  }
+  next();
+};

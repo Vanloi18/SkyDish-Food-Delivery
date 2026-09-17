@@ -26,9 +26,9 @@ export default function DriverRegister() {
     name: "",
     email: "",
     password: "",
-    phone: "0901234567",
+    phone: "",
     vehicleType: "bike",
-    vehicleNumber: "29A-12345",
+    vehicleNumber: "",
     location: { type: "Point", coordinates: [79.8612, 6.9271] },
   });
 
@@ -48,6 +48,10 @@ export default function DriverRegister() {
       setError("Vui lòng điền đầy đủ các thông tin đối tác giao hàng.");
       return;
     }
+    if (form.password.length < 8) {
+      setError("Mật khẩu phải có ít nhất 8 ký tự.");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -65,7 +69,7 @@ export default function DriverRegister() {
     } catch (err) {
       console.error("Driver registration error:", err);
       setError(
-        err.response?.data?.errors?.[0] ||
+        (err.response?.data?.errors && Object.values(err.response.data.errors)[0]) ||
         err.response?.data?.message ||
         "Lỗi đăng ký với Dịch vụ Giao hàng."
       );
@@ -178,8 +182,8 @@ export default function DriverRegister() {
                   }}
                 >
                   <option value="bike">Xe máy / Mô tô</option>
-                  <option value="scooter">Xe máy điện</option>
                   <option value="car">Ô tô / Xe bán tải</option>
+                  <option value="truck">Xe tải</option>
                 </select>
               </div>
 
@@ -198,7 +202,8 @@ export default function DriverRegister() {
               label="Mật khẩu"
               name="password"
               type="password"
-              placeholder="Tối thiểu 6 ký tự"
+              placeholder="Tối thiểu 8 ký tự"
+              minLength={8}
               icon={FaLock}
               value={form.password}
               onChange={handleChange}

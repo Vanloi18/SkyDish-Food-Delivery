@@ -45,7 +45,7 @@ export default function DriverLogin() {
     } catch (err) {
       console.error("Driver login error:", err);
       setError(
-        err.response?.data?.errors?.[0] ||
+        (err.response?.data?.errors && Object.values(err.response.data.errors)[0]) ||
         err.response?.data?.message ||
         "Không thể kết nối đến Dịch vụ Giao hàng. Vui lòng kiểm tra lại."
       );
