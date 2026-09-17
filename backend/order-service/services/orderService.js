@@ -13,7 +13,7 @@ export const checkOrderOwnership = (order, user) => {
     if (role === "admin") return true;
 
     if (role === "customer") {
-        return (
+        return Boolean(
             String(order.customerId) === String(user.id) ||
             (user.email && order.customerEmail === user.email) ||
             (user.name && order.customerId === user.name)
@@ -21,7 +21,7 @@ export const checkOrderOwnership = (order, user) => {
     }
 
     if (role === "restaurant") {
-        return (
+        return Boolean(
             String(order.restaurantId) === String(user.restaurantId || user.id) ||
             (user.name && order.restaurantName === user.name)
         );
@@ -256,6 +256,12 @@ export const getOrdersService = async ({ user, query }) => {
     const role = user?.role === "superAdmin" ? "admin" : (user?.role || "customer");
     const filter = {};
 
+    if (!["customer", "restaurant", "admin"].includes(role)) {
+        const error = new Error("Vai trò hiện tại không có quyền truy cập danh sách đơn hàng.");
+        error.statusCode = 403;
+        throw error;
+    }
+
     // Ownership filter: never leak cross-customer or cross-restaurant data
     if (role === "customer") {
         filter.$or = [
@@ -446,6 +452,12 @@ export const updateOrderStatusService = async (orderId, newStatus, user, updateD
     }
 
     const role = user?.role === "superAdmin" ? "admin" : (user?.role || "customer");
+
+    if (!["customer", "restaurant", "admin"].includes(role)) {
+        const error = new Error("Vai trò hiện tại không có quyền cập nhật trạng thái đơn hàng.");
+        error.statusCode = 403;
+        throw error;
+    }
 
     // 1. Role-specific validation
     if (role === "customer") {

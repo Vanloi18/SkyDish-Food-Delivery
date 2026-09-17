@@ -6,6 +6,8 @@ import connectDB from "./config/db.js";
 import cors from "cors";
 import orderRoutes from "./routes/orderRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import jwt from "jsonwebtoken";
+import { setIO } from "./utils/socket.js";
 
 dotenv.config();
 
@@ -26,6 +28,7 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     }
 });
+setIO(io);
 app.use(cors());
 app.use(express.json());
 
@@ -38,17 +41,30 @@ app.use("/api/users", userRoutes);
 
 
 // WebSocket Connection
-io.on("connection", (socket) => {
-    console.log("A user connected: ", socket.id);
+io.use((socket, next) => {
+    try {
+        const token = socket.handshake.auth?.token;
+        if (!token) return next(new Error("Authentication required"));
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.user = { ...decoded, id: decoded.id || decoded._id };
+        next();
+    } catch (error) {
+        next(new Error("Invalid token"));
+    }
+});
 
-    // Listen for order status updates
-    socket.on("orderStatusUpdate", (data) => {
-        console.log("Order Update:", data);
-        io.emit("updateOrder", data); // Broadcast update to all clients
-    });
+io.on("connection", (socket) => {
+    const role = socket.user.role === "superAdmin" ? "admin" : socket.user.role;
+    if (role === "restaurant") {
+        socket.join(`restaurant:${socket.user.restaurantId || socket.user.id}`);
+    } else if (role === "customer") {
+        socket.join(`customer:${socket.user.id}`);
+    } else if (role === "admin") {
+        socket.join("admin:orders");
+    }
 
     socket.on("disconnect", () => {
-        console.log("A user disconnected:", socket.id);
+        console.log("Order socket disconnected:", socket.id);
     });
 });
 

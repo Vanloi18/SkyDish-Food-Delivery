@@ -6,12 +6,14 @@ import {
     updateOrderStatusService,
     cancelOrderService
 } from "../services/orderService.js";
+import { emitOrderCreated, emitOrderUpdated } from "../utils/socket.js";
 
 // @desc Create new order
 // @route POST /api/orders
 export const createOrder = async (req, res) => {
     try {
         const order = await createOrderService(req.body, req.user);
+        emitOrderCreated(order);
         res.status(201).json(order);
     } catch (error) {
         const statusCode = error.statusCode || 500;
@@ -71,6 +73,7 @@ export const getOrderById = async (req, res) => {
 export const updateOrderDetails = async (req, res) => {
     try {
         const order = await updateOrderDetailsService(req.params.id, req.body, req.user);
+        emitOrderUpdated(order);
         res.status(200).json(order);
     } catch (error) {
         const statusCode = error.statusCode || 500;
@@ -91,6 +94,7 @@ export const updateOrderStatus = async (req, res) => {
             return res.status(400).json({ success: false, error: "Trạng thái đơn hàng là bắt buộc." });
         }
         const order = await updateOrderStatusService(req.params.id, status, req.user, req.body);
+        emitOrderUpdated(order);
         res.status(200).json(order);
     } catch (error) {
         const statusCode = error.statusCode || 500;
@@ -107,6 +111,7 @@ export const updateOrderStatus = async (req, res) => {
 export const cancelOrder = async (req, res) => {
     try {
         const order = await cancelOrderService(req.params.id, req.user);
+        emitOrderUpdated(order);
         res.status(200).json({
             success: true,
             message: "Đơn hàng đã được hủy thành công.",
