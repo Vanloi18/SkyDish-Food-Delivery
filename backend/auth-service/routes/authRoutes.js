@@ -1,17 +1,74 @@
+// backend/auth-service/routes/authRoutes.js
+
 const express = require("express");
-const router  = express.Router();
+const router = express.Router();
 
-router.get("/health", (req, res) => res.status(200).json({ status: "ok", service: "auth-service", timestamp: new Date().toISOString() }));
 const authController = require("../controllers/customerController");
-const { protect } = require("../middlewares/auth"); // your JWT-checker
+const { protect } = require("../middlewares/auth");
 
-router.post("/register/customer", authController.register);
-router.post("/login",           authController.login);
+// ============================================================
+// HEALTH CHECK
+// ============================================================
 
-// Protected customer routes
+router.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "auth-service",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ============================================================
+// PUBLIC AUTH ROUTES
+// ============================================================
+
+// Customer register
+router.post(
+  "/register/customer",
+  authController.register
+);
+
+// Customer login
+router.post(
+  "/login",
+  authController.login
+);
+
+// ============================================================
+// FORGOT PASSWORD / OTP
+// ============================================================
+
+// Gửi OTP về email
+router.post(
+  "/forgot-password",
+  authController.forgotPassword
+);
+
+// Xác nhận OTP
+router.post(
+  "/verify-otp",
+  authController.verifyOTP
+);
+
+// Đặt lại mật khẩu
+router.post(
+  "/reset-password",
+  authController.resetPassword
+);
+
+// ============================================================
+// PROTECTED CUSTOMER ROUTES
+// ============================================================
+
 router
   .route("/customer/profile")
-  .get(protect, authController.getProfile)
-  .patch(protect, authController.updateProfile);
+  .get(
+    protect,
+    authController.getProfile
+  )
+  .patch(
+    protect,
+    authController.updateProfile
+  );
 
 module.exports = router;
