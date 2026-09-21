@@ -1,9 +1,7 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import path from 'path';
-import fs from 'fs';
 
-const dbPath = path.resolve(process.cwd(), 'data', 'db');
-fs.mkdirSync(dbPath, { recursive: true });
+const dbPath = path.resolve('f:/Desktop/Food-Delivery-Microservices/data/db');
 
 console.log('Starting MongoDB on port 27017 with dbPath:', dbPath);
 
