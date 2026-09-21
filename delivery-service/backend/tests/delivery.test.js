@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import Delivery from '../src/models/Delivery.js';
 import Driver from '../src/models/Driver.js';
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27000/food_delivery_db';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/food_delivery_db';
 
 describe('Delivery Service Tests (Assignment, Ownership, Status Lifecycle)', () => {
   let driverA;
