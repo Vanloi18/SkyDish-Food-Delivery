@@ -5,8 +5,7 @@ dotenv.config();
 
 const connectDB = async () => {
   try {
-    // Match the project’s actual MongoDB port used in Docker and local development.
-    const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/food_delivery_db";
+    const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27000/food_delivery_db";
     const conn = await mongoose.connect(mongoUri);
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
