@@ -12,7 +12,8 @@ import {
   FaPlus, 
   FaShoppingCart, 
   FaUtensils, 
-  FaCheck
+  FaCheck,
+  FaExclamationCircle
 } from "react-icons/fa";
 import { CartContext } from "../contexts/CartContext";
 import Header from "../../components/Header";
@@ -32,10 +33,21 @@ function FoodItemList() {
   const [foods, setFoods] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
+  const [foodQuery, setFoodQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [favorites, setFavorites] = useState({});
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("skydish_favorite_foods")) || {};
+    } catch {
+      return {};
+    }
+  });
   const [addedItemToast, setAddedItemToast] = useState(null);
+
+  useEffect(() => {
+    localStorage.setItem("skydish_favorite_foods", JSON.stringify(favorites));
+  }, [favorites]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,6 +93,16 @@ function FoodItemList() {
   };
 
   const handleAddToCart = (food) => {
+    const isRestaurantAvailable = restaurant?.availability !== false;
+    if (food.availability === false || !isRestaurantAvailable) {
+      setAddedItemToast({
+        type: "warning",
+        text: food.availability === false ? "Món này hiện đã hết. Vui lòng chọn món khác." : "Nhà hàng hiện đang tạm đóng cửa.",
+      });
+      setTimeout(() => setAddedItemToast(null), 3000);
+      return;
+    }
+
     // Explicitly attach restaurantId and restaurantName so Cart & Checkout can resolve them instantly.
     const targetRestId =
       restaurantId ||
@@ -93,8 +115,17 @@ function FoodItemList() {
       food.restaurantName ||
       "";
 
-    addToCart({ ...food, restaurantId: targetRestId, restaurantName: targetRestName }, 1);
-    setAddedItemToast(food.name);
+    const result = addToCart({ ...food, restaurantId: targetRestId, restaurantName: targetRestName }, 1);
+    if (!result?.added) {
+      setAddedItemToast({
+        type: "warning",
+        text: `Giỏ hàng đang có món từ ${result?.restaurantName || "một nhà hàng khác"}. Hãy hoàn tất hoặc xóa giỏ hiện tại trước.`,
+      });
+      setTimeout(() => setAddedItemToast(null), 3500);
+      return;
+    }
+
+    setAddedItemToast({ type: "success", text: `Đã thêm ${food.name} vào giỏ hàng!` });
     setTimeout(() => setAddedItemToast(null), 2500);
   };
 
@@ -102,12 +133,18 @@ function FoodItemList() {
   const rawCategories = Array.from(new Set(foods.map((f) => f.category).filter(Boolean)));
   const availableCategories = ["Tất cả", ...rawCategories];
 
-  const filteredFoods = selectedCategory === "Tất cả"
+  const filteredFoods = (selectedCategory === "Tất cả"
     ? foods
-    : foods.filter((f) => f.category?.toLowerCase() === selectedCategory.toLowerCase());
+    : foods.filter((f) => f.category?.toLowerCase() === selectedCategory.toLowerCase()))
+    .filter((food) => {
+      const query = foodQuery.trim().toLowerCase();
+      return !query || [food.name, food.description, food.category].some((value) =>
+        String(value || "").toLowerCase().includes(query)
+      );
+    });
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
+    <div className="customer-experience customer-menu-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
 
       {/* Added to cart Toast */}
@@ -121,7 +158,7 @@ function FoodItemList() {
               position: "fixed",
               top: "90px",
               left: "50%",
-              backgroundColor: "var(--sd-secondary)",
+              backgroundColor: addedItemToast.type === "success" ? "var(--sd-secondary)" : "#b45309",
               color: "#ffffff",
               padding: "0.75rem 1.5rem",
               borderRadius: "var(--sd-radius-full)",
@@ -134,8 +171,8 @@ function FoodItemList() {
               fontWeight: "600",
             }}
           >
-            <FaCheck style={{ color: "var(--sd-success)" }} />
-            <span>Đã thêm <strong>{addedItemToast}</strong> vào giỏ hàng!</span>
+            {addedItemToast.type === "success" ? <FaCheck style={{ color: "var(--sd-success)" }} /> : <FaExclamationCircle />}
+            <span>{addedItemToast.text}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -217,7 +254,9 @@ function FoodItemList() {
                   <h1 className="sd-heading-2" style={{ margin: 0 }}>
                     {restaurant?.name || "Thực đơn nhà hàng"}
                   </h1>
-                  <Badge variant="success" size="sm">Đang mở cửa</Badge>
+                  <Badge variant={restaurant?.availability === false ? "danger" : "success"} size="sm">
+                    {restaurant?.availability === false ? "Tạm đóng cửa" : "Đang mở cửa"}
+                  </Badge>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
@@ -281,6 +320,22 @@ function FoodItemList() {
             </div>
           )}
 
+          {!loading && foods.length > 0 && (
+            <div style={{ marginBottom: "1.5rem", maxWidth: "460px" }}>
+              <label htmlFor="food-search" style={{ display: "block", marginBottom: "0.4rem", fontSize: "var(--sd-font-size-xs)", fontWeight: "700", color: "var(--sd-text-secondary)" }}>
+                Tìm trong thực đơn
+              </label>
+              <input
+                id="food-search"
+                type="search"
+                value={foodQuery}
+                onChange={(event) => setFoodQuery(event.target.value)}
+                placeholder="Tên món, danh mục hoặc mô tả..."
+                style={{ width: "100%", padding: "0.7rem 0.85rem", border: "1px solid var(--sd-border)", borderRadius: "var(--sd-radius-md)", backgroundColor: "#ffffff", fontSize: "var(--sd-font-size-sm)" }}
+              />
+            </div>
+          )}
+
           {/* Error Banner */}
           {error && (
             <div
@@ -306,8 +361,11 @@ function FoodItemList() {
               icon={FaUtensils}
               title="Không có món trong danh mục này"
               description="Nhà hàng hiện chưa có món ăn nào trong danh mục đã chọn."
-              actionLabel="Xem tất cả món"
-              onAction={() => setSelectedCategory("Tất cả")}
+              actionLabel={foodQuery ? "Xóa tìm kiếm" : "Xem tất cả món"}
+              onAction={() => {
+                setSelectedCategory("Tất cả");
+                setFoodQuery("");
+              }}
             />
           ) : (
             <div
@@ -319,6 +377,7 @@ function FoodItemList() {
             >
               {filteredFoods.map((food) => {
                 const isFav = !!favorites[food._id];
+                const isAvailable = food.availability !== false && restaurant?.availability !== false;
                 return (
                   <motion.div
                     key={food._id}
@@ -392,6 +451,14 @@ function FoodItemList() {
                           {food.category}
                         </span>
                       )}
+
+                      {!isAvailable && (
+                        <span
+                          style={{ position: "absolute", bottom: "12px", right: "12px", padding: "0.25rem 0.6rem", borderRadius: "var(--sd-radius-full)", backgroundColor: "rgba(127, 29, 29, 0.88)", color: "#ffffff", fontSize: "0.7rem", fontWeight: "700" }}
+                        >
+                          {restaurant?.availability === false ? "Tạm đóng cửa" : "Tạm hết món"}
+                        </span>
+                      )}
                     </div>
 
                     {/* Food Info */}
@@ -447,8 +514,9 @@ function FoodItemList() {
                           size="sm"
                           icon={FaPlus}
                           onClick={() => handleAddToCart(food)}
+                          disabled={!isAvailable}
                         >
-                          Thêm
+                          {isAvailable ? "Thêm" : "Hết món"}
                         </Button>
                       </div>
                     </div>

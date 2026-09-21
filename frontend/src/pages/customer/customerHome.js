@@ -21,11 +21,19 @@ function CustomerHome() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
   const [sortBy, setSortBy] = useState("recommended");
+  const [onlyOpen, setOnlyOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [searchParams] = useSearchParams();
   const [foodsMap, setFoodsMap] = useState({});
+  const [favoriteRestaurants, setFavoriteRestaurants] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("skydish_favorite_restaurants")) || {};
+    } catch {
+      return {};
+    }
+  });
 
   const categories = [
     "Tất cả", 
@@ -47,6 +55,10 @@ function CustomerHome() {
     const cat = searchParams.get("category");
     if (cat) setSelectedCategory(cat);
   }, [searchParams]);
+
+  useEffect(() => {
+    localStorage.setItem("skydish_favorite_restaurants", JSON.stringify(favoriteRestaurants));
+  }, [favoriteRestaurants]);
 
   const fetchRestaurants = useCallback(async () => {
     setLoading(true);
@@ -110,17 +122,29 @@ function CustomerHome() {
         matchesCategory = hasFoodCategory || nameHasCategory;
       }
 
-      return matchesSearch && matchesCategory;
+      const matchesAvailability = !onlyOpen || r.availability !== false;
+      return matchesSearch && matchesCategory && matchesAvailability;
     })
     .sort((a, b) => {
       if (sortBy === "name") {
         return (a.name || "").localeCompare(b.name || "");
       }
-      return 0; // default recommended order
+      if (sortBy === "menu") {
+        return (foodsMap[b._id] || []).length - (foodsMap[a._id] || []).length;
+      }
+      // Recommended: open restaurants first, then restaurants with more available choices.
+      const availabilityDiff = Number(b.availability !== false) - Number(a.availability !== false);
+      if (availabilityDiff) return availabilityDiff;
+      return (foodsMap[b._id] || []).length - (foodsMap[a._id] || []).length;
     });
 
+  const toggleFavoriteRestaurant = (restaurantId, isFavorite) => {
+    if (!restaurantId) return;
+    setFavoriteRestaurants((prev) => ({ ...prev, [restaurantId]: isFavorite }));
+  };
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
+    <div className="customer-experience customer-marketplace" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
 
       <main style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
@@ -256,7 +280,7 @@ function CustomerHome() {
                 {selectedCategory === "Tất cả" ? "Tất cả nhà hàng" : `Nhà hàng ${selectedCategory}`}
               </h2>
               <span style={{ fontSize: "var(--sd-font-size-xs)", color: "var(--sd-text-muted)" }}>
-                Đang hiển thị {filteredRestaurants.length} nhà hàng đang hoạt động
+                Đang hiển thị {filteredRestaurants.length} nhà hàng{onlyOpen ? " đang mở cửa" : ""}
               </span>
             </div>
 
@@ -279,8 +303,18 @@ function CustomerHome() {
                 >
                   <option value="recommended">Đề xuất</option>
                   <option value="name">Tên (A-Z)</option>
+                  <option value="menu">Nhiều món nhất</option>
                 </select>
               </div>
+
+              <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontSize: "var(--sd-font-size-xs)", color: "var(--sd-text-secondary)", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={onlyOpen}
+                  onChange={(event) => setOnlyOpen(event.target.checked)}
+                />
+                Đang mở cửa
+              </label>
 
               <Button
                 variant="outline"
@@ -289,6 +323,7 @@ function CustomerHome() {
                 onClick={() => {
                   setSelectedCategory("Tất cả");
                   setSearchQuery("");
+                  setOnlyOpen(true);
                 }}
               >
                 Xóa bộ lọc
@@ -349,6 +384,8 @@ function CustomerHome() {
                 <RestaurantCard
                   key={rest._id || index}
                   restaurant={rest}
+                  isFavorite={!!favoriteRestaurants[rest._id || rest.id]}
+                  onFavoriteToggle={toggleFavoriteRestaurant}
                 />
               ))}
             </div>

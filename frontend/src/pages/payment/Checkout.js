@@ -1,5 +1,5 @@
 import { API_URLS } from '../../config/api';
-import React, { useState, useEffect, useContext, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useContext, useCallback, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { 
@@ -33,7 +33,7 @@ const API_BASE_URL = API_URLS.PAYMENT;
 
 const CheckoutForm = () => {
   const navigate = useNavigate();
-  const { cartItems, subtotal, deliveryFee, clearCart } = useContext(CartContext);
+  const { cartItems, subtotal, deliveryFee, clearCart, hasMixedRestaurants } = useContext(CartContext);
 
   const authCustomer = useMemo(() => getAuthCustomer(), []);
 
@@ -107,6 +107,7 @@ const CheckoutForm = () => {
 
   const [currentOrderId] = useState(() => `ORDER${Math.floor(10000 + Math.random() * 90000)}`);
   const [placedOrder, setPlacedOrder] = useState(null);
+  const completionInFlightRef = useRef(false);
 
   const customerName = authCustomer?.name || localStorage.getItem("customerName") || "";
   const customerEmail = authCustomer?.email || localStorage.getItem("customerEmail") || "";
@@ -276,6 +277,28 @@ const CheckoutForm = () => {
     discountAmount: couponDiscount,
   }), [currentOrderId, calculatedTotal, firstName, lastName, customerEmail, customerPhone, deliveryAddress, cartItems, appliedCoupon, couponDiscount, effectiveRestaurantId, effectiveRestaurantName, authCustomer]);
 
+  // Keep validation in one place so every payment method uses the same order rules.
+  const validateCheckout = useCallback(() => {
+    if (!checkAuthOrRedirect()) return false;
+    if (!cartItems.length) {
+      setError("Giỏ hàng đang trống. Vui lòng chọn món trước khi thanh toán.");
+      return false;
+    }
+    if (hasMixedRestaurants) {
+      setError("Mỗi đơn chỉ áp dụng cho một nhà hàng. Vui lòng quay lại giỏ hàng để điều chỉnh.");
+      return false;
+    }
+    if (!addrCity.trim() || !addrDistrict.trim() || !addrDetail.trim()) {
+      setError("Vui lòng nhập Tỉnh/Thành phố, Quận/Huyện và địa chỉ chi tiết trước khi thanh toán.");
+      return false;
+    }
+    if (!effectiveRestaurantId) {
+      setError("Không thể xác định nhà hàng của đơn. Vui lòng quay lại giỏ hàng và thử lại.");
+      return false;
+    }
+    return true;
+  }, [checkAuthOrRedirect, cartItems.length, hasMixedRestaurants, addrCity, addrDistrict, addrDetail, effectiveRestaurantId]);
+
   const handleApplyCoupon = async (e) => {
     if (e) e.preventDefault();
     if (!couponCode.trim()) {
@@ -361,7 +384,7 @@ const CheckoutForm = () => {
 
   // 2. Initialize VNPay QR
   const generateVNPayQR = useCallback(async () => {
-    if (!checkAuthOrRedirect()) return;
+    if (!validateCheckout()) return;
     try {
       setLoading(true);
       setError(null);
@@ -380,14 +403,15 @@ const CheckoutForm = () => {
       }
     } catch (err) {
       console.warn("VNPay QR init note:", err.message);
+      setError(err.response?.data?.error || "Không thể tạo mã VNPay lúc này. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
-  }, [orderData, vnpBankCode, checkAuthOrRedirect]);
+  }, [orderData, vnpBankCode, validateCheckout]);
 
   // 3. Initialize MoMo QR
   const generateMoMoQR = useCallback(async () => {
-    if (!checkAuthOrRedirect()) return;
+    if (!validateCheckout()) return;
     try {
       setLoading(true);
       setError(null);
@@ -404,14 +428,15 @@ const CheckoutForm = () => {
       }
     } catch (err) {
       console.warn("MoMo QR init note:", err.message);
+      setError(err.response?.data?.error || "Không thể tạo mã MoMo lúc này. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
-  }, [orderData, checkAuthOrRedirect]);
+  }, [orderData, validateCheckout]);
 
   // 4. Initialize Bank Transfer / VietQR
   const generateBankTransferQR = useCallback(async () => {
-    if (!checkAuthOrRedirect()) return;
+    if (!validateCheckout()) return;
     try {
       setBankTransferLoading(true);
       setError(null);
@@ -430,14 +455,19 @@ const CheckoutForm = () => {
       }
     } catch (err) {
       console.warn("Bank Transfer QR init note:", err.message);
+      setError(err.response?.data?.error || "Không thể tạo thông tin chuyển khoản lúc này. Vui lòng thử lại.");
     } finally {
       setBankTransferLoading(false);
     }
-  }, [orderData, checkAuthOrRedirect]);
+  }, [orderData, validateCheckout]);
 
   // Customer clicked "Tôi đã chuyển khoản"
   const handleConfirmBankTransfer = async () => {
-    if (!checkAuthOrRedirect()) return;
+    if (!validateCheckout()) return;
+    if (!bankDetails) {
+      setError("Vui lòng tạo thông tin chuyển khoản trước khi xác nhận.");
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -464,17 +494,6 @@ const CheckoutForm = () => {
     setTimeout(() => setCopyFeedback(""), 2500);
   };
 
-  // Automatic provider init on method change (STRIPE removed)
-  useEffect(() => {
-    if (paymentMethod === "VNPAY" && vnpayMode === "QR") {
-      generateVNPayQR();
-    } else if (paymentMethod === "MOMO" && momoMode === "QR") {
-      generateMoMoQR();
-    } else if (paymentMethod === "BANK_TRANSFER") {
-      generateBankTransferQR();
-    }
-  }, [paymentMethod, vnpayMode, momoMode, generateVNPayQR, generateMoMoQR, generateBankTransferQR]);
-
   // Automatic polling effect for QR modes
   useEffect(() => {
     let interval = null;
@@ -482,7 +501,8 @@ const CheckoutForm = () => {
       interval = setInterval(async () => {
         try {
           const res = await axios.get(`${API_BASE_URL}/api/payment/status/${orderData.orderId}`, { headers: getAuthHeaders() });
-          if (res.data.paymentStatus === "Paid") {
+          if (res.data.paymentStatus === "Paid" && !completionInFlightRef.current) {
+            completionInFlightRef.current = true;
             await createOrderInOrderService(paymentMethod, "Paid");
             const snapshot = {
               orderId: orderData.orderId,
@@ -504,7 +524,7 @@ const CheckoutForm = () => {
             setPollingActive(false);
           }
         } catch (e) {
-          // silent fallback on background poll
+          completionInFlightRef.current = false;
         }
       }, 4000);
     }
@@ -517,7 +537,8 @@ const CheckoutForm = () => {
   const checkPaymentStatus = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/payment/status/${orderData.orderId}`, { headers: getAuthHeaders() });
-      if (res.data.paymentStatus === "Paid") {
+      if (res.data.paymentStatus === "Paid" && !completionInFlightRef.current) {
+        completionInFlightRef.current = true;
         await createOrderInOrderService(paymentMethod, "Paid");
         const snapshot = {
           orderId: orderData.orderId,
@@ -542,6 +563,7 @@ const CheckoutForm = () => {
         setTimeout(() => setError(null), 4000);
       }
     } catch (err) {
+      completionInFlightRef.current = false;
       setError("Không thể kiểm tra trạng thái thanh toán lúc này.");
       setTimeout(() => setError(null), 4000);
     }
@@ -552,7 +574,7 @@ const CheckoutForm = () => {
   // VNPay Redirect Submission Handler
   const handleVNPayRedirect = async (event) => {
     event.preventDefault();
-    if (!checkAuthOrRedirect()) return;
+    if (!validateCheckout()) return;
     if (loading || disablePayment) return;
     setLoading(true);
     setError(null);
@@ -583,7 +605,7 @@ const CheckoutForm = () => {
   // MoMo Redirect Submission Handler
   const handleMoMoRedirect = async (event) => {
     event.preventDefault();
-    if (!checkAuthOrRedirect()) return;
+    if (!validateCheckout()) return;
     if (loading || disablePayment) return;
     setLoading(true);
     setError(null);
@@ -612,14 +634,8 @@ const CheckoutForm = () => {
   // Cash on Delivery (COD) Submission Handler
   const handleCODSubmit = async (event) => {
     event.preventDefault();
-    if (!checkAuthOrRedirect()) return;
+    if (!validateCheckout()) return;
     if (loading || disablePayment) return;
-
-    // Validate delivery address before submitting
-    if (!deliveryAddress.trim()) {
-      setError("Vui lòng nhập đầy đủ địa chỉ giao hàng trước khi đặt hàng.");
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -816,11 +832,21 @@ const CheckoutForm = () => {
             {vnpayMode === "QR" ? (
               <div className="qr-checkout-container">
                 <div className="qr-image-wrapper vnpay">
-                  <img
-                    src={`https://quickchart.io/qr?text=${encodeURIComponent(vnpayQrUrl || "https://sandbox.vnpayment.vn")}&size=200&margin=1`}
-                    alt="Mã QR VNPay"
-                    style={{ width: "200px", height: "200px", display: "block" }}
-                  />
+                  {vnpayQrUrl ? (
+                    <img
+                      src={`https://quickchart.io/qr?text=${encodeURIComponent(vnpayQrUrl)}&size=200&margin=1`}
+                      alt="Mã QR VNPay"
+                      style={{ width: "200px", height: "200px", display: "block" }}
+                    />
+                  ) : (
+                    <div style={{ width: "200px", minHeight: "200px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", textAlign: "center", color: "var(--sd-text-secondary)", padding: "1rem" }}>
+                      <FaQrcode size={38} style={{ color: "var(--sd-primary)" }} />
+                      <span style={{ fontSize: "0.8rem" }}>Nhập địa chỉ giao hàng rồi tạo mã thanh toán an toàn.</span>
+                      <Button variant="primary" size="sm" disabled={loading || disablePayment} onClick={generateVNPayQR}>
+                        Tạo mã QR
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="qr-steps-list">
@@ -843,7 +869,7 @@ const CheckoutForm = () => {
                     variant="primary"
                     size="md"
                     icon={FaCheck}
-                    disabled={disablePayment || loading}
+                    disabled={disablePayment || loading || !vnpayQrUrl}
                     onClick={checkPaymentStatus}
                   >
                     Kiểm tra trạng thái thanh toán
@@ -918,11 +944,21 @@ const CheckoutForm = () => {
             {momoMode === "QR" ? (
               <div className="qr-checkout-container">
                 <div className="qr-image-wrapper momo">
-                  <img
-                    src={`https://quickchart.io/qr?text=${encodeURIComponent(momoQrUrl || "https://test-payment.momo.vn")}&size=200&margin=1`}
-                    alt="Mã QR MoMo"
-                    style={{ width: "200px", height: "200px", display: "block" }}
-                  />
+                  {momoQrUrl ? (
+                    <img
+                      src={`https://quickchart.io/qr?text=${encodeURIComponent(momoQrUrl)}&size=200&margin=1`}
+                      alt="Mã QR MoMo"
+                      style={{ width: "200px", height: "200px", display: "block" }}
+                    />
+                  ) : (
+                    <div style={{ width: "200px", minHeight: "200px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", textAlign: "center", color: "var(--sd-text-secondary)", padding: "1rem" }}>
+                      <FaQrcode size={38} style={{ color: "#a21caf" }} />
+                      <span style={{ fontSize: "0.8rem" }}>Nhập địa chỉ giao hàng rồi tạo mã thanh toán an toàn.</span>
+                      <Button variant="primary" size="sm" disabled={loading || disablePayment} onClick={generateMoMoQR} style={{ backgroundColor: "#a21caf", borderColor: "#a21caf" }}>
+                        Tạo mã QR
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="qr-steps-list">
@@ -945,7 +981,7 @@ const CheckoutForm = () => {
                     variant="primary"
                     size="md"
                     icon={FaCheck}
-                    disabled={disablePayment || loading}
+                    disabled={disablePayment || loading || !momoQrUrl}
                     onClick={checkPaymentStatus}
                     style={{ backgroundColor: "#a21caf", borderColor: "#a21caf" }}
                   >
@@ -1141,6 +1177,17 @@ const CheckoutForm = () => {
                 </div>
               </div>
 
+              {!bankDetails && !bankTransferLoading && (
+                <div style={{ padding: "0 1.5rem 1rem", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 0.7rem", color: "var(--sd-text-secondary)", fontSize: "0.82rem" }}>
+                    Tạo thông tin riêng cho đơn này trước khi chuyển khoản để hệ thống đối soát chính xác.
+                  </p>
+                  <Button variant="primary" size="sm" icon={FaQrcode} onClick={generateBankTransferQR} disabled={loading || disablePayment}>
+                    Tạo thông tin chuyển khoản
+                  </Button>
+                </div>
+              )}
+
               {/* Notice & Actions */}
               <div style={{ padding: "0 1.5rem 1.5rem 1.5rem" }}>
                 <div className="bank-transfer-alert">
@@ -1162,7 +1209,7 @@ const CheckoutForm = () => {
                     variant="primary"
                     size="lg"
                     icon={FaCheckCircle}
-                    disabled={disablePayment || loading}
+                    disabled={disablePayment || loading || !bankDetails}
                     onClick={handleConfirmBankTransfer}
                     style={{
                       flex: "1 1 240px",
@@ -1451,7 +1498,7 @@ const CheckoutForm = () => {
 
 export default function Checkout() {
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
+    <div className="checkout-experience" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
       <main className="checkout-page-wrapper">
         <div className="sd-container">
