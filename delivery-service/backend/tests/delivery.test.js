@@ -86,4 +86,22 @@ describe('Delivery Service Tests (Assignment, Ownership, Status Lifecycle)', () 
     assert.ok(deliveries.length <= 5);
     assert.ok(totalItems >= 1);
   });
+
+  it('VALIDATION: unsupported delivery statuses are rejected by the schema', async () => {
+    const invalidDelivery = new Delivery({
+      driver: driverA._id,
+      orderId: `ORDER_INVALID_STATUS_${Date.now()}`,
+      customerId: 'Customer Test',
+      pickupAddressString: '120 Phố Huế, Hà Nội',
+      pickupLocation: { type: 'Point', coordinates: [105.85, 21.02] },
+      deliveryAddressString: '45 Lê Lợi, Hà Nội',
+      deliveryLocation: { type: 'Point', coordinates: [105.86, 21.03] },
+      status: 'cancelled'
+    });
+
+    await assert.rejects(
+      invalidDelivery.validate(),
+      /`cancelled` is not a valid enum value/
+    );
+  });
 });
