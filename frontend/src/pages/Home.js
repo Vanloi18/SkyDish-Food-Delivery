@@ -1,11 +1,13 @@
 import { API_URLS } from '../config/api';
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { FaSearch, FaArrowRight, FaChevronLeft, FaChevronRight, FaStar, FaMotorcycle, FaShieldAlt } from "react-icons/fa";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import RestaurantCard from "../components/common/RestaurantCard";
-import { handleImageError } from "../utils/imageHelper";
+import { handleImageError, resolveImageUrl } from "../utils/imageHelper";
+import { formatCurrency } from "../utils/currency";
 import "../styles/home.css";
 
 const categories = [
@@ -359,11 +361,153 @@ function RestaurantSkeletons({ count = 4 }) {
   );
 }
 
+/** Compact presentation for real food records returned by the public API. */
+function PopularFoodCard({ food, onOpenMenu }) {
+  const restaurant = typeof food.restaurant === "object" ? food.restaurant : null;
+  const restaurantId = restaurant?._id || food.restaurantId || (typeof food.restaurant === "string" ? food.restaurant : "");
+  const isAvailable = food.availability !== false;
+
+  return (
+    <article
+      className={`landing-food-card${restaurantId ? " is-clickable" : ""}`}
+      onClick={() => restaurantId && onOpenMenu(restaurantId)}
+      onKeyDown={(event) => {
+        if (restaurantId && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onOpenMenu(restaurantId);
+        }
+      }}
+      role={restaurantId ? "link" : undefined}
+      tabIndex={restaurantId ? 0 : undefined}
+      aria-label={restaurantId ? `Xem thực đơn có món ${food.name}` : undefined}
+    >
+      <div className="landing-food-card-media">
+        <img
+          src={resolveImageUrl(food.image, "food")}
+          alt={food.name || "Món ăn SkyDish"}
+          loading="lazy"
+          onError={(event) => handleImageError(event, "food")}
+        />
+        {food.category && <span className="landing-food-category">{food.category}</span>}
+        {!isAvailable && <span className="landing-food-unavailable">Tạm hết món</span>}
+      </div>
+      <div className="landing-food-card-body">
+        <div>
+          <h3>{food.name || "Món ăn"}</h3>
+          {restaurant?.name && <p className="landing-food-restaurant">{restaurant.name}</p>}
+          {food.description && <p className="landing-food-description">{food.description}</p>}
+        </div>
+        <div className="landing-food-card-footer">
+          <strong>{formatCurrency(food.price)}</strong>
+          {restaurantId && <span>Khám phá <FaArrowRight size={11} /></span>}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function PopularFoodSkeletons({ count = 4 }) {
+  return Array.from({ length: count }).map((_, index) => (
+    <div key={index} className="landing-food-card landing-food-skeleton" aria-hidden="true">
+      <div className="landing-food-card-media sd-skeleton" />
+      <div className="landing-food-card-body">
+        <div className="sd-skeleton landing-food-skeleton-line" />
+        <div className="sd-skeleton landing-food-skeleton-line short" />
+      </div>
+    </div>
+  ));
+}
+
+/**
+ * An editorial food rail inspired by delivery marketplaces.
+ * It only renders records returned by the existing public food endpoint; the
+ * duplicate group is purely for a seamless visual loop, never new data.
+ */
+function FoodMarquee({ foods, onOpenMenu }) {
+  if (!foods?.length) return null;
+
+  const firstRow = foods.filter((_, index) => index % 2 === 0);
+  const secondRow = foods.filter((_, index) => index % 2 !== 0);
+
+  // Some restaurants only expose a few dishes. Repeat the *same API records*
+  // inside one visual set until it is wider than a desktop viewport; this keeps
+  // the rail full while the second set supplies a seamless return journey.
+  const fillRail = (items) => {
+    const source = items.length ? items : foods;
+    const repeats = Math.max(1, Math.ceil(12 / source.length));
+    return Array.from({ length: repeats }, () => source).flat();
+  };
+
+  const rows = [fillRail(firstRow), fillRail(secondRow)];
+
+  const renderFood = (food, index, clone = false) => {
+    const restaurant = typeof food.restaurant === "object" ? food.restaurant : null;
+    const restaurantId = restaurant?._id || food.restaurantId || (typeof food.restaurant === "string" ? food.restaurant : "");
+    const canOpen = Boolean(restaurantId) && !clone;
+
+    return (
+      <button
+        key={`${food._id || food.name || "food"}-${index}-${clone ? "clone" : "origin"}`}
+        type="button"
+        className="food-marquee-card"
+        onClick={() => canOpen && onOpenMenu(restaurantId)}
+        tabIndex={clone ? -1 : 0}
+        aria-hidden={clone || undefined}
+        aria-label={canOpen ? `Khám phá ${food.name}` : undefined}
+      >
+        <img
+          src={resolveImageUrl(food.image, "food")}
+          alt={clone ? "" : (food.name || "Món ăn SkyDish")}
+          loading="lazy"
+          onError={(event) => handleImageError(event, "food")}
+        />
+        <span className="food-marquee-card-label">{food.name || food.category || "Món ngon"}</span>
+      </button>
+    );
+  };
+
+  return (
+    <section className="food-marquee-section" aria-label="Khám phá món ăn nổi bật">
+      <div className="food-marquee-heading">
+        <span>Khám phá trên SkyDish</span>
+        <p>Món ngon từ thực đơn đang có</p>
+      </div>
+      {rows.map((row, rowIndex) => (
+        <div className="food-marquee-row" key={`food-marquee-row-${rowIndex}`}>
+          <motion.div
+            className={`food-marquee-track${rowIndex === 1 ? " is-reverse" : ""}`}
+            initial={{ x: rowIndex === 1 ? "-50%" : "0%" }}
+            animate={{ x: rowIndex === 1 ? "0%" : "-50%" }}
+            transition={{
+              duration: rowIndex === 1 ? 18 : 15,
+              ease: "easeInOut",
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+          >
+            {[false, true].map((clone) => (
+              <div
+                className="food-marquee-group"
+                key={`food-marquee-group-${rowIndex}-${clone ? "clone" : "origin"}`}
+                aria-hidden={clone || undefined}
+              >
+                {row.map((food, index) => renderFood(food, index, clone))}
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [restaurants, setRestaurants] = useState([]);
+  const [popularFoods, setPopularFoods] = useState([]);
   // Explicit states: "loading" | "success" | "empty" | "error"
   const [restaurantStatus, setRestaurantStatus] = useState("loading");
+  const [foodStatus, setFoodStatus] = useState("loading");
   const navigate = useNavigate();
 
   // Fetch live restaurants from backend for showcase
@@ -392,6 +536,30 @@ const Home = () => {
   useEffect(() => {
     fetchRestaurants();
   }, [fetchRestaurants]);
+
+  const fetchPopularFoods = useCallback(async () => {
+    setFoodStatus("loading");
+    try {
+      const response = await fetch(`${API_URLS.RESTAURANT}/api/food-items/all`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      const foods = Array.isArray(payload) ? payload : payload?.data;
+      const availableFoods = Array.isArray(foods) ? foods.filter((food) => food?.availability !== false) : [];
+      // Keep a broader set for the continuously moving discovery rail. The
+      // visible "popular" grid below remains deliberately curated to eight
+      // cards, so this does not make the home page unnecessarily long.
+      setPopularFoods(availableFoods.slice(0, 18));
+      setFoodStatus(availableFoods.length ? "success" : "empty");
+    } catch (error) {
+      console.warn("Popular foods fetch error:", error.message);
+      setPopularFoods([]);
+      setFoodStatus("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPopularFoods();
+  }, [fetchPopularFoods]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -574,8 +742,58 @@ const Home = () => {
           </div>
         </section>
 
+        {/* Live food discovery rail: it appears only once the existing food API responds. */}
+        {foodStatus === "success" && (
+          <FoodMarquee
+            foods={popularFoods}
+            onOpenMenu={(restaurantId) => navigate(`/customer/restaurant/${restaurantId}/foods`)}
+          />
+        )}
+
         {/* ====================================================================
-            4. HOW SKYDISH WORKS (Simple Linear Rhythm)
+            4. POPULAR FOOD — sourced from the existing public food API
+            ==================================================================== */}
+        <section className="landing-popular-food-section" aria-labelledby="popular-food-heading">
+          <div className="sd-container">
+            <div className="landing-section-header">
+              <div className="landing-section-title-group">
+                <span className="landing-section-eyebrow">Chọn nhanh, ăn ngon</span>
+                <h2 id="popular-food-heading" className="landing-section-title">Món ngon được yêu thích</h2>
+                <p className="landing-section-subtitle">
+                  Những món đang có trên SkyDish, sẵn sàng để bạn khám phá từ thực đơn của quán.
+                </p>
+              </div>
+              <Link to="/customer/home" className="landing-section-link">
+                Tìm món ăn <FaArrowRight size={12} />
+              </Link>
+            </div>
+
+            <div className="landing-food-grid">
+              {foodStatus === "loading" && <PopularFoodSkeletons count={4} />}
+              {foodStatus === "success" && popularFoods.slice(0, 8).map((food) => (
+                <PopularFoodCard
+                  key={food._id || `${food.name}-${food.price}`}
+                  food={food}
+                  onOpenMenu={(restaurantId) => navigate(`/customer/restaurant/${restaurantId}/foods`)}
+                />
+              ))}
+              {foodStatus === "empty" && (
+                <div className="landing-restaurants-empty" role="status">
+                  <p className="landing-empty-text">Chưa có món ăn để hiển thị</p>
+                </div>
+              )}
+              {foodStatus === "error" && (
+                <div className="landing-restaurants-error" role="alert">
+                  <p className="landing-error-text">Không thể tải món ăn</p>
+                  <button type="button" className="landing-retry-btn" onClick={fetchPopularFoods}>Thử lại</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ====================================================================
+            5. HOW SKYDISH WORKS (Simple Linear Rhythm)
             ==================================================================== */}
         <section className="landing-how-section" aria-labelledby="how-heading">
           <div className="sd-container">
@@ -607,18 +825,31 @@ const Home = () => {
         </section>
 
         {/* ====================================================================
-            5. PROMOTIONAL CTA BANNER
+            6. PROMOTIONAL CTA BANNER
             ==================================================================== */}
         <section className="landing-cta-section">
           <div className="sd-container">
             <div className="landing-cta-card">
-              <h2 className="landing-cta-title">Đói rồi? Đặt món ngay.</h2>
-              <p className="landing-cta-desc">
-                Khám phá hàng trăm món ngon chuẩn vị từ các nhà hàng uy tín xung quanh bạn với SkyDish.
-              </p>
-              <Link to="/customer/home" className="landing-cta-btn">
-                Khám phá nhà hàng <FaArrowRight size={13} />
-              </Link>
+              <div className="landing-promotion-copy">
+                <span className="landing-promotion-eyebrow">SkyDish dành cho những bữa ăn đáng nhớ</span>
+                <h2 className="landing-cta-title">Đói rồi? Đặt món ngay.</h2>
+                <p className="landing-cta-desc">
+                  Khám phá hàng trăm món ngon chuẩn vị từ các nhà hàng uy tín xung quanh bạn với SkyDish.
+                </p>
+                <Link to="/customer/home" className="landing-cta-btn">
+                  Khám phá nhà hàng <FaArrowRight size={13} />
+                </Link>
+              </div>
+              <div className="landing-promotion-aside" aria-label="Lợi ích SkyDish">
+                <div className="landing-promotion-stat">
+                  <FaMotorcycle />
+                  <span><strong>Đặt món linh hoạt</strong><small>Chọn quán và theo dõi đơn trong một nơi</small></span>
+                </div>
+                <div className="landing-promotion-stat">
+                  <FaShieldAlt />
+                  <span><strong>Thanh toán an tâm</strong><small>Nhiều phương thức thanh toán sẵn có</small></span>
+                </div>
+              </div>
             </div>
           </div>
         </section>

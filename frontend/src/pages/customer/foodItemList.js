@@ -142,6 +142,7 @@ function FoodItemList() {
         String(value || "").toLowerCase().includes(query)
       );
     });
+  const restaurantVisual = restaurant?.coverImage || restaurant?.bannerImage || restaurant?.imageURL || restaurant?.image || restaurant?.profilePicture;
 
   return (
     <div className="customer-experience customer-menu-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
@@ -177,11 +178,12 @@ function FoodItemList() {
         )}
       </AnimatePresence>
 
-      <main style={{ flex: 1, padding: "2rem 0 5rem 0" }}>
+      <main className="menu-page-main" style={{ flex: 1, padding: "2rem 0 5rem 0" }}>
         <div className="sd-container">
           {/* Back to restaurants button */}
           <button
             type="button"
+            className="menu-back-link"
             onClick={() => navigate("/customer/home")}
             style={{
               display: "inline-flex",
@@ -205,6 +207,7 @@ function FoodItemList() {
 
           {/* Restaurant Header Banner */}
           <motion.div
+            className="restaurant-menu-hero"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             style={{
@@ -221,8 +224,16 @@ function FoodItemList() {
               gap: "1.5rem",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+            {restaurantVisual && (
               <div
+                className="restaurant-menu-cover"
+                aria-hidden="true"
+                style={{ backgroundImage: `url("${resolveImageUrl(restaurantVisual, "restaurant")}")` }}
+              />
+            )}
+            <div className="restaurant-menu-identity" style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+              <div
+                className="restaurant-menu-avatar"
                 style={{
                   width: "72px",
                   height: "72px",
@@ -270,14 +281,16 @@ function FoodItemList() {
                       <FaPhoneAlt style={{ color: "var(--sd-success)" }} /> {restaurant.contactNumber}
                     </span>
                   )}
-                  <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "var(--sd-font-size-xs)", fontWeight: "600", color: "#f59e0b" }}>
-                    <FaStar /> 4.8 (120+ Đánh giá)
-                  </span>
+                  {restaurant?.rating && (
+                    <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "var(--sd-font-size-xs)", fontWeight: "600", color: "#f59e0b" }}>
+                      <FaStar /> {restaurant.rating}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
-            <Link to="/customer/cart">
+            <Link className="restaurant-menu-cart-link" to="/customer/cart">
               <Button variant="primary" icon={FaShoppingCart}>
                 Xem giỏ hàng ({totalItemCount})
               </Button>
@@ -287,6 +300,7 @@ function FoodItemList() {
           {/* Category Tabs */}
           {availableCategories.length > 1 && (
             <div
+              className="menu-category-tabs"
               style={{
                 display: "flex",
                 gap: "0.5rem",
@@ -321,7 +335,7 @@ function FoodItemList() {
           )}
 
           {!loading && foods.length > 0 && (
-            <div style={{ marginBottom: "1.5rem", maxWidth: "460px" }}>
+            <div className="menu-search-box" style={{ marginBottom: "1.5rem", maxWidth: "460px" }}>
               <label htmlFor="food-search" style={{ display: "block", marginBottom: "0.4rem", fontSize: "var(--sd-font-size-xs)", fontWeight: "700", color: "var(--sd-text-secondary)" }}>
                 Tìm trong thực đơn
               </label>
@@ -369,6 +383,7 @@ function FoodItemList() {
             />
           ) : (
             <div
+              className="food-menu-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
@@ -381,6 +396,7 @@ function FoodItemList() {
                 return (
                   <motion.div
                     key={food._id}
+                    className="food-menu-card"
                     whileHover={{ y: -6 }}
                     transition={{ duration: 0.2 }}
                     style={{
@@ -395,7 +411,7 @@ function FoodItemList() {
                     }}
                   >
                     {/* Food Image */}
-                    <div style={{ position: "relative", height: "180px", backgroundColor: "#f1f5f9" }}>
+                    <div className="food-menu-card-media" style={{ position: "relative", height: "180px", backgroundColor: "#f1f5f9" }}>
                       <img
                         src={resolveImageUrl(food.image, "food")}
                         alt={food.name}
@@ -462,7 +478,7 @@ function FoodItemList() {
                     </div>
 
                     {/* Food Info */}
-                    <div style={{ padding: "1.25rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <div className="food-menu-card-content" style={{ padding: "1.25rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                       <div>
                         <h4
                           style={{
@@ -474,6 +490,11 @@ function FoodItemList() {
                         >
                           {food.name}
                         </h4>
+                        {food.rating && (
+                          <span className="food-menu-rating">
+                            <FaStar /> {food.rating}
+                          </span>
+                        )}
                         <p
                           style={{
                             margin: "0 0 1rem 0",
@@ -486,7 +507,7 @@ function FoodItemList() {
                             overflow: "hidden",
                           }}
                         >
-                          {food.description || "Được chế biến tươi mới từ nguyên liệu hảo hạng."}
+                          {food.description || "Chưa có mô tả cho món ăn này."}
                         </p>
                       </div>
 
@@ -531,6 +552,7 @@ function FoodItemList() {
       {/* Floating Bottom Cart Bar if items exist */}
       {totalItemCount > 0 && (
         <motion.div
+          className="menu-cart-dock"
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           style={{

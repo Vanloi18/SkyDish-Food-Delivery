@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { 
   FaStar, 
   FaMapMarkerAlt, 
+  FaMotorcycle,
+  FaUtensils,
   FaHeart, 
   FaRegHeart 
 } from "react-icons/fa";
@@ -13,7 +15,8 @@ import { resolveImageUrl, handleImageError } from "../../utils/imageHelper";
 export default function RestaurantCard({ 
   restaurant, 
   onFavoriteToggle, 
-  isFavorite: initialFavorite = false 
+  isFavorite: initialFavorite = false,
+  menuItemCount = 0
 }) {
   const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(initialFavorite);
@@ -22,8 +25,15 @@ export default function RestaurantCard({
 
   const id = restaurant._id || restaurant.id;
   const name = restaurant.name || "Nhà hàng đối tác";
-  const location = restaurant.location || "Trung tâm thành phố";
+  const location = restaurant.location || "Địa chỉ đang cập nhật";
   const availability = restaurant.availability !== false; // default true
+  const cuisineSource = restaurant.cuisine || restaurant.cuisines || restaurant.category || restaurant.foodCategory;
+  const cuisine = Array.isArray(cuisineSource) ? cuisineSource.filter(Boolean).join(" · ") : cuisineSource;
+  const deliveryTime = restaurant.deliveryTime || restaurant.estimatedDeliveryTime || restaurant.deliveryDuration ||
+    (restaurant.deliveryTimeMinutes ? `${restaurant.deliveryTimeMinutes} phút` : "");
+  const distance = typeof restaurant.distance === "number" ? `${restaurant.distance} km` : (restaurant.distance || restaurant.distanceKm ? `${restaurant.distance || restaurant.distanceKm}${restaurant.distance ? "" : " km"}` : "");
+  const promotionSource = restaurant.promotion || restaurant.promo || restaurant.discountLabel || restaurant.offer;
+  const promotion = typeof promotionSource === "string" ? promotionSource : (promotionSource?.label || promotionSource?.title || "");
   
   // Format image URL safely with neutral SVG fallback
   const rawImage = restaurant.profilePicture || restaurant.imageURL || restaurant.image;
@@ -83,6 +93,8 @@ export default function RestaurantCard({
             transition: "transform 0.35s ease",
           }}
         />
+
+        {promotion && <span className="restaurant-promo-badge">{promotion}</span>}
 
         {/* Favorite Heart Button */}
         <button
@@ -156,6 +168,7 @@ export default function RestaurantCard({
           </div>
 
           <p
+            className="restaurant-card-location"
             style={{
               margin: "0 0 0.5rem 0",
               fontSize: "0.825rem",
@@ -170,6 +183,15 @@ export default function RestaurantCard({
               {location}
             </span>
           </p>
+
+          {(cuisine || deliveryTime || distance) && (
+            <div className="restaurant-card-meta" aria-label="Thông tin nhà hàng">
+              {cuisine && <span className="restaurant-card-cuisine">{cuisine}</span>}
+              {menuItemCount > 0 && <span><FaUtensils /> {menuItemCount} món</span>}
+              {deliveryTime && <span><FaMotorcycle /> {deliveryTime}</span>}
+              {distance && <span><FaMapMarkerAlt /> {distance}</span>}
+            </div>
+          )}
         </div>
 
         {/* Footer Meta Row */}
@@ -186,7 +208,7 @@ export default function RestaurantCard({
           }}
         >
           <span style={{ color: "var(--sd-text-muted)", fontSize: "0.78rem" }}>
-            {restaurant.ownerName ? `Chủ quán: ${restaurant.ownerName}` : "Đối tác chính thức"}
+            {restaurant.ownerName ? `Chủ quán: ${restaurant.ownerName}` : ""}
           </span>
 
           <span

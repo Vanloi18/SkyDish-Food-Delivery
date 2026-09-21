@@ -10,7 +10,8 @@ import {
   FaReceipt, 
   FaCheckCircle,
   FaStar,
-  FaTimes
+  FaTimes,
+  FaMotorcycle
 } from "react-icons/fa";
 import { jsPDF } from "jspdf";
 import Header from "./Header";
@@ -221,20 +222,29 @@ function OrderDetails() {
     confirmed: 1,
     preparing: 2,
     "out for delivery": 3,
+    delivering: 3,
     delivered: 4,
   };
   const currentStepIdx = mapStatusToIdx[currentStatus.toLowerCase()] ?? 0;
   const isCancelled = currentStatus.toLowerCase().includes("cancel");
+  const deliveryPartner = order?.deliveryPartner || order?.driver || order?.shipper || order?.delivery?.driver;
+  const deliveryPartnerName = typeof deliveryPartner === "object"
+    ? (deliveryPartner.name || deliveryPartner.fullName || deliveryPartner.driverName || "")
+    : "";
+  const deliveryPartnerPhone = typeof deliveryPartner === "object"
+    ? (deliveryPartner.phone || deliveryPartner.phoneNumber || deliveryPartner.contactNumber || "")
+    : "";
 
   return (
     <div className="customer-experience order-details-experience" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
 
-      <main style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
+      <main className="order-details-main" style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
         <div className="sd-container">
           <div style={{ marginBottom: "1.5rem" }}>
             <button
               type="button"
+              className="order-details-back-link"
               onClick={() => navigate("/orders")}
               style={{
                 display: "inline-flex",
@@ -273,6 +283,7 @@ function OrderDetails() {
             <div style={{ maxWidth: "800px", margin: "0 auto" }}>
               {/* Main Card */}
               <motion.div
+                className="order-details-card"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 style={{
@@ -333,6 +344,7 @@ function OrderDetails() {
                     </div>
                   )}
                   <div
+                    className="order-tracking-timeline"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -346,8 +358,9 @@ function OrderDetails() {
                     {steps.map((stepName, sIdx) => {
                       const isCompleted = sIdx <= currentStepIdx;
                       return (
-                        <div key={stepName} style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: "90px", textAlign: "center" }}>
+                        <div key={stepName} className={`order-tracking-step ${isCompleted ? "is-complete" : ""}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: "90px", textAlign: "center" }}>
                           <div
+                            className="order-tracking-marker"
                             style={{
                               width: "36px",
                               height: "36px",
@@ -413,6 +426,18 @@ function OrderDetails() {
                       <FaMapMarkerAlt style={{ color: "var(--sd-primary)" }} /> {order.deliveryAddress}
                     </p>
                   </div>
+
+                  {deliveryPartnerName && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <p style={{ margin: "0 0 0.25rem 0", fontSize: "var(--sd-font-size-xs)", fontWeight: "600", color: "var(--sd-text-muted)" }}>
+                        Đối tác giao hàng
+                      </p>
+                      <p style={{ margin: 0, fontWeight: "600", color: "var(--sd-text-primary)", display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+                        <FaMotorcycle style={{ color: "var(--sd-primary)" }} /> {deliveryPartnerName}
+                        {deliveryPartnerPhone && <span style={{ color: "var(--sd-text-secondary)", fontWeight: "500" }}>· {deliveryPartnerPhone}</span>}
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <p style={{ margin: "0 0 0.25rem 0", fontSize: "var(--sd-font-size-xs)", fontWeight: "600", color: "var(--sd-text-muted)" }}>

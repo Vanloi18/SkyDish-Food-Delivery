@@ -382,3 +382,532 @@ textarea:focus {
   0%, 100% { box-shadow: 0 9px 18px -10px rgba(234, 79, 27, 0.72); }
   50% { box-shadow: 0 12px 24px -8px rgba(234, 79, 27, 0.92); }
 }
+
+/* ---------------------------------------------------------------------------
+   Customer marketplace — intentionally more editorial than the former stack
+   of centered controls. The data and filter behavior remain unchanged.
+   --------------------------------------------------------------------------- */
+.marketplace-main {
+  padding: clamp(1.3rem, 3vw, 2.75rem) 0 5rem;
+}
+
+.marketplace-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+  gap: clamp(1.25rem, 3vw, 2.75rem);
+  align-items: stretch;
+  overflow: hidden;
+  position: relative;
+  padding: clamp(1.4rem, 3vw, 3rem);
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 140, 84, 0.17);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 82% 20%, rgba(255, 190, 139, 0.42), transparent 18rem),
+    linear-gradient(122deg, #fff7f2 0%, #ffffff 58%, #fff9f6 100%);
+  box-shadow: 0 28px 56px -45px rgba(15, 23, 42, 0.48);
+}
+
+.marketplace-hero::before {
+  content: "";
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  left: 46%;
+  bottom: -135px;
+  border-radius: 50%;
+  background: rgba(255, 122, 69, 0.08);
+}
+
+.marketplace-hero-copy,
+.marketplace-hero-panel { position: relative; z-index: 1; }
+
+.marketplace-eyebrow,
+.marketplace-section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  color: #d94b19;
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.marketplace-eyebrow {
+  padding: 0.42rem 0.72rem;
+  border: 1px solid rgba(255, 122, 69, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 242, 234, 0.9);
+}
+
+.marketplace-hero h1 {
+  max-width: 650px;
+  margin: 0.8rem 0;
+  color: #111827;
+  font-size: clamp(2.1rem, 4.4vw, 4.25rem);
+  font-weight: 800;
+  line-height: 0.99;
+  letter-spacing: -0.065em;
+}
+
+.marketplace-hero h1 em {
+  font-style: normal;
+  color: #ef5722;
+}
+
+.marketplace-hero-copy > p {
+  max-width: 610px;
+  margin: 0 0 1.35rem;
+  color: #526075;
+  font-size: clamp(0.91rem, 1.4vw, 1.02rem);
+  line-height: 1.65;
+}
+
+.marketplace-search-shell {
+  display: flex;
+  align-items: center;
+  width: min(100%, 610px);
+  min-height: 58px;
+  padding: 0.45rem 0.52rem 0.45rem 1rem;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 13px 24px -20px rgba(15, 23, 42, 0.44);
+  transition: border-color var(--sd-transition-fast), box-shadow var(--sd-transition-fast), transform var(--sd-transition-fast);
+}
+
+.marketplace-search-shell:focus-within {
+  border-color: rgba(255, 87, 34, 0.58);
+  box-shadow: 0 16px 28px -20px rgba(234, 79, 27, 0.42), var(--sd-ring);
+  transform: translateY(-1px);
+}
+
+.marketplace-search-shell input {
+  min-width: 0;
+  flex: 1;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: #1d2939;
+  font-size: 0.92rem;
+}
+
+.marketplace-quick-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin-top: 1rem;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.marketplace-quick-meta span { display: inline-flex; align-items: center; gap: 0.36rem; }
+.marketplace-quick-meta svg { color: #f05723; }
+
+.marketplace-hero-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.78rem;
+  min-height: 258px;
+  padding: 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 22px;
+  color: #ffffff;
+  background: linear-gradient(145deg, #1d2939, #101828);
+  box-shadow: 0 22px 35px -26px rgba(15, 23, 42, 0.68);
+}
+
+.marketplace-panel-highlight { padding: 0.5rem 0.38rem 0.88rem; border-bottom: 1px solid rgba(255,255,255,0.15); }
+.marketplace-panel-highlight span,
+.marketplace-panel-highlight small { display: block; color: #cbd5e1; font-size: 0.72rem; }
+.marketplace-panel-highlight strong { display: block; margin: 0.18rem 0; color: #ffffff; font-size: 2.35rem; line-height: 1; letter-spacing: -0.07em; }
+.marketplace-panel-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; color: #cbd5e1; font-size: 0.73rem; }
+.marketplace-panel-row span { display: inline-flex; align-items: center; gap: 0.38rem; }
+.marketplace-panel-row strong { color: #ffffff; font-size: 0.73rem; }
+
+.marketplace-panel-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  margin-top: 0.35rem;
+  padding: 0.72rem;
+  border-radius: 11px;
+  color: #1d2939;
+  background: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  transition: transform var(--sd-transition-fast), background-color var(--sd-transition-fast);
+}
+.marketplace-panel-link:hover { transform: translateY(-1px); background: #fff0e9; }
+
+.marketplace-categories {
+  margin: 1.15rem 0 2.4rem;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 12px 26px -27px rgba(15, 23, 42, 0.5);
+}
+
+.marketplace-category-row {
+  display: flex;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding-top: 0.72rem;
+  scrollbar-width: none;
+}
+.marketplace-category-row::-webkit-scrollbar { display: none; }
+
+.marketplace-category-chip {
+  flex: 0 0 auto;
+  padding: 0.56rem 0.94rem;
+  border: 1px solid #e7ebf0;
+  border-radius: 11px;
+  color: #536174;
+  background: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  transition: transform var(--sd-transition-fast), color var(--sd-transition-fast), background-color var(--sd-transition-fast), border-color var(--sd-transition-fast), box-shadow var(--sd-transition-fast);
+}
+.marketplace-category-chip:hover { transform: translateY(-2px); border-color: rgba(255, 122, 69, 0.4); color: #e94f1c; }
+.marketplace-category-chip.is-active { border-color: #f15925; color: #ffffff; background: linear-gradient(135deg, #ff7543, #ed4c1a); box-shadow: 0 10px 17px -13px rgba(234, 79, 27, 0.88); }
+
+.marketplace-results { scroll-margin-top: 5.6rem; }
+.marketplace-results-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.1rem;
+  margin-bottom: 1.4rem;
+}
+.marketplace-results-toolbar h2 { margin: 0.28rem 0; color: #101828; font-size: clamp(1.45rem, 2.4vw, 2rem); font-weight: 800; letter-spacing: -0.045em; }
+.marketplace-results-toolbar p { margin: 0; color: #718096; font-size: 0.82rem; }
+.marketplace-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.55rem; }
+.marketplace-sort-control,
+.marketplace-open-toggle { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 37px; padding: 0.35rem 0.5rem; border: 1px solid #e4e9ef; border-radius: 10px; color: #526075; background: #ffffff; font-size: 0.74rem; font-weight: 700; }
+.marketplace-sort-control select { border: 0 !important; box-shadow: none !important; background: transparent; color: #1d2939; font-size: 0.74rem; font-weight: 700; }
+.marketplace-open-toggle { cursor: pointer; }
+.marketplace-open-toggle input { accent-color: #f05723; }
+.marketplace-restaurant-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(275px, 1fr)); gap: 1.25rem; }
+
+@media (max-width: 850px) {
+  .marketplace-hero { grid-template-columns: 1fr; }
+  .marketplace-hero-panel { min-height: 0; }
+  .marketplace-panel-highlight { display: flex; align-items: baseline; gap: 0.4rem; padding-bottom: 0.55rem; }
+  .marketplace-panel-highlight strong { font-size: 1.8rem; }
+}
+
+@media (max-width: 620px) {
+  .marketplace-main { padding-top: 0.9rem; }
+  .marketplace-hero { padding: 1.2rem; border-radius: 20px; }
+  .marketplace-hero h1 { font-size: clamp(2.25rem, 12vw, 3.15rem); }
+  .marketplace-results-toolbar { align-items: flex-start; flex-direction: column; }
+  .marketplace-controls { justify-content: flex-start; width: 100%; }
+  .marketplace-sort-control { flex: 1; }
+  .marketplace-sort-control select { min-width: 0; width: 100%; }
+  .marketplace-restaurant-grid { grid-template-columns: 1fr; gap: 1rem; }
+}
+
+/* ===========================================================================
+   Teal customer surface — shared visual language for browse, menu and cart.
+   =========================================================================== */
+:root {
+  --sd-ring: 0 0 0 4px rgba(0, 169, 157, 0.14);
+}
+
+.logo-icon-badge {
+  background: linear-gradient(135deg, #00c6b7 0%, #009e91 52%, #00756d 100%);
+  box-shadow: 0 9px 18px -10px rgba(0, 137, 127, 0.76);
+}
+
+.nav-link-item.active { box-shadow: inset 0 0 0 1px rgba(0, 169, 157, 0.14); }
+.cart-header-btn:hover,
+.hamburger-menu:hover { border-color: rgba(0, 169, 157, 0.35); box-shadow: 0 8px 16px -12px rgba(0, 137, 127, 0.58); }
+.restaurant-card:hover { border-color: rgba(0, 169, 157, 0.45) !important; }
+
+.customer-marketplace .marketplace-hero {
+  border-color: rgba(0, 169, 157, 0.18);
+  background:
+    radial-gradient(circle at 82% 20%, rgba(161, 238, 229, 0.55), transparent 18rem),
+    linear-gradient(122deg, #f0fffc 0%, #ffffff 58%, #f5fffd 100%);
+}
+
+.customer-marketplace .marketplace-hero::before { background: rgba(0, 169, 157, 0.1); }
+.customer-marketplace .marketplace-eyebrow,
+.customer-marketplace .marketplace-section-kicker { color: #007d74; }
+.customer-marketplace .marketplace-eyebrow { border-color: rgba(0, 169, 157, 0.18); background: rgba(230, 250, 247, 0.95); }
+.customer-marketplace .marketplace-hero h1 { color: #002b2a; }
+.customer-marketplace .marketplace-hero h1 em { color: #008f85; }
+.customer-marketplace .marketplace-hero-copy > p { color: #486866; }
+.customer-marketplace .marketplace-search-shell:focus-within { border-color: rgba(0, 169, 157, 0.64); box-shadow: 0 16px 28px -20px rgba(0, 137, 127, 0.42), var(--sd-ring); }
+.customer-marketplace .marketplace-quick-meta svg { color: #009e91; }
+.customer-marketplace .marketplace-hero-panel { background: linear-gradient(145deg, #003c39, #002625); }
+.customer-marketplace .marketplace-panel-link:hover { background: #e7fbf8; color: #004e49; }
+.customer-marketplace .marketplace-category-chip:hover { border-color: rgba(0, 169, 157, 0.45); color: #008f85; }
+.customer-marketplace .marketplace-category-chip.is-active { border-color: #009e91; background: linear-gradient(135deg, #00bcae, #00877d); box-shadow: 0 10px 17px -13px rgba(0, 137, 127, 0.78); }
+.customer-marketplace .marketplace-open-toggle input { accent-color: #009e91; }
+.customer-marketplace .marketplace-results-toolbar h2 { color: #002b2a; }
+
+.menu-page-main { padding-top: clamp(1rem, 2vw, 2rem) !important; }
+.menu-back-link { border-color: rgba(0, 169, 157, 0.18) !important; color: #006f68 !important; background: rgba(255, 255, 255, 0.88) !important; }
+.menu-back-link:hover { border-color: rgba(0, 169, 157, 0.52) !important; background: #effdfa !important; }
+.restaurant-menu-hero {
+  overflow: hidden;
+  border-color: rgba(0, 169, 157, 0.16) !important;
+  background: linear-gradient(120deg, #ffffff, #f0fcfa) !important;
+  box-shadow: 0 25px 44px -38px rgba(0, 58, 55, 0.42) !important;
+}
+.menu-category-tabs { padding: 0.55rem !important; border: 1px solid rgba(0, 70, 66, 0.1); border-radius: 16px; background: rgba(255, 255, 255, 0.78); }
+.menu-search-box input { min-height: 44px; border-color: rgba(0, 100, 94, 0.18) !important; border-radius: 13px !important; box-shadow: 0 10px 20px -20px rgba(0, 52, 49, 0.45); }
+.food-menu-grid { gap: 1.25rem !important; }
+.food-menu-card { border-color: rgba(0, 82, 77, 0.12) !important; border-radius: 20px !important; box-shadow: 0 16px 30px -25px rgba(0, 45, 43, 0.5) !important; }
+.food-menu-card-media::after { content: ""; position: absolute; inset: 45% 0 0; pointer-events: none; background: linear-gradient(180deg, transparent, rgba(0, 43, 42, 0.18)); }
+.food-menu-card:hover .food-menu-card-media img { transform: scale(1.05); }
+.food-menu-card-media img { transition: transform 250ms ease; }
+.food-menu-card-content { padding: 1.2rem !important; }
+.menu-cart-dock { border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 22px 42px -23px rgba(0, 40, 38, 0.72) !important; }
+
+.cart-page-main,
+.orders-page-main,
+.order-details-main { padding-top: clamp(1.25rem, 3vw, 2.5rem) !important; }
+.cart-back-link,
+.order-details-back-link { border-color: rgba(0, 169, 157, 0.18) !important; color: #006f68 !important; }
+.cart-layout { gap: clamp(1.25rem, 3vw, 2.5rem) !important; }
+.cart-item-card { border-color: rgba(0, 82, 77, 0.11) !important; border-radius: 18px !important; box-shadow: 0 16px 28px -26px rgba(0, 48, 46, 0.44) !important; }
+.cart-item-card:hover { border-color: rgba(0, 169, 157, 0.32) !important; }
+.cart-summary-card { overflow: hidden; border-color: rgba(0, 169, 157, 0.2) !important; border-radius: 20px !important; box-shadow: 0 22px 42px -33px rgba(0, 56, 53, 0.45) !important; }
+.cart-summary-card::before { content: ""; display: block; height: 3px; margin: -2rem -2rem 1.5rem; background: linear-gradient(90deg, #00c6b7, #75dfc8); }
+
+.orders-page-hero { padding: 1.4rem 1.55rem; border: 1px solid rgba(0, 169, 157, 0.14); border-radius: 20px; background: linear-gradient(115deg, #ffffff, #edfcf9); box-shadow: 0 18px 34px -31px rgba(0, 56, 53, 0.42); }
+.orders-filter-bar { border-color: rgba(0, 82, 77, 0.11) !important; border-radius: 16px !important; box-shadow: 0 15px 26px -27px rgba(0, 46, 43, 0.42) !important; }
+.order-list-card { border-color: rgba(0, 82, 77, 0.11) !important; border-radius: 19px !important; box-shadow: 0 16px 30px -26px rgba(0, 47, 44, 0.42) !important; }
+.order-list-card:hover { border-color: rgba(0, 169, 157, 0.36) !important; }
+.order-details-card { border-color: rgba(0, 169, 157, 0.18) !important; border-radius: 22px !important; box-shadow: 0 28px 52px -39px rgba(0, 52, 49, 0.48) !important; }
+.order-details-card > div:nth-child(3) { border: 1px solid rgba(0, 169, 157, 0.1); background: #f1fcfa !important; }
+
+@media (max-width: 620px) {
+  .menu-category-tabs { margin-left: -0.1rem; margin-right: -0.1rem; border-radius: 13px; }
+  .food-menu-grid { grid-template-columns: 1fr !important; gap: 1rem !important; }
+  .restaurant-menu-hero { padding: 1.25rem !important; }
+  .menu-cart-dock { bottom: 12px !important; max-width: calc(100vw - 24px); gap: 0.8rem !important; padding: 0.65rem 0.8rem !important; }
+  .cart-layout { grid-template-columns: 1fr !important; }
+  .cart-summary-card { position: static !important; }
+  .orders-page-hero { padding: 1.2rem; }
+  .order-details-card { padding: 1.5rem 1rem !important; }
+}
+
+/* ===========================================================================
+   SkyDish customer refresh — warm orange accent, white surfaces, deep ink.
+   This final layer intentionally overrides the former teal experiment without
+   changing any component state, route, API request, or customer flow.
+   =========================================================================== */
+:root {
+  --sd-ring: 0 0 0 4px rgba(244, 81, 30, 0.13);
+}
+
+body {
+  background:
+    radial-gradient(circle at 3% 0%, rgba(255, 158, 122, 0.11), transparent 28rem),
+    radial-gradient(circle at 100% 12%, rgba(255, 213, 194, 0.16), transparent 25rem),
+    #f8fafc;
+}
+
+.logo-icon-badge {
+  background: #f4511e;
+  box-shadow: 0 9px 18px -10px rgba(196, 57, 18, 0.75);
+}
+
+.nav-link-item.active { box-shadow: inset 0 0 0 1px rgba(244, 81, 30, 0.14); }
+.cart-header-btn:hover,
+.hamburger-menu:hover { border-color: rgba(244, 81, 30, 0.34); box-shadow: 0 8px 16px -12px rgba(196, 57, 18, 0.52); }
+
+/* Restaurant cards only reveal metadata that is actually provided by the API. */
+.restaurant-card { border-radius: 18px !important; }
+.restaurant-card:hover { border-color: rgba(244, 81, 30, 0.46) !important; }
+.restaurant-card-media { height: 212px !important; }
+.restaurant-promo-badge { position: absolute; z-index: 2; left: 12px; bottom: 12px; max-width: calc(100% - 24px); padding: 0.34rem 0.64rem; overflow: hidden; border-radius: 999px; color: #fff; background: #f4511e; font-size: 0.7rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; box-shadow: 0 8px 16px -10px rgba(157, 45, 13, 0.8); }
+.restaurant-card-content { padding: 1.2rem !important; }
+.restaurant-card-location { margin-bottom: 0.7rem !important; }
+.restaurant-card-meta { display: flex; flex-wrap: wrap; gap: 0.38rem 0.5rem; margin: 0.1rem 0 0.88rem; }
+.restaurant-card-meta span { display: inline-flex; align-items: center; gap: 0.26rem; padding: 0.28rem 0.48rem; border-radius: 999px; color: #6a5a53; background: #fff7f3; font-size: 0.7rem; font-weight: 650; }
+.restaurant-card-meta svg { color: var(--sd-primary); font-size: 0.65rem; }
+.restaurant-card-cuisine { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* FoodGo-like restaurant discovery without changing the search/filter data. */
+.customer-marketplace .marketplace-hero {
+  border-color: rgba(244, 81, 30, 0.17);
+  background:
+    radial-gradient(circle at 85% 18%, rgba(255, 204, 184, 0.66), transparent 18rem),
+    #fffdfc;
+}
+.customer-marketplace .marketplace-hero::before { background: rgba(244, 81, 30, 0.1); }
+.customer-marketplace .marketplace-eyebrow,
+.customer-marketplace .marketplace-section-kicker { color: #bf3d16; }
+.customer-marketplace .marketplace-eyebrow { border-color: rgba(244, 81, 30, 0.18); background: #fff1ea; }
+.customer-marketplace .marketplace-hero h1 { color: #1e2026; }
+.customer-marketplace .marketplace-hero h1 em { color: #e84a19; }
+.customer-marketplace .marketplace-hero-copy > p { color: #665c58; }
+.customer-marketplace .marketplace-search-shell:focus-within { border-color: rgba(244, 81, 30, 0.62); box-shadow: 0 16px 28px -20px rgba(196, 57, 18, 0.38), var(--sd-ring); }
+.customer-marketplace .marketplace-quick-meta svg { color: #e84a19; }
+.customer-marketplace .marketplace-hero-panel { background: #20242d; }
+.customer-marketplace .marketplace-panel-link:hover { color: #7f280f; background: #fff1ea; }
+.customer-marketplace .marketplace-category-chip:hover { border-color: rgba(244, 81, 30, 0.44); color: #ca3f14; }
+.customer-marketplace .marketplace-category-chip.is-active { border-color: #e84a19; background: #f4511e; box-shadow: 0 10px 17px -13px rgba(196, 57, 18, 0.78); }
+.customer-marketplace .marketplace-open-toggle input { accent-color: #f4511e; }
+.customer-marketplace .marketplace-results-toolbar h2 { color: #1e2026; }
+
+/* Restaurant detail and menu retain the existing cart and favorite handlers. */
+.menu-back-link { border-color: rgba(244, 81, 30, 0.18) !important; color: #ae3712 !important; }
+.menu-back-link:hover { border-color: rgba(244, 81, 30, 0.48) !important; background: #fff7f3 !important; }
+.restaurant-menu-hero { border-color: rgba(244, 81, 30, 0.16) !important; background: #fffdfc !important; box-shadow: 0 25px 44px -38px rgba(67, 34, 23, 0.38) !important; }
+.menu-category-tabs { border-color: rgba(105, 56, 40, 0.1); background: rgba(255, 255, 255, 0.9); }
+.menu-search-box input { border-color: rgba(140, 70, 43, 0.18) !important; box-shadow: 0 10px 20px -20px rgba(58, 30, 21, 0.4); }
+.food-menu-card { border-color: rgba(92, 48, 34, 0.12) !important; box-shadow: 0 16px 30px -25px rgba(56, 29, 20, 0.45) !important; }
+.food-menu-card-media::after { background: linear-gradient(180deg, transparent, rgba(46, 25, 18, 0.2)); }
+.food-menu-rating { display: inline-flex; align-items: center; gap: 0.28rem; margin: 0 0 0.55rem; color: #b97900; font-size: 0.72rem; font-weight: 750; }
+.menu-cart-dock { box-shadow: 0 22px 42px -23px rgba(30, 30, 35, 0.7) !important; }
+
+/* Cart and tracking make the next action and current status visually obvious. */
+.cart-back-link,
+.order-details-back-link { border-color: rgba(244, 81, 30, 0.18) !important; color: #ae3712 !important; }
+.cart-item-card { border-color: rgba(92, 48, 34, 0.11) !important; box-shadow: 0 16px 28px -26px rgba(55, 29, 20, 0.4) !important; }
+.cart-item-card:hover { border-color: rgba(244, 81, 30, 0.3) !important; }
+.cart-summary-card { border-color: rgba(244, 81, 30, 0.2) !important; box-shadow: 0 22px 42px -33px rgba(64, 32, 22, 0.42) !important; }
+.cart-summary-card::before { background: #f4511e; }
+.orders-page-hero { border-color: rgba(244, 81, 30, 0.15); background: #fffdfc; box-shadow: 0 18px 34px -31px rgba(56, 29, 20, 0.38); }
+.orders-filter-bar { border-color: rgba(92, 48, 34, 0.11) !important; box-shadow: 0 15px 26px -27px rgba(52, 28, 20, 0.38) !important; }
+.order-list-card { border-color: rgba(92, 48, 34, 0.11) !important; box-shadow: 0 16px 30px -26px rgba(52, 28, 20, 0.38) !important; }
+.order-list-card:hover { border-color: rgba(244, 81, 30, 0.34) !important; }
+.order-details-card { border-color: rgba(244, 81, 30, 0.18) !important; box-shadow: 0 28px 52px -39px rgba(59, 30, 20, 0.44) !important; }
+.order-details-card > div:nth-child(3) { border-color: rgba(244, 81, 30, 0.11); background: #fff8f4 !important; }
+.order-tracking-timeline { padding: 1rem 0.35rem !important; border-radius: 15px; background: #fff9f6; }
+.order-tracking-step { position: relative; z-index: 1; flex: 1 0 90px; }
+.order-tracking-step:not(:last-child)::after { content: ""; position: absolute; top: 18px; left: calc(50% + 18px); width: calc(100% - 36px); height: 2px; background: #e8e9ec; }
+.order-tracking-step.is-complete:not(:last-child)::after { background: rgba(244, 81, 30, 0.55); }
+.order-tracking-marker { position: relative; z-index: 1; border: 3px solid #fff; box-shadow: 0 7px 14px -10px rgba(63, 31, 20, 0.55) !important; }
+
+/* Checkout is a two-part guided flow; all input/payment behavior is untouched. */
+.checkout-page-wrapper { padding-top: clamp(1.25rem, 3vw, 3rem); background: linear-gradient(180deg, #fffaf8 0%, #f8fafc 55%); }
+.checkout-breadcrumb a { padding: 0.55rem 0.75rem; border: 1px solid rgba(92, 48, 34, 0.12); border-radius: 999px; background: #fff; }
+.checkout-premium-grid { gap: clamp(1.25rem, 3vw, 2.5rem); }
+.checkout-payment-card,
+.checkout-summary-card { border-color: rgba(92, 48, 34, 0.11); border-radius: 20px; box-shadow: 0 22px 40px -32px rgba(52, 28, 20, 0.4); }
+.checkout-payment-card { min-height: 100%; }
+.checkout-summary-card { position: sticky; top: 94px; }
+.checkout-summary-card::before { content: "Tóm tắt đơn hàng"; display: block; margin: -0.15rem 0 1rem; color: #a13a18; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase; }
+.checkout-restaurant-summary { padding: 0.78rem; border-radius: 12px; background: #fff7f3; }
+.checkout-address-section { padding: 1rem; border: 1px solid rgba(92, 48, 34, 0.1); border-radius: 14px; background: #fff; }
+.checkout-items-list { padding: 0.15rem 0.25rem 0.9rem; }
+.checkout-coupon-box { border-color: rgba(244, 81, 30, 0.55) !important; background: #fff8f4 !important; border-radius: 14px !important; }
+.checkout-price-breakdown { padding: 1rem; border-radius: 14px; background: #20242d; color: #c6cad2 !important; }
+.checkout-price-breakdown > div:last-child { border-top-color: rgba(255,255,255,0.15) !important; color: #fff !important; }
+.checkout-price-breakdown > div:last-child span:last-child { color: #ff9c78 !important; }
+.payment-mode-tabs { border-radius: 14px; background: #fff5f0; }
+.payment-mode-tab.active { color: #ae3712; }
+.stripe-input-box:focus-within { box-shadow: var(--sd-ring); }
+
+/* Customer profile now reads as an account dashboard, with its existing edit form. */
+.profile-page-main { padding-top: clamp(1.5rem, 3vw, 3rem) !important; }
+.profile-page-shell { max-width: 1000px !important; }
+.profile-hero-card { position: relative; overflow: hidden; border-color: rgba(244, 81, 30, 0.17) !important; border-radius: 22px !important; background: #fffdfc !important; box-shadow: 0 24px 46px -35px rgba(63, 31, 20, 0.46) !important; }
+.profile-hero-card::after { content: ""; position: absolute; width: 220px; height: 220px; right: -100px; top: -140px; border-radius: 50%; background: rgba(244, 81, 30, 0.1); pointer-events: none; }
+.profile-hero-content,
+.profile-hero-actions { position: relative; z-index: 1; }
+.profile-avatar { background: #fff0e9 !important; box-shadow: 0 12px 24px -17px rgba(196, 57, 18, 0.54) !important; }
+.profile-delivery-alert { border-color: rgba(244, 81, 30, 0.28) !important; background: #fff7f3 !important; box-shadow: 0 15px 28px -30px rgba(62, 29, 18, 0.5); }
+.profile-stats-grid > * { border-radius: 17px !important; border-color: rgba(92, 48, 34, 0.1) !important; box-shadow: 0 15px 28px -28px rgba(52, 28, 20, 0.44) !important; }
+.profile-details-card { border-color: rgba(92, 48, 34, 0.12) !important; border-radius: 20px !important; box-shadow: 0 20px 38px -31px rgba(52, 28, 20, 0.4) !important; }
+.profile-contact-grid { gap: 1rem !important; }
+.profile-contact-item { min-height: 92px; padding: 1rem; border: 1px solid rgba(92, 48, 34, 0.1); border-radius: 14px; background: #fffaf8; }
+.profile-delivery-form { padding: 1.5rem; border-radius: 14px; background: #fff9f6; }
+
+@media (max-width: 900px) {
+  .checkout-summary-card { position: static; }
+}
+
+@media (max-width: 620px) {
+  .restaurant-card-media { height: 205px !important; }
+  .profile-hero-actions { width: 100%; }
+  .profile-hero-actions > * { flex: 1; }
+  .profile-hero-actions .sd-button { width: 100%; }
+  .profile-contact-item { min-height: auto; }
+  .checkout-payment-card,
+  .checkout-summary-card { border-radius: 16px; }
+  .order-tracking-timeline { justify-content: flex-start !important; }
+}
+
+/* ---------------------------------------------------------------------------
+   Restaurant / menu editorial details — sourced from the existing restaurant
+   and food records, so no placeholder restaurant data is introduced.
+   --------------------------------------------------------------------------- */
+.marketplace-category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.marketplace-category-chip small {
+  display: inline-flex;
+  min-width: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem 0.27rem;
+  border-radius: 999px;
+  color: #87675b;
+  background: #fff1ea;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.marketplace-category-chip.is-active small { color: #fff; background: rgba(255, 255, 255, 0.2); }
+
+.restaurant-menu-hero {
+  isolation: isolate;
+  min-height: 210px;
+}
+
+.restaurant-menu-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  pointer-events: none;
+  background-position: center;
+  background-size: cover;
+}
+
+.restaurant-menu-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255, 253, 252, 0.98) 0%, rgba(255, 253, 252, 0.86) 52%, rgba(255, 253, 252, 0.6) 100%);
+}
+
+.restaurant-menu-identity,
+.restaurant-menu-cart-link {
+  position: relative;
+  z-index: 1;
+}
+
+.restaurant-menu-avatar {
+  box-shadow: 0 14px 26px -18px rgba(79, 39, 23, 0.48);
+}
+
+.restaurant-menu-cart-link .sd-button {
+  min-height: 44px;
+  box-shadow: 0 13px 22px -16px rgba(178, 48, 13, 0.76);
+}
+
+@media (max-width: 620px) {
+  .restaurant-menu-hero { min-height: 0; align-items: flex-start !important; }
+  .restaurant-menu-identity { align-items: flex-start !important; gap: 0.95rem !important; }
+  .restaurant-menu-avatar { width: 58px !important; height: 58px !important; }
+  .restaurant-menu-cart-link { width: 100%; }
+  .restaurant-menu-cart-link .sd-button { width: 100%; }
+}
