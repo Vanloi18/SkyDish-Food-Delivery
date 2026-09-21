@@ -27,15 +27,36 @@ const customerSchema = new mongoose.Schema(
 
     phone: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
+      default: "",
     },
 
+    // ========================================================
+    // AUTHENTICATION
+    // ========================================================
+
+    // Password chỉ bắt buộc đối với tài khoản đăng ký
+    // bằng email/password.
     password: {
       type: String,
-      required: true,
+      required: false,
       minlength: 6,
       select: false,
+    },
+
+    // Google account ID
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
+    // Provider dùng để biết tài khoản đăng nhập bằng cách nào
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
     },
 
     location: {
@@ -48,14 +69,12 @@ const customerSchema = new mongoose.Schema(
     // FORGOT PASSWORD / OTP
     // ========================================================
 
-    // OTP đã được hash trước khi lưu vào MongoDB
     resetPasswordOTP: {
       type: String,
       default: null,
       select: false,
     },
 
-    // Thời điểm OTP hết hạn
     resetPasswordOTPExpires: {
       type: Date,
       default: null,
@@ -72,6 +91,11 @@ const customerSchema = new mongoose.Schema(
 // ============================================================
 
 customerSchema.pre("save", async function (next) {
+  // Google account không có password
+  if (!this.password) {
+    return next();
+  }
+
   if (!this.isModified("password")) {
     return next();
   }
@@ -86,6 +110,11 @@ customerSchema.pre("save", async function (next) {
 // ============================================================
 
 customerSchema.methods.comparePassword = async function (candidate) {
+  // Tài khoản Google không có password
+  if (!this.password) {
+    return false;
+  }
+
   return bcrypt.compare(candidate, this.password);
 };
 

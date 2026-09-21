@@ -27,6 +27,7 @@ services:
       - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
       - MAIL_PORT=${MAIL_PORT:-465}
       - MAIL_SECURE=${MAIL_SECURE:-true}
@@ -190,6 +191,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        REACT_APP_GOOGLE_CLIENT_ID: ${REACT_APP_GOOGLE_CLIENT_ID}
     container_name: skydish-frontend
     restart: unless-stopped
     ports:
