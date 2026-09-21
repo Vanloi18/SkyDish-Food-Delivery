@@ -1,7 +1,7 @@
 import { API_URLS } from '../config/api';
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaSearch, FaArrowRight, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaSearch, FaArrowRight, FaChevronLeft, FaChevronRight, FaStar, FaMotorcycle, FaShieldAlt } from "react-icons/fa";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import RestaurantCard from "../components/common/RestaurantCard";
@@ -477,12 +477,22 @@ const Home = () => {
 
               {/* Right Column: Clean Food Photography */}
               <div className="landing-hero-visual">
+                <div className="landing-hero-ambient landing-hero-ambient--one" />
+                <div className="landing-hero-ambient landing-hero-ambient--two" />
                 <div className="landing-hero-img-container">
                   <img
                     src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=900&auto=format&fit=crop&q=80"
                     alt="Món ngon giao tận nơi SkyDish"
                     className="landing-hero-img"
                   />
+                </div>
+                <div className="landing-hero-float-card landing-hero-rating-card">
+                  <span className="landing-float-icon landing-float-icon--gold"><FaStar /></span>
+                  <span><strong>Chọn món theo gu</strong><small>Hàng trăm món ngon chờ bạn</small></span>
+                </div>
+                <div className="landing-hero-float-card landing-hero-delivery-card">
+                  <span className="landing-float-icon landing-float-icon--orange"><FaMotorcycle /></span>
+                  <span><strong>Giao tận nơi</strong><small>Theo dõi đơn hàng dễ dàng</small></span>
                 </div>
               </div>
             </div>
@@ -586,6 +596,12 @@ const Home = () => {
                   <p className="landing-step-desc">{st.desc}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="landing-confidence-row" aria-label="Cam kết dịch vụ SkyDish">
+              <span><FaShieldAlt /> Thanh toán bảo mật</span>
+              <span><FaMotorcycle /> Theo dõi đơn hàng trực quan</span>
+              <span><FaStar /> Đánh giá sau khi nhận món</span>
             </div>
           </div>
         </section>

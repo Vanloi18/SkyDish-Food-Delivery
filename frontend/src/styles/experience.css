@@ -1,0 +1,384 @@
+/* ===========================================================================
+   SKYDISH EXPERIENCE LAYER
+   Shared polish for every customer, partner and admin surface. This file is
+   intentionally presentation-only: it does not alter routing or API behavior.
+   =========================================================================== */
+
+:root {
+  --sd-ink: #101828;
+  --sd-orange-deep: #ea4f1b;
+  --sd-cream: #fffaf6;
+  --sd-glass: rgba(255, 255, 255, 0.78);
+  --sd-ring: 0 0 0 4px rgba(255, 87, 34, 0.14);
+}
+
+html {
+  background: #f8fafc;
+}
+
+body {
+  background:
+    radial-gradient(circle at 2% 0%, rgba(255, 122, 69, 0.11), transparent 28rem),
+    radial-gradient(circle at 98% 14%, rgba(251, 191, 36, 0.09), transparent 25rem),
+    #f8fafc;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(255, 111, 56, 0.22);
+  color: var(--sd-ink);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  border-color: var(--sd-border);
+  transition: border-color var(--sd-transition-fast), box-shadow var(--sd-transition-fast), background-color var(--sd-transition-fast);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus,
+textarea:focus {
+  border-color: var(--sd-primary) !important;
+  box-shadow: var(--sd-ring) !important;
+  outline: none;
+}
+
+/* Shared component refinement */
+.sd-button {
+  min-height: 38px;
+  letter-spacing: -0.01em;
+  box-shadow: 0 8px 18px -13px rgba(15, 23, 42, 0.68);
+}
+
+.sd-button[disabled] {
+  box-shadow: none;
+}
+
+.sd-card,
+.checkout-card {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 14px 35px -26px rgba(15, 23, 42, 0.24);
+}
+
+.sd-heading-1,
+.sd-heading-2,
+.sd-heading-3 {
+  color: var(--sd-ink);
+}
+
+/* Header: a compact, elevated command bar */
+.home-header {
+  min-height: 72px;
+  padding: 0.75rem clamp(1rem, 3vw, 2.5rem);
+  background: rgba(255, 255, 255, 0.82);
+  border-bottom-color: rgba(226, 232, 240, 0.78);
+  box-shadow: 0 8px 30px -25px rgba(15, 23, 42, 0.55);
+}
+
+.logo-icon-badge {
+  background: linear-gradient(135deg, #ff7a45 0%, #f14918 52%, #c93b15 100%);
+  box-shadow: 0 9px 18px -10px rgba(234, 79, 27, 0.9);
+}
+
+.logo-brand {
+  color: var(--sd-ink);
+}
+
+.nav-link-item {
+  padding: 0.48rem 0.75rem;
+}
+
+.nav-link-item.active {
+  box-shadow: inset 0 0 0 1px rgba(255, 87, 34, 0.1);
+}
+
+.cart-header-btn,
+.hamburger-menu {
+  background: rgba(248, 250, 252, 0.88);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.cart-header-btn:hover,
+.hamburger-menu:hover {
+  border-color: rgba(255, 87, 34, 0.28);
+  box-shadow: 0 8px 16px -12px rgba(234, 79, 27, 0.72);
+}
+
+.profile-dropdown-card {
+  border-color: rgba(226, 232, 240, 0.92);
+  box-shadow: 0 24px 50px -30px rgba(15, 23, 42, 0.42);
+}
+
+/* Food / restaurant presentation */
+.restaurant-card {
+  isolation: isolate;
+  border-color: rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 14px 28px -24px rgba(15, 23, 42, 0.54) !important;
+}
+
+.restaurant-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.48);
+  z-index: 3;
+}
+
+.restaurant-card:hover {
+  border-color: rgba(255, 122, 69, 0.45) !important;
+  box-shadow: 0 24px 44px -28px rgba(15, 23, 42, 0.48) !important;
+}
+
+.restaurant-card-media::after {
+  content: "";
+  position: absolute;
+  inset: 35% 0 0;
+  background: linear-gradient(180deg, transparent, rgba(15, 23, 42, 0.18));
+  pointer-events: none;
+}
+
+.restaurant-card:hover .restaurant-card-image {
+  transform: scale(1.055);
+}
+
+.restaurant-card-content h3 {
+  letter-spacing: -0.015em;
+}
+
+/* Page canvases */
+.customer-experience main,
+.checkout-experience main {
+  position: relative;
+}
+
+.customer-marketplace main::before,
+.customer-menu-page main::before,
+.cart-experience main::before,
+.orders-experience main::before,
+.order-details-experience main::before,
+.checkout-experience .checkout-page-wrapper::before {
+  content: "";
+  position: absolute;
+  width: min(42vw, 540px);
+  height: min(42vw, 540px);
+  right: -20vw;
+  top: -18rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 151, 96, 0.13), rgba(255, 151, 96, 0));
+  pointer-events: none;
+}
+
+.customer-experience .sd-container,
+.checkout-experience .sd-container {
+  position: relative;
+  z-index: 1;
+}
+
+.customer-marketplace [style*="maxWidth: 620px"],
+.customer-menu-page [style*="maxWidth: 460px"] {
+  filter: drop-shadow(0 10px 20px rgba(15, 23, 42, 0.06));
+}
+
+.cart-experience [style*="position: sticky"],
+.checkout-experience .checkout-grid > .checkout-card:last-child {
+  border-color: rgba(255, 122, 69, 0.2);
+  box-shadow: 0 20px 44px -34px rgba(15, 23, 42, 0.36);
+}
+
+/* Checkout feels like a guided secure flow */
+.checkout-page-wrapper {
+  background:
+    radial-gradient(circle at 98% 5%, rgba(255, 122, 69, 0.11), transparent 23rem),
+    linear-gradient(180deg, #fffaf7 0%, #f8fafc 52%);
+}
+
+.checkout-card {
+  border-color: rgba(226, 232, 240, 0.95);
+}
+
+.checkout-section-title {
+  letter-spacing: -0.02em;
+}
+
+.payment-mode-tabs {
+  padding: 0.35rem;
+  border: 1px solid rgba(226, 232, 240, 0.88);
+  border-radius: 12px;
+}
+
+.payment-mode-tab.active {
+  color: var(--sd-primary);
+  box-shadow: 0 6px 12px -8px rgba(15, 23, 42, 0.3);
+}
+
+.qr-checkout-container {
+  background: linear-gradient(145deg, #fffdfc, #fff7f2);
+  border-color: rgba(255, 122, 69, 0.2);
+}
+
+.bank-transfer-card {
+  box-shadow: 0 18px 35px -27px rgba(2, 132, 199, 0.6);
+}
+
+/* Authentication pages and Google sign in */
+.auth-page-wrapper,
+.login-page {
+  background:
+    radial-gradient(circle at 4% 6%, rgba(255, 122, 69, 0.16), transparent 26rem),
+    radial-gradient(circle at 98% 0%, rgba(251, 191, 36, 0.13), transparent 23rem),
+    #fffaf7;
+}
+
+.auth-card-container,
+.login-card {
+  border-color: rgba(226, 232, 240, 0.92);
+  box-shadow: 0 30px 70px -44px rgba(15, 23, 42, 0.52), 0 12px 26px -22px rgba(234, 79, 27, 0.24);
+}
+
+.auth-card-container::before,
+.login-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 2rem;
+  right: 2rem;
+  height: 3px;
+  border-radius: 0 0 8px 8px;
+  background: linear-gradient(90deg, #ff7a45, #fbbf24, #ff7a45);
+}
+
+.google-login-section {
+  margin-top: 1.4rem;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: var(--sd-text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin: 0 0 1rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--sd-border);
+}
+
+.google-login-button {
+  min-height: 44px;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.google-login-button > div {
+  max-width: 100%;
+}
+
+/* Footer is a destination, not an afterthought */
+.home-footer {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 122, 69, 0.18), transparent 22rem),
+    linear-gradient(135deg, #121826 0%, #0d1422 50%, #172033 100%);
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.footer-social-btn {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.footer-newsletter-input {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Mobile: protect dense business pages from horizontal squeeze. */
+@media (max-width: 760px) {
+  .home-header {
+    min-height: 64px;
+    gap: 0.5rem;
+  }
+
+  .header-left,
+  .header-right {
+    gap: 0.45rem;
+  }
+
+  .portals-dropdown-container:first-child,
+  .profile-trigger span,
+  .profile-trigger svg:last-child {
+    display: none;
+  }
+
+  .logo-brand {
+    font-size: 1.18rem;
+  }
+
+  .customer-experience main,
+  .checkout-page-wrapper {
+    padding-bottom: 4rem !important;
+  }
+
+  .checkout-card {
+    padding: 1.25rem;
+  }
+
+  .payment-mode-tab {
+    padding: 0.5rem 0.35rem;
+    font-size: 0.74rem;
+  }
+
+  .bank-info-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .auth-card-container,
+  .login-card {
+    padding: 2rem 1.25rem;
+  }
+
+  .google-login-button {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing-hero-img-container {
+    animation: sd-soft-float 7s ease-in-out infinite;
+  }
+
+  .logo-icon-badge {
+    animation: sd-warm-glow 4s ease-in-out infinite;
+  }
+}
+
+@keyframes sd-soft-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes sd-warm-glow {
+  0%, 100% { box-shadow: 0 9px 18px -10px rgba(234, 79, 27, 0.72); }
+  50% { box-shadow: 0 12px 24px -8px rgba(234, 79, 27, 0.92); }
+}

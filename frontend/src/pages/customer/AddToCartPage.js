@@ -31,7 +31,9 @@ function AddToCartPage() {
     subtotal, 
     deliveryFee, 
     totalAmount, 
-    totalItemCount 
+    totalItemCount,
+    cartRestaurantName,
+    hasMixedRestaurants
   } = useContext(CartContext);
 
   const navigate = useNavigate();
@@ -46,7 +48,7 @@ function AddToCartPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
+    <div className="customer-experience cart-experience" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
 
       <main style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
@@ -110,14 +112,25 @@ function AddToCartPage() {
               />
             </div>
           ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.6fr 1fr",
-                gap: "2.5rem",
-                alignItems: "flex-start",
-              }}
-            >
+            <>
+              {hasMixedRestaurants && (
+                <div style={{ marginBottom: "1.25rem", padding: "1rem 1.25rem", borderRadius: "var(--sd-radius-md)", backgroundColor: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", fontSize: "var(--sd-font-size-sm)", fontWeight: "600" }}>
+                  Giỏ hàng cũ có món từ nhiều nhà hàng. Vui lòng chỉ giữ món của một nhà hàng trước khi thanh toán để đơn được gửi đúng nơi.
+                </div>
+              )}
+              {cartRestaurantName && (
+                <div style={{ marginBottom: "1rem", color: "var(--sd-text-secondary)", fontSize: "var(--sd-font-size-sm)" }}>
+                  Đơn hàng này được giao từ <strong style={{ color: "var(--sd-text-primary)" }}>{cartRestaurantName}</strong>. Mỗi lần thanh toán áp dụng cho một nhà hàng.
+                </div>
+              )}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1.6fr 1fr",
+                  gap: "2.5rem",
+                  alignItems: "flex-start",
+                }}
+              >
               {/* Left Column: Cart Items List */}
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                 {cartItems.map((item) => {
@@ -127,7 +140,7 @@ function AddToCartPage() {
 
                   return (
                     <motion.div
-                      key={item._id}
+                      key={item.cartKey || item._id}
                       layout
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -189,7 +202,7 @@ function AddToCartPage() {
                         >
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item._id, itemQty - 1)}
+                            onClick={() => updateQuantity(item.cartKey || item._id, itemQty - 1)}
                             style={{
                               width: "28px",
                               height: "28px",
@@ -210,7 +223,8 @@ function AddToCartPage() {
                           </span>
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item._id, itemQty + 1)}
+                            onClick={() => updateQuantity(item.cartKey || item._id, itemQty + 1)}
+                            disabled={itemQty >= 99}
                             style={{
                               width: "28px",
                               height: "28px",
@@ -236,7 +250,7 @@ function AddToCartPage() {
                         {/* Remove button */}
                         <button
                           type="button"
-                          onClick={() => removeFromCart(item._id)}
+                          onClick={() => removeFromCart(item.cartKey || item._id)}
                           title="Xóa món"
                           style={{
                             border: "none",
@@ -312,6 +326,7 @@ function AddToCartPage() {
                     fullWidth
                     icon={FaCreditCard}
                     onClick={handleProceedToCheckout}
+                    disabled={hasMixedRestaurants}
                   >
                     Tiến hành thanh toán
                   </Button>
@@ -343,7 +358,8 @@ function AddToCartPage() {
                   <span>Bảo mật SSL 256-bit & Thanh toán an toàn</span>
                 </div>
               </Card>
-            </div>
+              </div>
+            </>
           )}
         </div>
       </main>

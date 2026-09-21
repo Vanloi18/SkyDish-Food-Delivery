@@ -46,6 +46,15 @@ export default function RestaurantCard({
       whileHover={{ y: -6 }}
       transition={{ duration: 0.2 }}
       onClick={handleCardClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleCardClick();
+        }
+      }}
+      role="link"
+      tabIndex={0}
+      aria-label={`Xem thực đơn ${name}`}
       style={{
         backgroundColor: "#ffffff",
         borderRadius: "var(--sd-radius-xl)",
@@ -58,14 +67,15 @@ export default function RestaurantCard({
         position: "relative",
         transition: "box-shadow 0.2s ease",
       }}
-      className="sd-card-interactive"
+      className="sd-card-interactive restaurant-card"
     >
       {/* Image Container with Badges */}
-      <div style={{ position: "relative", height: "190px", width: "100%", overflow: "hidden", backgroundColor: "#f1f5f9" }}>
+      <div className="restaurant-card-media" style={{ position: "relative", height: "190px", width: "100%", overflow: "hidden", backgroundColor: "#f1f5f9" }}>
         <img
           src={imageSrc}
           alt={name}
           onError={(e) => handleImageError(e, "restaurant")}
+          className="restaurant-card-image"
           style={{
             width: "100%",
             height: "100%",
@@ -129,7 +139,7 @@ export default function RestaurantCard({
       </div>
 
       {/* Card Content Body */}
-      <div style={{ padding: "1.1rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+      <div className="restaurant-card-content" style={{ padding: "1.1rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         <div>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.5rem", marginBottom: "0.35rem" }}>
             <h3

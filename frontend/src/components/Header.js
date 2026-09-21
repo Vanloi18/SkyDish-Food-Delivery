@@ -191,9 +191,17 @@ function Header() {
           <div
             className="hamburger-menu"
             onClick={() => setSidebarOpen(true)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSidebarOpen(true);
+              }
+            }}
             title="Mở menu điều hướng"
             role="button"
             tabIndex={0}
+            aria-label="Mở menu điều hướng"
+            aria-expanded={isSidebarOpen}
           >
             <FaBars size={18} />
           </div>
@@ -236,6 +244,8 @@ function Header() {
               type="button"
               className="portals-trigger-btn"
               onClick={() => setShowPortalsDropdown((v) => !v)}
+              aria-expanded={showPortalsDropdown}
+              aria-haspopup="menu"
             >
               Cổng đối tác <FaChevronDown size={10} />
             </button>
@@ -294,6 +304,8 @@ function Header() {
               className="cart-header-btn"
               title="Thông báo"
               onClick={() => setShowNotifDropdown((v) => !v)}
+              aria-expanded={showNotifDropdown}
+              aria-haspopup="dialog"
               style={{ position: "relative" }}
             >
               <FaBell size={17} />
@@ -409,6 +421,16 @@ function Header() {
               <div
                 className="profile-trigger"
                 onClick={() => setShowProfileDropdown((v) => !v)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setShowProfileDropdown((value) => !value);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-expanded={showProfileDropdown}
+                aria-haspopup="menu"
               >
                 <FaUserCircle size={22} style={{ color: "var(--sd-primary)" }} />
                 <span
