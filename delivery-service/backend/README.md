@@ -31,3 +31,7 @@ npm test
 ```
 
 The suite covers driver assignment, ownership checks, status lifecycle, pagination, and schema validation.
+
+## Ownership
+
+Delivery Service work is maintained on `feature/lephuonganh-delivery` by `lephuonganh`.
