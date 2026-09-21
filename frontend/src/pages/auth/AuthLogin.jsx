@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { API_URLS } from "../../config/api";
 import {
-  GoogleOAuthProvider,
   GoogleLogin,
 } from "@react-oauth/google";
 

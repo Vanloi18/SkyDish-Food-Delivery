@@ -789,9 +789,9 @@ const CheckoutForm = () => {
   }
 
   return (
-    <div className="checkout-grid">
+    <div className="checkout-grid checkout-premium-grid">
       {/* LEFT COLUMN: Payment Configuration & Method Form */}
-      <div className="checkout-card">
+      <div className="checkout-card checkout-payment-card">
         <h2 className="checkout-section-title">
           <FaShieldAlt style={{ color: "var(--sd-primary)" }} /> Chọn phương thức thanh toán
         </h2>
@@ -1284,13 +1284,13 @@ const CheckoutForm = () => {
       </div>
 
       {/* RIGHT COLUMN: Order Breakdown Summary */}
-      <div className="checkout-card">
+      <div className="checkout-card checkout-summary-card">
         <h2 className="checkout-section-title">
           <FaReceipt style={{ color: "var(--sd-primary)" }} /> Tóm tắt đơn hàng
         </h2>
 
         {/* Restaurant name */}
-        <div style={{ margin: "0 0 1rem 0", fontSize: "0.875rem", color: "var(--sd-text-secondary)", display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+        <div className="checkout-restaurant-summary" style={{ margin: "0 0 1rem 0", fontSize: "0.875rem", color: "var(--sd-text-secondary)", display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
           <span>Nhà hàng:</span>
           {restaurantInfo.loading ? (
             <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", color: "var(--sd-primary)", fontWeight: "600", fontSize: "0.85rem" }}>
@@ -1314,7 +1314,7 @@ const CheckoutForm = () => {
         </div>
 
         {/* Structured Delivery Address Form */}
-        <div style={{ marginBottom: "1.25rem" }}>
+        <div className="checkout-address-section" style={{ marginBottom: "1.25rem" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "0.8rem", fontWeight: "700", color: "var(--sd-text-secondary)", marginBottom: "0.5rem" }}>
             <FaMapMarkerAlt style={{ color: "var(--sd-primary)" }} /> Địa chỉ giao hàng
           </label>
@@ -1380,7 +1380,7 @@ const CheckoutForm = () => {
         </div>
 
         {/* Items List */}
-        <div style={{ maxHeight: "240px", overflowY: "auto", marginBottom: "1.25rem", borderBottom: "1px solid var(--sd-border)", paddingBottom: "0.75rem" }}>
+        <div className="checkout-items-list" style={{ maxHeight: "240px", overflowY: "auto", marginBottom: "1.25rem", borderBottom: "1px solid var(--sd-border)", paddingBottom: "0.75rem" }}>
           {displayedItems.map((item, idx) => (
             <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem", fontSize: "0.85rem" }}>
               <div>
@@ -1394,7 +1394,7 @@ const CheckoutForm = () => {
 
         {/* Coupon Code Box */}
         {!placedOrder && (
-          <div style={{ marginBottom: "1.25rem", padding: "0.85rem", backgroundColor: "#fff7ed", borderRadius: "10px", border: "1px dashed var(--sd-primary)" }}>
+          <div className="checkout-coupon-box" style={{ marginBottom: "1.25rem", padding: "0.85rem", backgroundColor: "#fff7ed", borderRadius: "10px", border: "1px dashed var(--sd-primary)" }}>
             <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#9a3412", marginBottom: "0.4rem" }}>
               Mã khuyến mãi / Giảm giá
             </label>
@@ -1469,7 +1469,7 @@ const CheckoutForm = () => {
         )}
 
         {/* Price Breakdown */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.85rem", color: "var(--sd-text-secondary)" }}>
+        <div className="checkout-price-breakdown" style={{ display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.85rem", color: "var(--sd-text-secondary)" }}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Tạm tính</span>
             <span>{formatCurrency(displayedSubtotal)}</span>
@@ -1502,7 +1502,7 @@ export default function Checkout() {
       <Header />
       <main className="checkout-page-wrapper">
         <div className="sd-container">
-          <div style={{ marginBottom: "1.5rem" }}>
+          <div className="checkout-breadcrumb" style={{ marginBottom: "1.5rem" }}>
             <Link
               to="/customer/cart"
               style={{

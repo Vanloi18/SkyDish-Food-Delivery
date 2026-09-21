@@ -51,12 +51,13 @@ function AddToCartPage() {
     <div className="customer-experience cart-experience" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
 
-      <main style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
+      <main className="cart-page-main" style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
         <div className="sd-container">
           {/* Breadcrumb / Back Link */}
           <div style={{ marginBottom: "1.5rem" }}>
             <button
               type="button"
+              className="cart-back-link"
               onClick={() => navigate("/customer/home")}
               style={{
                 display: "inline-flex",
@@ -124,6 +125,7 @@ function AddToCartPage() {
                 </div>
               )}
               <div
+                className="cart-layout"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1.6fr 1fr",
@@ -141,6 +143,7 @@ function AddToCartPage() {
                   return (
                     <motion.div
                       key={item.cartKey || item._id}
+                      className="cart-item-card"
                       layout
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -272,7 +275,7 @@ function AddToCartPage() {
               </div>
 
               {/* Order Summary Card */}
-              <Card padding="2rem" style={{ position: "sticky", top: "100px" }}>
+              <Card className="cart-summary-card" padding="2rem" style={{ position: "sticky", top: "100px" }}>
                 <h3
                   style={{
                     margin: "0 0 1.25rem 0",

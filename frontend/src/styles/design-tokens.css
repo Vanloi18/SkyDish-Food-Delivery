@@ -5,11 +5,11 @@
 
 :root {
   /* 1. BRAND & IDENTITY COLOR PALETTE */
-  --sd-primary: #FF5722;
-  --sd-primary-hover: #F4511E;
-  --sd-primary-active: #E64A19;
-  --sd-primary-light: #FFF3ED;
-  --sd-primary-glow: rgba(255, 87, 34, 0.18);
+  --sd-primary: #F4511E;
+  --sd-primary-hover: #D84315;
+  --sd-primary-active: #BF360C;
+  --sd-primary-light: #FFF1EA;
+  --sd-primary-glow: rgba(244, 81, 30, 0.18);
 
   /* Deep Navy / Secondary */
   --sd-navy: #0F172A;
@@ -57,7 +57,7 @@
   --sd-border: #E2E8F0;
   --sd-border-light: #F1F5F9;
   --sd-border-strong: #CBD5E1;
-  --sd-border-focus: #FF5722;
+  --sd-border-focus: #F4511E;
 
   /* Typography Text Colors */
   --sd-text-primary: #0F172A;

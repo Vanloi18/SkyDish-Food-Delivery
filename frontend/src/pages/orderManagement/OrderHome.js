@@ -110,10 +110,11 @@ function OrderHome() {
     <div className="customer-experience orders-experience" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
 
-      <main style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
+      <main className="orders-page-main" style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
         <div className="sd-container">
           {/* Header Bar */}
           <div
+            className="orders-page-hero"
             style={{
               display: "flex",
               alignItems: "center",
@@ -159,6 +160,7 @@ function OrderHome() {
                 </p>
               )}
               <div
+                className="orders-filter-bar"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -265,6 +267,7 @@ function OrderHome() {
                     return (
                       <motion.div
                         key={order._id}
+                        className="order-list-card"
                         layout
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}

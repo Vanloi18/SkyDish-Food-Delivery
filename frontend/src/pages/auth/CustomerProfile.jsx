@@ -299,6 +299,7 @@ export default function CustomerProfile() {
 
   return (
     <div
+      className="customer-experience customer-profile-page"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -308,6 +309,7 @@ export default function CustomerProfile() {
       <Header />
 
       <main
+        className="profile-page-main"
         style={{
           flex: 1,
           padding: "3rem 1.25rem",
@@ -321,6 +323,7 @@ export default function CustomerProfile() {
 
           {loading ? (
             <div
+              className="profile-page-shell"
               style={{
                 maxWidth: "800px",
                 margin: "0 auto",
@@ -365,6 +368,7 @@ export default function CustomerProfile() {
             /* ================================================== */
 
             <div
+              className="profile-page-shell"
               style={{
                 maxWidth: "900px",
                 margin: "0 auto",
@@ -375,6 +379,7 @@ export default function CustomerProfile() {
               {/* ================================================== */}
 
               <motion.div
+                className="profile-hero-motion"
                 initial={{
                   opacity: 0,
                   y: 15,
@@ -388,6 +393,7 @@ export default function CustomerProfile() {
                 }}
               >
                 <Card
+                  className="profile-hero-card"
                   padding="2rem"
                   style={{
                     marginBottom: "2rem",
@@ -398,6 +404,7 @@ export default function CustomerProfile() {
                   }}
                 >
                   <div
+                    className="profile-hero-content"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -407,6 +414,7 @@ export default function CustomerProfile() {
                     }}
                   >
                     <div
+                      className="profile-hero-identity"
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -414,6 +422,7 @@ export default function CustomerProfile() {
                       }}
                     >
                       <div
+                        className="profile-avatar"
                         style={{
                           width: "72px",
                           height: "72px",
@@ -478,6 +487,7 @@ export default function CustomerProfile() {
                     </div>
 
                     <div
+                      className="profile-hero-actions"
                       style={{
                         display: "flex",
                         gap: "0.75rem",
@@ -510,6 +520,7 @@ export default function CustomerProfile() {
 
               {missingDeliveryInfo && (
                 <motion.div
+                  className="profile-delivery-alert"
                   initial={{
                     opacity: 0,
                     y: 10,
@@ -570,6 +581,7 @@ export default function CustomerProfile() {
               {/* ================================================== */}
 
               <div
+                className="profile-stats-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns:
@@ -613,7 +625,7 @@ export default function CustomerProfile() {
               {/* PROFILE DETAILS */}
               {/* ================================================== */}
 
-              <Card padding="2rem">
+              <Card className="profile-details-card" padding="2rem">
                 <h3
                   style={{
                     margin: "0 0 1.5rem 0",
@@ -629,6 +641,7 @@ export default function CustomerProfile() {
                 </h3>
 
                 <div
+                  className="profile-contact-grid"
                   style={{
                     display: "grid",
                     gridTemplateColumns:
@@ -639,6 +652,7 @@ export default function CustomerProfile() {
                   {/* EMAIL */}
 
                   <div
+                    className="profile-contact-item"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -690,6 +704,7 @@ export default function CustomerProfile() {
                   {/* PHONE */}
 
                   <div
+                    className="profile-contact-item"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -742,6 +757,7 @@ export default function CustomerProfile() {
                   {/* LOCATION */}
 
                   <div
+                    className="profile-contact-item"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -798,6 +814,7 @@ export default function CustomerProfile() {
 
                 {editingDeliveryInfo && (
                   <motion.form
+                    className="profile-delivery-form"
                     initial={{
                       opacity: 0,
                       height: 0,
