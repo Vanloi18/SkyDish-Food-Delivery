@@ -53,7 +53,7 @@ export default function RestaurantCard({
 
   return (
     <motion.div
-      whileHover={{ y: -6 }}
+      whileHover={{ y: -8, scale: 1.005 }}
       transition={{ duration: 0.2 }}
       onClick={handleCardClick}
       onKeyDown={(event) => {
@@ -67,20 +67,20 @@ export default function RestaurantCard({
       aria-label={`Xem thực đơn ${name}`}
       style={{
         backgroundColor: "#ffffff",
-        borderRadius: "var(--sd-radius-xl)",
-        border: "1px solid var(--sd-border)",
+        borderRadius: "24px",
+        border: "1px solid rgba(24, 32, 29, 0.08)",
         overflow: "hidden",
-        boxShadow: "var(--sd-shadow-sm)",
+        boxShadow: "0 18px 30px -25px rgba(15, 23, 42, 0.38)",
         cursor: "pointer",
         display: "flex",
         flexDirection: "column",
         position: "relative",
-        transition: "box-shadow 0.2s ease",
+        transition: "box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease",
       }}
-      className="sd-card-interactive restaurant-card"
+      className="sd-card-interactive restaurant-card premium-restaurant-card"
     >
       {/* Image Container with Badges */}
-      <div className="restaurant-card-media" style={{ position: "relative", height: "190px", width: "100%", overflow: "hidden", backgroundColor: "#f1f5f9" }}>
+      <div className="restaurant-card-media" style={{ position: "relative", height: "210px", width: "100%", overflow: "hidden", backgroundColor: "#f5f3ee" }}>
         <img
           src={imageSrc}
           alt={name}
@@ -93,6 +93,8 @@ export default function RestaurantCard({
             transition: "transform 0.35s ease",
           }}
         />
+
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(11, 17, 15, 0.08), rgba(11, 17, 15, 0.15))", pointerEvents: "none" }} />
 
         {promotion && <span className="restaurant-promo-badge">{promotion}</span>}
 
@@ -108,15 +110,15 @@ export default function RestaurantCard({
             width: "36px",
             height: "36px",
             borderRadius: "50%",
-            backgroundColor: "rgba(255, 255, 255, 0.92)",
+            backgroundColor: "rgba(255, 255, 255, 0.94)",
             backdropFilter: "blur(4px)",
             border: "none",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: isFavorite ? "var(--sd-primary)" : "var(--sd-text-secondary)",
+            color: isFavorite ? "#d94a2d" : "#4b463f",
             cursor: "pointer",
-            boxShadow: "var(--sd-shadow-sm)",
+            boxShadow: "0 8px 16px -12px rgba(15, 23, 42, 0.4)",
             transition: "transform 0.15s ease, color 0.15s ease",
           }}
         >
@@ -131,36 +133,37 @@ export default function RestaurantCard({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.25rem",
-                padding: "0.25rem 0.6rem",
-                borderRadius: "var(--sd-radius-full)",
-                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                padding: "0.28rem 0.64rem",
+                borderRadius: "999px",
+                backgroundColor: "rgba(255, 255, 255, 0.96)",
                 backdropFilter: "blur(4px)",
-                color: "var(--sd-text-primary)",
-                fontWeight: "700",
+                color: "#1c1b1a",
+                fontWeight: "800",
                 fontSize: "0.75rem",
-                boxShadow: "var(--sd-shadow-sm)",
+                boxShadow: "0 10px 16px -12px rgba(15, 23, 42, 0.5)",
               }}
             >
               <FaStar style={{ color: "#f59e0b" }} /> {restaurant.rating}
             </span>
           ) : null}
-          <Badge variant={availability ? "success" : "danger"} size="sm">
+          <Badge variant={availability ? "success" : "danger"} size="sm" className="premium-badge">
             {availability ? "Đang mở cửa" : "Đã đóng cửa"}
           </Badge>
         </div>
       </div>
 
       {/* Card Content Body */}
-      <div className="restaurant-card-content" style={{ padding: "1.1rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+      <div className="restaurant-card-content" style={{ padding: "1.15rem 1.1rem 1rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", background: "linear-gradient(180deg, #fffdfd 0%, #fff 100%)" }}>
         <div>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.5rem", marginBottom: "0.35rem" }}>
             <h3
               style={{
                 margin: 0,
-                fontSize: "1.05rem",
-                fontWeight: "600",
-                color: "var(--sd-text-primary)",
+                fontSize: "1.18rem",
+                fontWeight: "700",
+                color: "#1d1b1a",
                 lineHeight: "1.35",
+                letterSpacing: "-0.02em",
               }}
             >
               {name}
@@ -171,14 +174,14 @@ export default function RestaurantCard({
             className="restaurant-card-location"
             style={{
               margin: "0 0 0.5rem 0",
-              fontSize: "0.825rem",
-              color: "var(--sd-text-secondary)",
+              fontSize: "0.88rem",
+              color: "#5d5652",
               display: "flex",
               alignItems: "center",
               gap: "0.35rem",
             }}
           >
-            <FaMapMarkerAlt style={{ color: "var(--sd-primary)", flexShrink: 0 }} />
+            <FaMapMarkerAlt style={{ color: "#d94a2d", flexShrink: 0 }} />
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {location}
             </span>
@@ -197,24 +200,24 @@ export default function RestaurantCard({
         {/* Footer Meta Row */}
         <div
           style={{
-            paddingTop: "0.65rem",
-            borderTop: "1px solid var(--sd-border)",
+            paddingTop: "0.8rem",
+            borderTop: "1px solid #efe7e2",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             fontSize: "0.8rem",
-            color: "var(--sd-text-secondary)",
+            color: "#5d5652",
             marginTop: "0.5rem",
           }}
         >
-          <span style={{ color: "var(--sd-text-muted)", fontSize: "0.78rem" }}>
+          <span style={{ color: "#7a706b", fontSize: "0.78rem" }}>
             {restaurant.ownerName ? `Chủ quán: ${restaurant.ownerName}` : ""}
           </span>
 
           <span
             style={{
-              fontWeight: "600",
-              color: "var(--sd-primary)",
+              fontWeight: "700",
+              color: "#d74b2d",
               display: "flex",
               alignItems: "center",
             }}

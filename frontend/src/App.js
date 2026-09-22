@@ -54,7 +54,6 @@ import MoMoCallback from "./pages/payment/MoMoCallback";
 
 import OrderHome from "./pages/orderManagement/OrderHome";
 import OrderForm from "./components/OrderForm";
-import UpdateOrder from "./components/UpdateOrder";
 import DeleteOrder from "./components/DeleteOrder";
 import OrderDetails from "./components/OrderDetails";
 
@@ -253,6 +252,10 @@ function App() {
                 path="/payment/vnpay/callback"
                 element={<VNPayCallback />}
               />
+              <Route
+                path="/payment/vnpay/return"
+                element={<VNPayCallback />}
+              />
 
               <Route
                 path="/payment/momo/callback"
@@ -284,9 +287,7 @@ function App() {
               <Route
                 path="/orders/edit/:id"
                 element={
-                  <CustomerGuard>
-                    <UpdateOrder />
-                  </CustomerGuard>
+                  <Navigate to="/orders" replace />
                 }
               />
 

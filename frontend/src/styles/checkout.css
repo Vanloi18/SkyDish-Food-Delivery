@@ -326,3 +326,22 @@
 .sd-spin {
   animation: sdSpin 1s linear infinite;
 }
+
+/* SkyDish Studio checkout layer — layout/logic and payment handlers stay in
+   Checkout.js; this only makes the payment flow easier to scan. */
+.checkout-page-wrapper { padding: clamp(1.25rem, 3vw, 3rem) 0 5rem; background: #f5f1ed; }
+.checkout-grid { gap: clamp(1.15rem, 3vw, 3.2rem); }
+.checkout-card { border: 1px solid #e0d6cf; border-radius: 0; background: #fffdfa; box-shadow: none; }
+.checkout-grid > .checkout-card:first-child { border-top: 5px solid #292320; }
+.checkout-grid > .checkout-card:last-child { border-top: 5px solid #de4c2a; }
+.checkout-section-title { font-family: var(--sd-font-family-display); font-size: 1.72rem; letter-spacing: -0.04em; border-bottom-color: #e4dad4; }
+.payment-mode-tabs { padding: 0.3rem; border-radius: 0; background: #f5ede8; }
+.payment-mode-tab { border-radius: 0; }
+.payment-mode-tab.active { color: #a3381d; background: #fffdfa; box-shadow: none; }
+.qr-checkout-container, .qr-image-wrapper, .qr-steps-list { border-radius: 0; box-shadow: none; }
+.stripe-input-box { border-radius: 0; box-shadow: none; }
+.bank-transfer-card { border-radius: 0; box-shadow: none; }
+.bank-transfer-header { background: #292320; }
+.bank-qr-box, .bank-info-row, .bank-transfer-alert { border-radius: 0; }
+.checkout-status-alert { border-radius: 0; }
+@media (max-width: 900px) { .checkout-grid { gap: 1.2rem; } }

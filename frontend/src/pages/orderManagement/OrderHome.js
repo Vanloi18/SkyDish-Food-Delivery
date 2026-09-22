@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { 
   FaSearch, 
-  FaEdit, 
   FaTrashAlt, 
   FaEye, 
   FaReceipt, 
@@ -380,12 +379,6 @@ function OrderHome() {
                           <Link to={`/orders/details/${order._id}`}>
                             <Button variant="outline" size="sm" icon={order.status?.toLowerCase().includes("deliver") ? FaEye : FaMotorcycle}>
                               {order.status?.toLowerCase().includes("deliver") ? "Xem hóa đơn" : "Theo dõi đơn"}
-                            </Button>
-                          </Link>
-
-                          <Link to={`/orders/edit/${order._id}`}>
-                            <Button variant="secondary" size="sm" icon={FaEdit}>
-                              Chỉnh sửa
                             </Button>
                           </Link>
 

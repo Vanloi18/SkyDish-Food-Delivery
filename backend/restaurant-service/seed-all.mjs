@@ -64,7 +64,7 @@ const VIETNAM_RESTAURANTS = [
         description: "Quẩy giòn rụm chiên mới thơm nức ăn cùng nước phở",
         price: 10000,
         category: "Món phụ",
-        image: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=500&auto=format&fit=crop&q=80",
+        image: "https://upload.wikimedia.org/wikipedia/commons/7/78/Youtiao.jpg",
       },
       {
         name: "Trứng Chần Béo Ngậy",
@@ -89,7 +89,7 @@ const VIETNAM_RESTAURANTS = [
         description: "Chả miếng, chả viên nướng than hoa ăn cùng nem cua bể giòn rụm",
         price: 90000,
         category: "Bún & Mì",
-        image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80",
+        image: "https://images.unsplash.com/photo-1559847844-5315695dadae?w=500&auto=format&fit=crop&q=80",
       },
       {
         name: "Nem Cua Bể Hải Phòng",

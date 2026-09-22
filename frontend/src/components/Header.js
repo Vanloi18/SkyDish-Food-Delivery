@@ -13,7 +13,8 @@ import {
   FaReceipt,
   FaChevronDown,
   FaBars,
-  FaBell
+  FaBell,
+  FaSearch
 } from "react-icons/fa";
 import { CartContext } from "../pages/contexts/CartContext";
 import Sidebar from "./Sidebar";
@@ -31,6 +32,7 @@ function Header() {
   const [userProfile, setUserProfile] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [headerSearch, setHeaderSearch] = useState("");
 
   const { totalItemCount } = useContext(CartContext) || { totalItemCount: 0 };
   const navigate = useNavigate();
@@ -179,6 +181,12 @@ function Header() {
 
   const isActive = (path) => location.pathname === path;
 
+  const handleHeaderSearch = (event) => {
+    event.preventDefault();
+    const query = headerSearch.trim();
+    navigate(query ? `/customer/home?q=${encodeURIComponent(query)}` : "/customer/home");
+  };
+
   return (
     <>
       <motion.header
@@ -235,6 +243,17 @@ function Header() {
               Đơn hàng của tôi
             </Link>
           </nav>
+
+          <form className="header-search" onSubmit={handleHeaderSearch} role="search">
+            <FaSearch aria-hidden="true" size={14} />
+            <input
+              value={headerSearch}
+              onChange={(event) => setHeaderSearch(event.target.value)}
+              placeholder="Tìm món ăn, nhà hàng..."
+              aria-label="Tìm món ăn hoặc nhà hàng"
+            />
+            <button type="submit" aria-label="Tìm kiếm">Tìm</button>
+          </form>
         </div>
 
         <div className="header-right">
