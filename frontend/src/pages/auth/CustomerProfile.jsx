@@ -13,6 +13,9 @@ import {
   FaSignOutAlt,
   FaShieldAlt,
   FaHeart,
+  FaFlag,
+  FaStar,
+  FaChevronRight,
   FaEdit,
   FaSave,
   FaTimes,
@@ -26,25 +29,28 @@ import Badge from "../../components/common/Badge";
 import StatCard from "../../components/common/StatCard";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";
 import EmptyState from "../../components/common/EmptyState";
+import { formatCurrency } from "../../utils/currency";
 
 export default function CustomerProfile() {
   const [profile, setProfile] = useState(null);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-
-  // Trạng thái form cập nhật
-  const [editingDeliveryInfo, setEditingDeliveryInfo] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
-  const [saveSuccess, setSaveSuccess] = useState("");
-
-  const [form, setForm] = useState({
-    phone: "",
-    location: "",
-  });
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [reviewedOrders, setReviewedOrders] = useState({});
 
   const navigate = useNavigate();
+  const editingDeliveryInfo = false;
+  const saving = false;
+  const saveError = "";
+  const saveSuccess = "";
+  const form = { phone: profile?.phone || "", location: profile?.location || "" };
+  const missingDeliveryInfo = false;
+  const handleOpenEdit = () => {};
+  const handleCancelEdit = () => {};
+  const handleChange = () => {};
+  const handleSaveDeliveryInfo = () => {};
 
   // ============================================================
   // LOAD PROFILE
@@ -75,12 +81,6 @@ export default function CustomerProfile() {
           res.data;
 
         setProfile(customer);
-
-        // Đồng bộ form
-        setForm({
-          phone: customer?.phone || "",
-          location: customer?.location || "",
-        });
 
         // Lưu thông tin cơ bản vào localStorage
         if (customer?.firstName) {
@@ -119,6 +119,43 @@ export default function CustomerProfile() {
     fetchProfile();
   }, [navigate]);
 
+  useEffect(() => {
+    const fetchPurchaseHistory = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const response = await axios.get(`${API_URLS.ORDER}/api/orders`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const orderList = Array.isArray(response.data)
+          ? response.data
+          : (Array.isArray(response.data?.data) ? response.data.data : []);
+        setOrders(orderList);
+
+        const deliveredOrders = orderList.filter((order) => {
+          const status = String(order.status || "").toLowerCase();
+          return status.includes("deliver") || status.includes("complete");
+        });
+        const reviewEntries = await Promise.all(deliveredOrders.map(async (order) => {
+          try {
+            const reviewResponse = await axios.get(`${API_URLS.RESTAURANT}/api/reviews/order/${order._id}`);
+            return [order._id, Boolean(reviewResponse.data?.reviewed)];
+          } catch {
+            return [order._id, false];
+          }
+        }));
+        setReviewedOrders(Object.fromEntries(reviewEntries));
+      } catch (historyError) {
+        console.warn("Purchase history fetch error:", historyError.message);
+      } finally {
+        setOrdersLoading(false);
+      }
+    };
+
+    fetchPurchaseHistory();
+  }, []);
+
   // ============================================================
   // LOGOUT
   // ============================================================
@@ -133,165 +170,24 @@ export default function CustomerProfile() {
     navigate("/auth/login");
   };
 
-  // ============================================================
-  // OPEN EDIT FORM
-  // ============================================================
+  const completedOrders = orders.filter((order) => {
+    const status = String(order.status || "").toLowerCase();
+    return status.includes("deliver") || status.includes("complete");
+  });
+  const totalSpent = orders.reduce((total, order) => total + Number(order.totalAmount || order.total || 0), 0);
+  const purchasedItemCount = orders.reduce(
+    (total, order) => total + (order.items || []).reduce((itemTotal, item) => itemTotal + Number(item.quantity || 1), 0),
+    0
+  );
 
-  const handleOpenEdit = () => {
-    setForm({
-      phone: profile?.phone || "",
-      location: profile?.location || "",
-    });
-
-    setSaveError("");
-    setSaveSuccess("");
-    setEditingDeliveryInfo(true);
+  const getOrderStatusLabel = (status) => {
+    const normalized = String(status || "").toLowerCase();
+    if (normalized.includes("deliver") || normalized.includes("complete")) return "Đã giao hàng";
+    if (normalized.includes("cancel")) return "Đã hủy";
+    if (normalized.includes("prepar")) return "Đang chuẩn bị";
+    if (normalized.includes("confirm")) return "Đã xác nhận";
+    return "Đang xử lý";
   };
-
-  // ============================================================
-  // CLOSE EDIT FORM
-  // ============================================================
-
-  const handleCancelEdit = () => {
-    setForm({
-      phone: profile?.phone || "",
-      location: profile?.location || "",
-    });
-
-    setSaveError("");
-    setSaveSuccess("");
-    setEditingDeliveryInfo(false);
-  };
-
-  // ============================================================
-  // HANDLE INPUT
-  // ============================================================
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  // ============================================================
-  // UPDATE DELIVERY INFORMATION
-  // ============================================================
-
-  const handleSaveDeliveryInfo = async (e) => {
-    e.preventDefault();
-
-    setSaveError("");
-    setSaveSuccess("");
-
-    const phone = form.phone.trim();
-    const location = form.location.trim();
-
-    // Validate SĐT
-    if (!phone) {
-      setSaveError("Vui lòng nhập số điện thoại.");
-      return;
-    }
-
-    // Validate số điện thoại Việt Nam cơ bản
-    const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
-
-    if (!phoneRegex.test(phone)) {
-      setSaveError(
-        "Số điện thoại không hợp lệ. Ví dụ: 0901234567."
-      );
-      return;
-    }
-
-    // Validate địa chỉ
-    if (!location) {
-      setSaveError("Vui lòng nhập địa chỉ giao hàng.");
-      return;
-    }
-
-    if (location.length < 5) {
-      setSaveError("Địa chỉ giao hàng quá ngắn.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        navigate("/auth/login");
-        return;
-      }
-
-      const res = await axios.patch(
-        `${API_URLS.AUTH}/api/auth/customer/profile`,
-        {
-          phone,
-          location,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const updatedCustomer =
-        res.data?.data?.customer ||
-        res.data?.customer ||
-        res.data;
-
-      // Cập nhật profile trên giao diện
-      setProfile((prev) => ({
-        ...prev,
-        ...updatedCustomer,
-        phone,
-        location,
-      }));
-
-      // Đồng bộ form
-      setForm({
-        phone,
-        location,
-      });
-
-      // Đồng bộ localStorage
-      localStorage.setItem("customerPhone", phone);
-      localStorage.setItem("customerLocation", location);
-
-      setSaveSuccess(
-        "Cập nhật thông tin giao hàng thành công."
-      );
-
-      // Đóng form sau một khoảng ngắn
-      setTimeout(() => {
-        setEditingDeliveryInfo(false);
-        setSaveSuccess("");
-      }, 1200);
-    } catch (err) {
-      console.error("Update delivery information error:", err);
-
-      const message =
-        err.response?.data?.message ||
-        "Không thể cập nhật thông tin giao hàng. Vui lòng thử lại.";
-
-      setSaveError(message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ============================================================
-  // CHECK MISSING DELIVERY INFORMATION
-  // ============================================================
-
-  const missingDeliveryInfo =
-    !profile?.phone?.trim() ||
-    !profile?.location?.trim();
 
   // ============================================================
   // RENDER
@@ -592,34 +488,95 @@ export default function CustomerProfile() {
               >
                 <StatCard
                   title="Hạng thành viên"
-                  value="Gold Foodie"
-                  subtitle="Miễn phí giao hàng đơn > 250.000 ₫"
+                  value={orders.length ? "Thành viên SkyDish" : "Mới tham gia"}
+                  subtitle={`${orders.length} đơn hàng đã đặt`}
                   icon={FaHeart}
                   iconBg="var(--sd-primary-light)"
                   iconColor="var(--sd-primary)"
                 />
 
                 <StatCard
-                  title="Quản lý đơn hàng"
-                  value="Theo dõi trực tiếp"
-                  subtitle="Cập nhật shipper thời gian thực"
+                  title="Tổng chi tiêu"
+                  value={formatCurrency(totalSpent)}
+                  subtitle={`${purchasedItemCount} món đã mua`}
                   icon={FaReceipt}
                   iconBg="var(--sd-info-light)"
                   iconColor="var(--sd-info)"
                 />
 
                 <StatCard
-                  title="Địa chỉ mặc định"
-                  value={
-                    profile.location ||
-                    "Chưa cập nhật"
-                  }
-                  subtitle="Địa chỉ giao hàng chính"
-                  icon={FaMapMarkerAlt}
-                  iconBg="var(--sd-success-light)"
-                  iconColor="var(--sd-success)"
+                  title="Đã hoàn tất"
+                  value={`${completedOrders.length} đơn`}
+                  subtitle="Lịch sử giao hàng thành công"
+                  icon={FaStar}
+                  iconBg="#e7fbf8"
+                  iconColor="#007d74"
                 />
               </div>
+
+              <section className="profile-purchase-history" aria-labelledby="purchase-history-heading">
+                <div className="profile-history-heading">
+                  <div>
+                    <span className="profile-section-kicker">Dữ liệu thực tế từ hệ thống</span>
+                    <h3 id="purchase-history-heading">Lịch sử đã mua</h3>
+                    <p>Chỉ xem lịch sử đơn hàng và thực hiện báo cáo hoặc đánh giá sau khi nhận món.</p>
+                  </div>
+                  <Link to="/orders" className="profile-history-link">Xem toàn bộ <FaChevronRight size={11} /></Link>
+                </div>
+
+                {ordersLoading ? (
+                  <LoadingSkeleton type="card" count={2} />
+                ) : orders.length === 0 ? (
+                  <EmptyState
+                    icon={FaReceipt}
+                    title="Chưa có lịch sử mua hàng"
+                    description="Các đơn hàng của bạn sẽ xuất hiện tại đây sau khi đặt món."
+                    actionLabel="Khám phá nhà hàng"
+                    onAction={() => navigate("/customer/home")}
+                  />
+                ) : (
+                  <div className="profile-history-list">
+                    {orders.slice(0, 8).map((order) => {
+                      const isCompleted = completedOrders.some((completed) => completed._id === order._id);
+                      const restaurantName = order.restaurantName || order.restaurant?.name || "Nhà hàng SkyDish";
+                      const itemCount = (order.items || []).reduce((total, item) => total + Number(item.quantity || 1), 0);
+                      return (
+                        <article className="profile-history-item" key={order._id}>
+                          <div className="profile-history-main">
+                            <div className="profile-history-icon"><FaReceipt /></div>
+                            <div>
+                              <h4>{restaurantName}</h4>
+                              <p>#{String(order._id || "").slice(-8)} · {itemCount} món · {order.createdAt ? new Date(order.createdAt).toLocaleDateString("vi-VN") : "Gần đây"}</p>
+                            </div>
+                          </div>
+                          <div className="profile-history-side">
+                            <strong>{formatCurrency(order.totalAmount || order.total || 0)}</strong>
+                            <span className={`profile-history-status profile-history-status--${isCompleted ? "done" : "pending"}`}>
+                              {getOrderStatusLabel(order.status)}
+                            </span>
+                            <div className="profile-history-actions">
+                              <Link to={`/contact?orderId=${encodeURIComponent(order._id || "")}&type=order`} className="profile-report-link">
+                                <FaFlag size={11} /> Báo cáo
+                              </Link>
+                              {isCompleted && (
+                                reviewedOrders[order._id] ? (
+                                  <button type="button" className="profile-review-button is-reviewed" disabled>
+                                    <FaStar size={11} /> Đã đánh giá
+                                  </button>
+                                ) : (
+                                  <Link to={`/orders/details/${order._id}`} className="profile-review-button">
+                                    <FaStar size={11} /> Đánh giá
+                                  </Link>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
 
               {/* ================================================== */}
               {/* PROFILE DETAILS */}

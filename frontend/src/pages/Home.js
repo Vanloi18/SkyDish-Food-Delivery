@@ -13,39 +13,39 @@ import "../styles/home.css";
 const categories = [
   {
     name: "Phở",
-    image: "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=300&auto=format&fit=crop&q=80"
+    image: "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80"
   },
   {
     name: "Bún chả",
-    image: "https://images.unsplash.com/photo-1559847844-5315695dadae?w=300&auto=format&fit=crop&q=80"
+    image: "https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=800&q=80"
   },
   {
     name: "Cơm",
-    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&auto=format&fit=crop&q=80"
+    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80"
   },
   {
     name: "Bánh mì",
-    image: "https://images.unsplash.com/photo-1626804475297-41608ea09aeb?w=300&auto=format&fit=crop&q=80"
+    image: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=800&q=80"
   },
   {
     name: "Pizza",
-    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=300&auto=format&fit=crop&q=80"
+    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80"
   },
   {
     name: "Lẩu",
-    image: "https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=300&auto=format&fit=crop&q=80"
+    image: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80"
   },
   {
     name: "Đồ ăn nhanh",
-    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&auto=format&fit=crop&q=80"
+    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80"
   },
   {
     name: "Đồ uống",
-    image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&auto=format&fit=crop&q=80"
+    image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80"
   },
   {
     name: "Tráng miệng",
-    image: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=300&auto=format&fit=crop&q=80"
+    image: "https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80"
   },
 ];
 
@@ -479,8 +479,10 @@ function FoodMarquee({ foods, onOpenMenu }) {
             initial={{ x: rowIndex === 1 ? "-50%" : "0%" }}
             animate={{ x: rowIndex === 1 ? "0%" : "-50%" }}
             transition={{
-              duration: rowIndex === 1 ? 18 : 15,
-              ease: "easeInOut",
+              // A linear pace keeps the food wall calm and visibly in motion
+              // instead of accelerating and stopping at each end.
+              duration: rowIndex === 1 ? 44 : 38,
+              ease: "linear",
               repeat: Infinity,
               repeatType: "reverse",
             }}
@@ -592,12 +594,13 @@ const Home = () => {
                 </span>
 
                 <h1 className="landing-hero-title">
-                  Đặt món ngon. <br />
-                  <span>Giao tận cửa.</span>
+                  Restaurants, takeaways,<br />
+                  <span>supermarkets and shops.</span><br />
+                  Delivered.
                 </h1>
 
                 <p className="landing-hero-desc">
-                  Khám phá hàng trăm nhà hàng yêu thích và nhận món ăn nóng hổi nhanh chóng ngay tại khu vực của bạn.
+                  Khám phá hàng trăm món ngon từ các nhà hàng, cửa hàng tiện lợi và thương hiệu yêu thích ngay trong khu vực của bạn.
                 </p>
 
                 {/* Core Search Form */}
@@ -612,7 +615,7 @@ const Home = () => {
                     aria-label="Tìm kiếm món ăn hoặc nhà hàng"
                   />
                   <button type="submit" className="landing-search-btn" aria-label="Tìm kiếm">
-                    Tìm món
+                    Search
                   </button>
                 </form>
 
@@ -666,6 +669,14 @@ const Home = () => {
             </div>
           </div>
         </section>
+
+        {/* Live food discovery rail: it appears before category browsing, matching the marketplace layout. */}
+        {foodStatus === "success" && (
+          <FoodMarquee
+            foods={popularFoods}
+            onOpenMenu={(restaurantId) => navigate(`/customer/restaurant/${restaurantId}/foods`)}
+          />
+        )}
 
         {/* ====================================================================
             2. POPULAR CATEGORIES — Professional Horizontal Carousel
@@ -741,14 +752,6 @@ const Home = () => {
             </div>
           </div>
         </section>
-
-        {/* Live food discovery rail: it appears only once the existing food API responds. */}
-        {foodStatus === "success" && (
-          <FoodMarquee
-            foods={popularFoods}
-            onOpenMenu={(restaurantId) => navigate(`/customer/restaurant/${restaurantId}/foods`)}
-          />
-        )}
 
         {/* ====================================================================
             4. POPULAR FOOD — sourced from the existing public food API

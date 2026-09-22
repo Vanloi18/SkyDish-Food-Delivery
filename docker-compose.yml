@@ -150,10 +150,13 @@ services:
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-sk_test_placeholder_key_skydish_dev}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-whsec_placeholder_key_skydish_dev}
+      - VNPAY_ENABLED=${VNPAY_ENABLED:-false}
       - VNPAY_TMN_CODE=${VNPAY_TMN_CODE:-}
       - VNPAY_HASH_SECRET=${VNPAY_HASH_SECRET:-}
       - VNPAY_PAYMENT_URL=${VNPAY_PAYMENT_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      - VNPAY_VERSION=${VNPAY_VERSION:-2.1.0}
       - VNPAY_RETURN_URL=${VNPAY_RETURN_URL:-http://localhost:3000/payment/vnpay/callback}
+      - VNPAY_IPN_URL=${VNPAY_IPN_URL:-http://localhost:5004/webhooks/vnpay/ipn}
       - MOMO_PARTNER_CODE=${MOMO_PARTNER_CODE:-}
       - MOMO_ACCESS_KEY=${MOMO_ACCESS_KEY:-}
       - MOMO_SECRET_KEY=${MOMO_SECRET_KEY:-}
