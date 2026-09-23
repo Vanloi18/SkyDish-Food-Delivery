@@ -646,16 +646,34 @@ const Home = () => {
                 </div>
               </div>
 
-              {/* Right Column: Clean Food Photography */}
+              {/* Right Column: Layered food board inspired by delivery marketplaces */}
               <div className="landing-hero-visual">
-                <div className="landing-hero-ambient landing-hero-ambient--one" />
-                <div className="landing-hero-ambient landing-hero-ambient--two" />
-                <div className="landing-hero-img-container">
-                  <img
-                    src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=900&auto=format&fit=crop&q=80"
-                    alt="Món ngon giao tận nơi SkyDish"
-                    className="landing-hero-img"
-                  />
+                <div className="landing-food-board" aria-label="Các món ngon nổi bật của SkyDish">
+                  <span className="landing-food-board-shape landing-food-board-shape--teal" />
+                  <span className="landing-food-board-shape landing-food-board-shape--orange" />
+                  <div className="landing-food-sticker landing-food-sticker--fresh">Tươi ngon mỗi ngày</div>
+                  <div className="landing-food-photo landing-food-photo--produce">
+                    <img
+                      src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=700&auto=format&fit=crop&q=85"
+                      alt="Rau củ và trái cây tươi"
+                    />
+                  </div>
+                  <div className="landing-food-photo landing-food-photo--burger">
+                    <img
+                      src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=700&auto=format&fit=crop&q=85"
+                      alt="Burger nóng hổi"
+                    />
+                  </div>
+                  <div className="landing-food-photo landing-food-photo--pizza">
+                    <img
+                      src="https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=700&auto=format&fit=crop&q=85"
+                      alt="Pizza phô mai"
+                    />
+                  </div>
+                  <div className="landing-food-board-caption">
+                    <strong>Đặt món thật ngon</strong>
+                    <span>Giao nhanh tận cửa</span>
+                  </div>
                 </div>
                 <div className="landing-hero-float-card landing-hero-rating-card">
                   <span className="landing-float-icon landing-float-icon--gold"><FaStar /></span>

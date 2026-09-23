@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 export default function Button({
   children,
-  variant = 'primary', // 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success'
+  variant = 'primary', // 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'cart'
   size = 'md',        // 'sm' | 'md' | 'lg'
   icon: Icon = null,
   iconPosition = 'left',
@@ -45,6 +45,11 @@ export default function Button({
       backgroundColor: 'var(--sd-primary)',
       color: '#ffffff',
       boxShadow: '0 2px 4px rgba(255, 87, 34, 0.25)',
+    },
+    cart: {
+      backgroundColor: '#b93800',
+      color: '#ffffff',
+      boxShadow: '0 3px 8px rgba(185, 56, 0, 0.28)',
     },
     secondary: {
       backgroundColor: 'var(--sd-secondary)',

@@ -17,6 +17,7 @@ export const API_URLS = {
   RESTAURANT: process.env.REACT_APP_RESTAURANT_URL || (isDevStandalone ? 'http://localhost:5002' : ''),
   DELIVERY: process.env.REACT_APP_DELIVERY_URL || (isDevStandalone ? 'http://localhost:5003' : ''),
   PAYMENT: process.env.REACT_APP_PAYMENT_URL || (isDevStandalone ? 'http://localhost:5004' : ''),
+  AI: process.env.REACT_APP_AI_URL || (isDevStandalone ? 'http://localhost:5006' : ''),
   ORDER: process.env.REACT_APP_ORDER_URL || (isDevStandalone ? 'http://localhost:5005' : ''),
 };
 

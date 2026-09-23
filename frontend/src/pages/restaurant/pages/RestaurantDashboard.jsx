@@ -1053,7 +1053,7 @@ export default function RestaurantDashboard() {
 
                       <button
                         type="button"
-                        style={{ padding: "0.6rem 1.15rem", borderRadius: "8px", backgroundColor: "var(--merch-primary)", color: "#ffffff", border: "none", fontSize: "0.85rem", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.4rem" }}
+                        className="merchant-add-food-btn"
                         onClick={() => {
                           setIsEditingFood(false);
                           setFoodForm({ id: "", name: "", description: "", price: "", category: "Phở & Bún", image: "", imageFile: null, imageRemoved: false, availability: true });

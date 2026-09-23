@@ -130,6 +130,33 @@
   box-shadow: 0 4px 12px rgba(255, 87, 34, 0.25);
 }
 
+.merchant-add-food-btn {
+  padding: 0.6rem 1.15rem;
+  border-radius: 8px;
+  background-color: #d94801;
+  color: #ffffff;
+  border: 1px solid #b93800;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 3px 8px rgba(185, 56, 0, 0.2);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.merchant-add-food-btn:hover {
+  background-color: #b93800;
+  box-shadow: 0 5px 12px rgba(185, 56, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.merchant-add-food-btn:focus-visible {
+  outline: 3px solid #fdba74;
+  outline-offset: 2px;
+}
+
 /* Main Area */
 .merchant-main-area {
   flex: 1;
