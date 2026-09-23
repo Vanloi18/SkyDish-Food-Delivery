@@ -324,9 +324,9 @@
   display: none;
   align-items: center;
   gap: 0.55rem;
-  min-width: 190px;
-  max-width: 310px;
-  height: 40px;
+  min-width: 220px;
+  max-width: 360px;
+  height: 46px;
   margin-left: auto;
   padding: 0.25rem 0.32rem 0.25rem 0.8rem;
   color: #8b827c;
@@ -337,9 +337,9 @@
 }
 
 .header-search:focus-within { border-color: #df5932; background: #fff; box-shadow: 0 0 0 3px rgba(233, 77, 36, 0.1); }
-.header-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: #24201e; font-size: 0.78rem; }
+.header-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: #24201e; font-size: 0.86rem; }
 .header-search input:focus { box-shadow: none !important; }
-.header-search button { flex: 0 0 auto; padding: 0.38rem 0.55rem; border: 0; border-radius: 7px; background: #292421; color: #fff; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
+.header-search button { flex: 0 0 auto; padding: 0.48rem 0.72rem; border: 0; border-radius: 8px; background: #292421; color: #fff; font-size: 0.74rem; font-weight: 700; cursor: pointer; }
 
 .header-right { gap: 0.45rem; flex-shrink: 0; }
 .portals-trigger-btn { padding: 0.44rem 0.68rem; border-color: transparent; background: transparent; color: #665e58; }

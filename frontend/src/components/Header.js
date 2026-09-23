@@ -21,6 +21,7 @@ import Sidebar from "./Sidebar";
 import Button from "./common/Button";
 import { validateRestaurantToken } from "../layouts/RestaurantPartnerLayout/RestaurantPartnerGuard";
 import { getValidToken, getAuthCustomer, clearCustomerAuth } from "../utils/authHelper";
+import SkyDishAssistant from "./assistant/SkyDishAssistant";
 import "../styles/header.css";
 
 function Header() {
@@ -525,6 +526,7 @@ function Header() {
         isLoggedIn={isLoggedIn}
         onLogout={handleLogout}
       />
+      <SkyDishAssistant />
     </>
   );
 }

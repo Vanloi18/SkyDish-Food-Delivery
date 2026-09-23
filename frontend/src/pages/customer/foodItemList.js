@@ -531,7 +531,7 @@ function FoodItemList() {
                         </span>
 
                         <Button
-                          variant="primary"
+                          variant="cart"
                           size="sm"
                           icon={FaPlus}
                           onClick={() => handleAddToCart(food)}
