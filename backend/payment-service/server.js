@@ -31,6 +31,9 @@ app.use("/api/payment/webhook", express.raw({ type: "application/json" }), webho
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// VNPay calls this public endpoint server-to-server after payment completion.
+app.post("/webhooks/vnpay/ipn", paymentRoutes.handleVNPayIpn);
+
 // Swagger Configuration (optional)
 const swaggerOptions = {
   definition: {
