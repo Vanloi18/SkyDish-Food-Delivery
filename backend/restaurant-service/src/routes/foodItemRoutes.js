@@ -25,8 +25,10 @@ router.post('/create', authMiddleware, upload.single('image'), async (req, res) 
 
     const newFoodItem = new FoodItem({
       restaurant: restaurant._id,
-      name,
-      description,
+      name: typeof name === 'string' ? name.trim() : name,
+      description: typeof description === 'string' && description.trim()
+        ? description.trim()
+        : 'Món ngon chất lượng từ nhà hàng.',
       price: Number(price),
       image,
       category,
@@ -36,6 +38,9 @@ router.post('/create', authMiddleware, upload.single('image'), async (req, res) 
     res.status(201).json({ message: 'Food item created successfully', newFoodItem });
   } catch (err) {
     console.error(err);
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ message: 'Dữ liệu món ăn không hợp lệ.', details: err.message });
+    }
     res.status(500).json({ message: 'Server Error' });
   }
 });

@@ -834,9 +834,9 @@ const CheckoutForm = () => {
                 <div className="qr-image-wrapper vnpay">
                   {vnpayQrUrl ? (
                     <img
-                      src={`https://quickchart.io/qr?text=${encodeURIComponent(vnpayQrUrl)}&size=200&margin=1`}
+                      src={`https://quickchart.io/qr?text=${encodeURIComponent(vnpayQrUrl)}&size=320&margin=2&ecLevel=M`}
                       alt="Mã QR VNPay"
-                      style={{ width: "200px", height: "200px", display: "block" }}
+                      style={{ width: "320px", height: "320px", maxWidth: "100%", display: "block" }}
                     />
                   ) : (
                     <div style={{ width: "200px", minHeight: "200px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", textAlign: "center", color: "var(--sd-text-secondary)", padding: "1rem" }}>
