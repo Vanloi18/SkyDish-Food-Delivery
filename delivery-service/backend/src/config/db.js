@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// Delivery service database connection.
 const connectDB = async () => {
   try {
     // Match the project’s actual MongoDB port used in Docker and local development.
