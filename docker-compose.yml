@@ -24,14 +24,27 @@ services:
       - "${AUTH_PORT:-4000}:4000"
     environment:
       - PORT=4000
-      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-465}
+      - MAIL_SECURE=${MAIL_SECURE:-true}
+      - MAIL_USER=${MAIL_USER}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM=${MAIL_FROM:-SkyDish Food Delivery}
     depends_on:
       mongo:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -47,7 +60,7 @@ services:
       - "${REST_PORT:-5002}:5002"
     environment:
       - PORT=5002
-      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
     volumes:
       - restaurant-uploads:/app/uploads
@@ -55,7 +68,13 @@ services:
       mongo:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5002/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5002/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -71,20 +90,19 @@ services:
       - "${ORDER_PORT:-5005}:5005"
     environment:
       - PORT=5005
-      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
-      - SMTP_HOST=${SMTP_HOST:-}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_USERNAME=${SMTP_USERNAME:-}
-      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
-      - SMTP_SECURE=${SMTP_SECURE:-false}
-      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-SkyDish Food Delivery}
-      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-}
     depends_on:
       mongo:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5005/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5005/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -100,13 +118,19 @@ services:
       - "${DELIVERY_PORT:-5003}:5003"
     environment:
       - PORT=5003
-      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
     depends_on:
       mongo:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5003/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5003/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -122,15 +146,17 @@ services:
       - "${PAY_PORT:-5004}:5004"
     environment:
       - PORT=5004
-      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
-      - ORDER_SERVICE_URL=${ORDER_SERVICE_URL:-http://order-service:5005}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-sk_test_placeholder_key_skydish_dev}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-whsec_placeholder_key_skydish_dev}
+      - VNPAY_ENABLED=${VNPAY_ENABLED:-false}
       - VNPAY_TMN_CODE=${VNPAY_TMN_CODE:-}
       - VNPAY_HASH_SECRET=${VNPAY_HASH_SECRET:-}
       - VNPAY_PAYMENT_URL=${VNPAY_PAYMENT_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      - VNPAY_VERSION=${VNPAY_VERSION:-2.1.0}
       - VNPAY_RETURN_URL=${VNPAY_RETURN_URL:-http://localhost:3000/payment/vnpay/callback}
+      - VNPAY_IPN_URL=${VNPAY_IPN_URL:-http://localhost:5004/webhooks/vnpay/ipn}
       - MOMO_PARTNER_CODE=${MOMO_PARTNER_CODE:-}
       - MOMO_ACCESS_KEY=${MOMO_ACCESS_KEY:-}
       - MOMO_SECRET_KEY=${MOMO_SECRET_KEY:-}
@@ -138,28 +164,61 @@ services:
       - MOMO_REDIRECT_URL=${MOMO_REDIRECT_URL:-http://localhost:3000/payment/momo/callback}
       - MOMO_IPN_URL=${MOMO_IPN_URL:-http://localhost:5004/api/payment/momo/ipn}
       - BANK_TRANSFER_ENABLED=${BANK_TRANSFER_ENABLED:-true}
-      - BANK_ID=${BANK_ID:-970415}
-      - BANK_CODE=${BANK_CODE:-ICB}
-      - BANK_NAME=${BANK_NAME:-VietinBank}
-      - BANK_ACCOUNT_NUMBER=${BANK_ACCOUNT_NUMBER:-1234567890}
-      - BANK_ACCOUNT_NAME=${BANK_ACCOUNT_NAME:-SKYDISH FOOD DELIVERY}
+      - BANK_ID=${BANK_ID:-970422}
+      - BANK_CODE=${BANK_CODE:-MB}
+      - BANK_NAME=${BANK_NAME:-MB Bank}
+      - BANK_ACCOUNT_NUMBER=${BANK_ACCOUNT_NUMBER:-}
+      - BANK_ACCOUNT_NAME=${BANK_ACCOUNT_NAME:-}
       - VIETQR_TEMPLATE=${VIETQR_TEMPLATE:-compact2}
       - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
       - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
       - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER:-}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
-      - SMTP_HOST=${SMTP_HOST:-}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_USERNAME=${SMTP_USERNAME:-}
-      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
-      - SMTP_SECURE=${SMTP_SECURE:-false}
-      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-SkyDish Food Delivery}
-      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-}
     depends_on:
       mongo:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5004/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5004/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  ai-service:
+    build:
+      context: ./backend/ai-service
+      dockerfile: Dockerfile
+    container_name: skydish-ai-service
+    restart: unless-stopped
+    ports:
+      - "${AI_PORT:-5006}:5006"
+    environment:
+      - PORT=5006
+      - RESTAURANT_SERVICE_URL=http://restaurant-service:5002
+      - ORDER_SERVICE_URL=http://order-service:5005
+      - AUTH_SERVICE_URL=http://auth-service:4000
+      - AI_PROVIDER=${AI_PROVIDER:-openai}
+      - AI_MODEL=${AI_MODEL:-}
+      - AI_BASE_URL=${AI_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      - auth-service
+      - restaurant-service
+      - order-service
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5006/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -169,10 +228,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        REACT_APP_GOOGLE_CLIENT_ID: ${REACT_APP_GOOGLE_CLIENT_ID}
     container_name: skydish-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-3300}:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
       - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-http://localhost:4000}
       - REACT_APP_STRIPE_PUBLISHABLE_KEY=${REACT_APP_STRIPE_PUBLISHABLE_KEY:-}

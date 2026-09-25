@@ -5,14 +5,15 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { 
   FaSearch, 
-  FaPlus, 
-  FaEdit, 
   FaTrashAlt, 
   FaEye, 
   FaReceipt, 
   FaMapMarkerAlt, 
   FaStore,
-  FaRedo
+  FaRedo,
+  FaSyncAlt,
+  FaClock,
+  FaMotorcycle
 } from "react-icons/fa";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
@@ -30,11 +31,15 @@ function OrderHome() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const navigate = useNavigate();
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const fetchOrders = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
     setIsUnauthorized(false);
 
     const token = localStorage.getItem("token");
@@ -49,6 +54,7 @@ function OrderHome() {
       const response = await axios.get(`${API_URLS.ORDER}/api/orders`, { headers });
       const orderList = Array.isArray(response.data) ? response.data : (Array.isArray(response.data?.data) ? response.data.data : []);
       setOrders(orderList);
+      setLastUpdated(new Date());
     } catch (err) {
       console.error("Error fetching orders:", err);
       if (err.response?.status === 401 || err.response?.status === 403) {
@@ -57,13 +63,19 @@ function OrderHome() {
         setError("Không thể kết nối đến Dịch vụ Đơn hàng. Vui lòng kiểm tra lại kết nối mạng.");
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  useEffect(() => {
+    if (!autoRefresh || isUnauthorized) return undefined;
+    const refreshTimer = window.setInterval(() => fetchOrders(true), 15000);
+    return () => window.clearInterval(refreshTimer);
+  }, [autoRefresh, isUnauthorized, fetchOrders]);
 
   const getStatusBadge = (status) => {
     const s = (status || "Pending").toLowerCase();
@@ -85,20 +97,23 @@ function OrderHome() {
     })
     .filter((order) => {
       const rest = (order.restaurantId || "").toLowerCase();
+      const restName = (order.restaurantName || order.restaurant?.name || "").toLowerCase();
       const cust = (order.customerId || "").toLowerCase();
       const addr = (order.deliveryAddress || "").toLowerCase();
+      const items = (order.items || []).map((item) => item.name || item.foodId || "").join(" ").toLowerCase();
       const q = searchQuery.toLowerCase();
-      return rest.includes(q) || cust.includes(q) || addr.includes(q);
+      return rest.includes(q) || restName.includes(q) || cust.includes(q) || addr.includes(q) || items.includes(q);
     });
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
+    <div className="customer-experience orders-experience" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
 
-      <main style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
+      <main className="orders-page-main" style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
         <div className="sd-container">
           {/* Header Bar */}
           <div
+            className="orders-page-hero"
             style={{
               display: "flex",
               alignItems: "center",
@@ -113,16 +128,18 @@ function OrderHome() {
                 Quản lý & Lịch sử đơn hàng
               </h1>
               <p style={{ margin: "0.35rem 0 0 0", color: "var(--sd-text-secondary)", fontSize: "var(--sd-font-size-sm)" }}>
-                Theo dõi đơn đang giao, xem lại hóa đơn và tạo đơn hàng tùy chọn
+                Theo dõi tiến trình đơn hàng và xem lại hóa đơn của bạn
               </p>
             </div>
 
-            <div style={{ display: "flex", gap: "0.75rem" }}>
-              <Link to="/orders/new">
-                <Button variant="primary" icon={FaPlus}>
-                  Tạo đơn hàng mới
-                </Button>
-              </Link>
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+              <Button variant="outline" size="sm" icon={FaSyncAlt} onClick={() => fetchOrders()} disabled={loading}>
+                Làm mới
+              </Button>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", color: "var(--sd-text-secondary)", fontSize: "var(--sd-font-size-xs)", cursor: "pointer" }}>
+                <input type="checkbox" checked={autoRefresh} onChange={(event) => setAutoRefresh(event.target.checked)} />
+                Tự cập nhật
+              </label>
             </div>
           </div>
 
@@ -136,7 +153,13 @@ function OrderHome() {
           ) : (
             <>
               {/* Filters & Search */}
+              {lastUpdated && (
+                <p style={{ display: "flex", alignItems: "center", gap: "0.35rem", margin: "0 0 0.75rem", color: "var(--sd-text-muted)", fontSize: "0.75rem" }}>
+                  <FaClock size={12} /> Cập nhật lần cuối: {lastUpdated.toLocaleTimeString("vi-VN")}{autoRefresh ? " · Tự làm mới mỗi 15 giây" : ""}
+                </p>
+              )}
               <div
+                className="orders-filter-bar"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -156,7 +179,7 @@ function OrderHome() {
                   <FaSearch style={{ color: "var(--sd-text-muted)" }} />
                   <input
                     type="text"
-                    placeholder="Tìm kiếm theo Nhà hàng, Khách hàng hoặc Địa chỉ..."
+                    placeholder="Tìm nhà hàng, món ăn hoặc địa chỉ..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{
@@ -243,6 +266,7 @@ function OrderHome() {
                     return (
                       <motion.div
                         key={order._id}
+                        className="order-list-card"
                         layout
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -286,7 +310,7 @@ function OrderHome() {
                             </div>
                             <div>
                               <h3 style={{ margin: 0, fontSize: "var(--sd-font-size-base)", fontWeight: "700" }}>
-                                {order.restaurantId}
+                                {order.restaurantName || order.restaurant?.name || order.restaurantId || "Nhà hàng đối tác SkyDish"}
                               </h3>
                               <p style={{ margin: 0, fontSize: "var(--sd-font-size-xs)", color: "var(--sd-text-muted)" }}>
                                 Mã đơn: <code style={{ color: "var(--sd-text-secondary)" }}>{order._id}</code> • {createdDate}
@@ -326,7 +350,7 @@ function OrderHome() {
                                     color: "var(--sd-text-secondary)",
                                   }}
                                 >
-                                  <strong>{item.foodId}</strong> × {item.quantity} ({formatCurrency(item.price)})
+                                  <strong>{item.name || item.foodId}</strong> × {item.quantity} ({formatCurrency(item.price)})
                                 </span>
                               ))}
                             </div>
@@ -353,14 +377,8 @@ function OrderHome() {
                           }}
                         >
                           <Link to={`/orders/details/${order._id}`}>
-                            <Button variant="outline" size="sm" icon={FaEye}>
-                              Xem hóa đơn & Chi tiết
-                            </Button>
-                          </Link>
-
-                          <Link to={`/orders/edit/${order._id}`}>
-                            <Button variant="secondary" size="sm" icon={FaEdit}>
-                              Chỉnh sửa
+                            <Button variant="outline" size="sm" icon={order.status?.toLowerCase().includes("deliver") ? FaEye : FaMotorcycle}>
+                              {order.status?.toLowerCase().includes("deliver") ? "Xem hóa đơn" : "Theo dõi đơn"}
                             </Button>
                           </Link>
 

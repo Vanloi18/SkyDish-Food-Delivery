@@ -48,10 +48,23 @@ async function createVNPayUrl({
   language = "vn",
   ipAddr = "127.0.0.1",
 }) {
+  if (process.env.VNPAY_ENABLED !== "true") {
+    const error = new Error("VNPay is not enabled.");
+    error.status = 503;
+    throw error;
+  }
+
   const tmnCode = process.env.VNPAY_TMN_CODE || "";
   const secretKey = process.env.VNPAY_HASH_SECRET || "";
   const vnpUrl = process.env.VNPAY_PAYMENT_URL || "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
   const returnUrl = process.env.VNPAY_RETURN_URL || "http://localhost:3000/payment/vnpay/callback";
+  const version = process.env.VNPAY_VERSION || "2.1.0";
+
+  if (!tmnCode || !secretKey) {
+    const error = new Error("VNPay credentials are not configured.");
+    error.status = 503;
+    throw error;
+  }
 
   if (!userId || userId === "GUEST") {
     const error = new Error("Unauthorized: Guest payments are strictly prohibited. Please login.");
@@ -74,7 +87,7 @@ async function createVNPayUrl({
   const createDate = getVNPayDateFormat();
 
   const vnp_Params = {
-    vnp_Version: "2.1.0",
+    vnp_Version: version,
     vnp_Command: "pay",
     vnp_TmnCode: tmnCode,
     vnp_Locale: language || "vn",
@@ -182,8 +195,18 @@ async function verifyVNPayReturn(queryParams) {
   };
 }
 
+async function processVNPayIpn(queryParams) {
+  const result = await verifyVNPayReturn(queryParams);
+  return {
+    RspCode: result.isValid ? "00" : "97",
+    Message: result.isValid ? "Confirm Success" : "Invalid signature",
+    result,
+  };
+}
+
 module.exports = {
   createVNPayUrl,
   verifyVNPayReturn,
+  processVNPayIpn,
   buildVNPaySignData,
 };

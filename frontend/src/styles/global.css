@@ -23,6 +23,11 @@ body {
   overflow-x: hidden;
 }
 
+::selection {
+  background: rgba(217, 74, 45, 0.2);
+  color: var(--sd-text-primary);
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -53,16 +58,16 @@ img {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #f2ece7;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: #cfc0b7;
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #a99488;
 }
 
 /* Container Utilities - Expanded 1200-1400px modern viewport */
@@ -139,7 +144,7 @@ img {
   padding: 0.35rem 0.85rem;
   background-color: var(--sd-primary-light);
   color: var(--sd-primary);
-  border-radius: var(--sd-radius-full);
+  border-radius: 0;
   font-size: var(--sd-font-size-xs);
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -152,13 +157,13 @@ img {
   background-color: var(--sd-bg-surface);
   border-radius: var(--sd-radius-lg);
   border: 1px solid var(--sd-border);
-  box-shadow: var(--sd-shadow-sm);
+  box-shadow: 0 16px 30px -28px rgba(39, 27, 21, 0.46);
   transition: transform var(--sd-transition-fast), box-shadow var(--sd-transition-fast);
 }
 
 .sd-card-interactive:hover {
   transform: translateY(-4px);
-  box-shadow: var(--sd-shadow-lg);
+  box-shadow: 0 16px 26px -24px rgba(54, 33, 23, 0.56);
 }
 
 /* Button Utilities */
@@ -178,12 +183,12 @@ img {
 .sd-btn-primary {
   background-color: var(--sd-primary);
   color: #ffffff;
-  box-shadow: 0 2px 4px rgba(255, 87, 34, 0.2);
+  box-shadow: 0 12px 22px -16px rgba(173, 48, 22, 0.68);
 }
 
 .sd-btn-primary:hover {
   background-color: var(--sd-primary-hover);
-  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.35);
+  box-shadow: 0 16px 28px -17px rgba(173, 48, 22, 0.74);
   transform: translateY(-1px);
 }
 
@@ -232,7 +237,7 @@ img {
 }
 
 .sd-skeleton {
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 37%, #e2e8f0 63%);
+  background: linear-gradient(90deg, #eee5df 25%, #fbf7f3 37%, #eee5df 63%);
   background-size: 200% 100%;
   animation: sd-shimmer 1.5s infinite;
   border-radius: var(--sd-radius-sm);

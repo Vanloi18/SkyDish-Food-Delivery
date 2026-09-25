@@ -4,7 +4,7 @@ const router = express.Router();
 router.get("/health", (req, res) => res.status(200).json({ status: "ok", service: "payment-service", timestamp: new Date().toISOString() }));
 const Payment = require("../models/PaymentModel");
 const { processStripePayment } = require("../services/paymentProviders/stripeProvider");
-const { createVNPayUrl, verifyVNPayReturn } = require("../services/paymentProviders/vnpayProvider");
+const { createVNPayUrl, verifyVNPayReturn, processVNPayIpn } = require("../services/paymentProviders/vnpayProvider");
 const { createMoMoPayment, verifyMoMoNotification } = require("../services/paymentProviders/momoProvider");
 const { processCodPayment } = require("../services/paymentProviders/codProvider");
 const {
@@ -122,6 +122,21 @@ router.get("/vnpay/callback", async (req, res) => {
     return res.status(500).json({ error: "VNPay signature verification failed." });
   }
 });
+
+const handleVNPayIpn = async (req, res) => {
+  try {
+    const result = await processVNPayIpn(req.body);
+    return res.status(result.RspCode === "00" ? 200 : 400).json({
+      RspCode: result.RspCode,
+      Message: result.Message,
+    });
+  } catch (error) {
+    console.error("❌ VNPay IPN error:", error.message || error);
+    return res.status(500).json({ RspCode: "99", Message: "Unknown error" });
+  }
+};
+
+router.post("/vnpay/ipn", handleVNPayIpn);
 
 // ==========================================
 // 3. MOMO PAYMENT FLOW
@@ -344,3 +359,4 @@ router.get("/status/:orderId", async (req, res) => {
 });
 
 module.exports = router;
+module.exports.handleVNPayIpn = handleVNPayIpn;

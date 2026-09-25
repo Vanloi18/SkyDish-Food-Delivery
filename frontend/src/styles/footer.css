@@ -154,3 +154,38 @@
   align-items: center;
   gap: 1rem;
 }
+
+/* SkyDish Studio footer: an editorial closing block with restrained contrast. */
+.home-footer {
+  margin-top: 0;
+  padding: clamp(3rem, 6vw, 5.5rem) 0 1.4rem;
+  background: #27221f;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #c4bbb5;
+}
+
+.footer-grid { grid-template-columns: minmax(230px, 1.55fr) 0.72fr 0.9fr minmax(260px, 1.18fr); gap: clamp(1.8rem, 4vw, 4.5rem); margin-bottom: clamp(2.5rem, 5vw, 4rem); }
+.footer-brand-title { color: #fffaf6; font-size: 1.42rem; }
+.footer-brand-title span { color: #ff7652; }
+.footer-description { color: #bcb1aa; font-size: 0.83rem; line-height: 1.7; }
+.footer-col-title { margin-bottom: 1rem; color: #fff8f4; font-size: 0.68rem; letter-spacing: 0.13em; }
+.footer-links-list { gap: 0.56rem; }
+.footer-link-item { color: #bcb1aa; font-size: 0.82rem; }
+.footer-link-item:hover { color: #ff9a7f; transform: none; }
+.footer-social-links { gap: 0.5rem; }
+.footer-social-btn { width: 34px; height: 34px; border-radius: 9px; background: #38312e; color: #fff6f1; }
+.footer-social-btn:hover { background: #e9562c; transform: translateY(-2px); }
+.footer-newsletter-input-group { gap: 0.4rem; }
+.footer-newsletter-input { min-width: 0; border-color: #514641; border-radius: 9px; background: #332c29; color: #fff; font-size: 0.78rem; }
+.footer-newsletter-input:focus { border-color: #e9562c; }
+.footer-newsletter-input-group .sd-button { border-radius: 9px; background: #e9562c; }
+.footer-bottom-bar { padding-top: 1.4rem; border-top-color: #443a35; color: #968a83; }
+.footer-badges { gap: 0.8rem; color: #b7aaa3; }
+
+@media (max-width: 980px) { .footer-grid { grid-template-columns: 1.2fr 1fr; } }
+@media (max-width: 600px) {
+  .home-footer { padding-top: 3rem; }
+  .footer-grid { grid-template-columns: 1fr; gap: 1.7rem; }
+  .footer-bottom-bar { align-items: flex-start; flex-direction: column; }
+  .footer-badges { align-items: flex-start; flex-direction: column; gap: 0.35rem; }
+}

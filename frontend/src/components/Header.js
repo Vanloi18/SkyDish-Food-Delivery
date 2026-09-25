@@ -13,13 +13,15 @@ import {
   FaReceipt,
   FaChevronDown,
   FaBars,
-  FaBell
+  FaBell,
+  FaSearch
 } from "react-icons/fa";
 import { CartContext } from "../pages/contexts/CartContext";
 import Sidebar from "./Sidebar";
 import Button from "./common/Button";
 import { validateRestaurantToken } from "../layouts/RestaurantPartnerLayout/RestaurantPartnerGuard";
 import { getValidToken, getAuthCustomer, clearCustomerAuth } from "../utils/authHelper";
+import SkyDishAssistant from "./assistant/SkyDishAssistant";
 import "../styles/header.css";
 
 function Header() {
@@ -31,6 +33,7 @@ function Header() {
   const [userProfile, setUserProfile] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [headerSearch, setHeaderSearch] = useState("");
 
   const { totalItemCount } = useContext(CartContext) || { totalItemCount: 0 };
   const navigate = useNavigate();
@@ -179,6 +182,12 @@ function Header() {
 
   const isActive = (path) => location.pathname === path;
 
+  const handleHeaderSearch = (event) => {
+    event.preventDefault();
+    const query = headerSearch.trim();
+    navigate(query ? `/customer/home?q=${encodeURIComponent(query)}` : "/customer/home");
+  };
+
   return (
     <>
       <motion.header
@@ -191,9 +200,17 @@ function Header() {
           <div
             className="hamburger-menu"
             onClick={() => setSidebarOpen(true)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSidebarOpen(true);
+              }
+            }}
             title="Mở menu điều hướng"
             role="button"
             tabIndex={0}
+            aria-label="Mở menu điều hướng"
+            aria-expanded={isSidebarOpen}
           >
             <FaBars size={18} />
           </div>
@@ -227,6 +244,17 @@ function Header() {
               Đơn hàng của tôi
             </Link>
           </nav>
+
+          <form className="header-search" onSubmit={handleHeaderSearch} role="search">
+            <FaSearch aria-hidden="true" size={14} />
+            <input
+              value={headerSearch}
+              onChange={(event) => setHeaderSearch(event.target.value)}
+              placeholder="Tìm món ăn, nhà hàng..."
+              aria-label="Tìm món ăn hoặc nhà hàng"
+            />
+            <button type="submit" aria-label="Tìm kiếm">Tìm</button>
+          </form>
         </div>
 
         <div className="header-right">
@@ -236,6 +264,8 @@ function Header() {
               type="button"
               className="portals-trigger-btn"
               onClick={() => setShowPortalsDropdown((v) => !v)}
+              aria-expanded={showPortalsDropdown}
+              aria-haspopup="menu"
             >
               Cổng đối tác <FaChevronDown size={10} />
             </button>
@@ -294,6 +324,8 @@ function Header() {
               className="cart-header-btn"
               title="Thông báo"
               onClick={() => setShowNotifDropdown((v) => !v)}
+              aria-expanded={showNotifDropdown}
+              aria-haspopup="dialog"
               style={{ position: "relative" }}
             >
               <FaBell size={17} />
@@ -409,6 +441,16 @@ function Header() {
               <div
                 className="profile-trigger"
                 onClick={() => setShowProfileDropdown((v) => !v)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setShowProfileDropdown((value) => !value);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-expanded={showProfileDropdown}
+                aria-haspopup="menu"
               >
                 <FaUserCircle size={22} style={{ color: "var(--sd-primary)" }} />
                 <span
@@ -484,6 +526,7 @@ function Header() {
         isLoggedIn={isLoggedIn}
         onLogout={handleLogout}
       />
+      <SkyDishAssistant />
     </>
   );
 }

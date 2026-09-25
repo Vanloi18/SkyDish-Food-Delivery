@@ -10,7 +10,8 @@ import {
   FaReceipt, 
   FaCheckCircle,
   FaStar,
-  FaTimes
+  FaTimes,
+  FaMotorcycle
 } from "react-icons/fa";
 import { jsPDF } from "jspdf";
 import Header from "./Header";
@@ -26,6 +27,7 @@ function OrderDetails() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   // Review states
   const [isReviewModalOpen, setReviewModalOpen] = useState(false);
@@ -47,27 +49,34 @@ function OrderDetails() {
   }, [id]);
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      setLoading(true);
-      setError("");
+    const fetchOrder = async (silent = false) => {
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
       try {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
         const res = await axios.get(`${API_URLS.ORDER}/api/orders/${id}`, { headers });
         setOrder(res.data);
+        setLastUpdated(new Date());
       } catch (err) {
         console.error("Error fetching order details:", err);
         setError("Không thể tải chi tiết đơn hàng. Vui lòng kiểm tra lại mã đơn.");
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     };
 
+    let refreshTimer;
     if (id) {
       fetchOrder();
       checkExistingReview();
+      refreshTimer = window.setInterval(() => fetchOrder(true), 15000);
     }
+
+    return () => window.clearInterval(refreshTimer);
   }, [id, checkExistingReview]);
 
   const handleSubmitReview = async (e) => {
@@ -213,19 +222,29 @@ function OrderDetails() {
     confirmed: 1,
     preparing: 2,
     "out for delivery": 3,
+    delivering: 3,
     delivered: 4,
   };
   const currentStepIdx = mapStatusToIdx[currentStatus.toLowerCase()] ?? 0;
+  const isCancelled = currentStatus.toLowerCase().includes("cancel");
+  const deliveryPartner = order?.deliveryPartner || order?.driver || order?.shipper || order?.delivery?.driver;
+  const deliveryPartnerName = typeof deliveryPartner === "object"
+    ? (deliveryPartner.name || deliveryPartner.fullName || deliveryPartner.driverName || "")
+    : "";
+  const deliveryPartnerPhone = typeof deliveryPartner === "object"
+    ? (deliveryPartner.phone || deliveryPartner.phoneNumber || deliveryPartner.contactNumber || "")
+    : "";
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
+    <div className="customer-experience order-details-experience" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
 
-      <main style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
+      <main className="order-details-main" style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
         <div className="sd-container">
           <div style={{ marginBottom: "1.5rem" }}>
             <button
               type="button"
+              className="order-details-back-link"
               onClick={() => navigate("/orders")}
               style={{
                 display: "inline-flex",
@@ -264,6 +283,7 @@ function OrderDetails() {
             <div style={{ maxWidth: "800px", margin: "0 auto" }}>
               {/* Main Card */}
               <motion.div
+                className="order-details-card"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 style={{
@@ -304,6 +324,7 @@ function OrderDetails() {
                     </h2>
                     <p style={{ margin: 0, fontSize: "var(--sd-font-size-xs)", color: "var(--sd-text-muted)" }}>
                       Đặt lúc: {order.createdAt ? new Date(order.createdAt).toLocaleString() : "Gần đây"}
+                      {lastUpdated && ` · Cập nhật ${lastUpdated.toLocaleTimeString("vi-VN")}`}
                     </p>
                   </div>
 
@@ -317,7 +338,13 @@ function OrderDetails() {
                   <h4 style={{ fontSize: "var(--sd-font-size-xs)", fontWeight: "700", textTransform: "uppercase", color: "var(--sd-text-muted)", marginBottom: "1rem" }}>
                     Tiến trình giao hàng
                   </h4>
+                  {isCancelled && (
+                    <div style={{ marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: "var(--sd-radius-md)", backgroundColor: "var(--sd-danger-light)", color: "var(--sd-danger-hover)", fontSize: "var(--sd-font-size-sm)", fontWeight: "600" }}>
+                      Đơn hàng này đã được hủy và không còn được giao.
+                    </div>
+                  )}
                   <div
+                    className="order-tracking-timeline"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -331,8 +358,9 @@ function OrderDetails() {
                     {steps.map((stepName, sIdx) => {
                       const isCompleted = sIdx <= currentStepIdx;
                       return (
-                        <div key={stepName} style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: "90px", textAlign: "center" }}>
+                        <div key={stepName} className={`order-tracking-step ${isCompleted ? "is-complete" : ""}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: "90px", textAlign: "center" }}>
                           <div
+                            className="order-tracking-marker"
                             style={{
                               width: "36px",
                               height: "36px",
@@ -386,7 +414,7 @@ function OrderDetails() {
                       Đối tác nhà hàng
                     </p>
                     <p style={{ margin: 0, fontWeight: "700", color: "var(--sd-text-primary)" }}>
-                      {order.restaurantId}
+                              {order.restaurantName || order.restaurant?.name || order.restaurantId || "Nhà hàng đối tác SkyDish"}
                     </p>
                   </div>
 
@@ -398,6 +426,18 @@ function OrderDetails() {
                       <FaMapMarkerAlt style={{ color: "var(--sd-primary)" }} /> {order.deliveryAddress}
                     </p>
                   </div>
+
+                  {deliveryPartnerName && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <p style={{ margin: "0 0 0.25rem 0", fontSize: "var(--sd-font-size-xs)", fontWeight: "600", color: "var(--sd-text-muted)" }}>
+                        Đối tác giao hàng
+                      </p>
+                      <p style={{ margin: 0, fontWeight: "600", color: "var(--sd-text-primary)", display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+                        <FaMotorcycle style={{ color: "var(--sd-primary)" }} /> {deliveryPartnerName}
+                        {deliveryPartnerPhone && <span style={{ color: "var(--sd-text-secondary)", fontWeight: "500" }}>· {deliveryPartnerPhone}</span>}
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <p style={{ margin: "0 0 0.25rem 0", fontSize: "var(--sd-font-size-xs)", fontWeight: "600", color: "var(--sd-text-muted)" }}>
@@ -444,7 +484,7 @@ function OrderDetails() {
                     <tbody>
                       {order.items?.map((item, idx) => (
                         <tr key={idx} style={{ borderBottom: "1px solid var(--sd-border)" }}>
-                          <td style={{ padding: "0.75rem 0", fontWeight: "600" }}>{item.foodId}</td>
+                          <td style={{ padding: "0.75rem 0", fontWeight: "600" }}>{item.name || item.foodId}</td>
                           <td style={{ padding: "0.75rem", textAlign: "center" }}>{item.quantity}</td>
                           <td style={{ padding: "0.75rem", textAlign: "right" }}>{formatCurrency(item.price)}</td>
                           <td style={{ padding: "0.75rem 0", textAlign: "right", fontWeight: "700" }}>
