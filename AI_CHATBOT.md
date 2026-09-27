@@ -12,7 +12,7 @@ Customer UI -> /api/ai/chat -> ai-service
                               -> Open-Meteo weather tools when a user location is available
 ```
 
-The current provider is `rules`: intent detection and recommendation orchestration work without an external model key. The service boundary is ready for a model provider later through `AI_PROVIDER`, `AI_MODEL`, and `OPENAI_API_KEY`.
+The current provider is `rules`: intent detection and recommendation orchestration work without an external model key. The service supports `rules`, OpenAI-compatible providers, and Gemini through `AI_PROVIDER`, `AI_MODEL`, `OPENAI_API_KEY`, and `GEMINI_API_KEY`.
 
 ## Implemented Capabilities
 
@@ -35,7 +35,10 @@ AI_PORT=5006
 AI_PROVIDER=rules
 AI_MODEL=
 OPENAI_API_KEY=
+GEMINI_API_KEY=
 ```
+
+To use Gemini, set `AI_PROVIDER=gemini`, add your Gemini key as `GEMINI_API_KEY`, and optionally set `AI_MODEL=gemini-flash-latest`. Keep the key in the backend environment only; never put it in frontend code.
 
 The AI service uses these internal defaults in Docker:
 
