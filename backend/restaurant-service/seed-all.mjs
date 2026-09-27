@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { seedRealRestaurants } from './seed-real-restaurants.mjs';
+import { seedDemoReviews } from './seed-demo-reviews.mjs';
 
 const DEMO_PASSWORD = 'password123';
 
@@ -347,6 +349,12 @@ export async function seedAll() {
   }
 
   console.log(`✅ Seeded ${VIETNAM_RESTAURANTS.length} Restaurants & Dishes successfully!`);
+
+  const expanded = await seedRealRestaurants(db, hashedPassword);
+  console.log(`✅ Seeded ${expanded.total} additional real Vietnam restaurants (${expanded.restaurants} new, ${expanded.foods} new dishes).`);
+
+  const reviewSeed = await seedDemoReviews(db);
+  console.log(`✅ Seeded demo review flow (${reviewSeed.customersCreated} customers, ${reviewSeed.ordersCreated} delivered orders, ${reviewSeed.reviewsCreated} reviews).`);
 }
 
 // Standalone execution

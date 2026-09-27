@@ -540,7 +540,7 @@ function OrderDetails() {
                         variant={existingReview ? "outline" : "primary"}
                         size="sm"
                         icon={FaStar}
-                        onClick={() => setReviewModalOpen(true)}
+                        onClick={() => navigate(`/reviews/write/${id}`)}
                       >
                         {existingReview ? `Đã đánh giá (${existingReview.rating}⭐)` : "Đánh giá đơn hàng"}
                       </Button>

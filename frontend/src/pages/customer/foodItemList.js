@@ -1,6 +1,6 @@
 import { API_URLS } from '../../config/api';
 import React, { useEffect, useState, useContext } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { 
@@ -13,7 +13,8 @@ import {
   FaShoppingCart, 
   FaUtensils, 
   FaCheck,
-  FaExclamationCircle
+  FaExclamationCircle,
+  FaCommentAlt
 } from "react-icons/fa";
 import { CartContext } from "../contexts/CartContext";
 import Header from "../../components/Header";
@@ -27,6 +28,8 @@ import { resolveImageUrl, handleImageError } from "../../utils/imageHelper";
 
 function FoodItemList() {
   const { restaurantId } = useParams();
+  const [searchParams] = useSearchParams();
+  const featuredFoodName = searchParams.get("food") || "";
   const navigate = useNavigate();
   const { addToCart, totalItemCount, totalAmount } = useContext(CartContext);
 
@@ -44,6 +47,8 @@ function FoodItemList() {
     }
   });
   const [addedItemToast, setAddedItemToast] = useState(null);
+  const [foodReviews, setFoodReviews] = useState({});
+  const [expandedReviews, setExpandedReviews] = useState({});
 
   useEffect(() => {
     localStorage.setItem("skydish_favorite_foods", JSON.stringify(favorites));
@@ -64,6 +69,7 @@ function FoodItemList() {
         );
         const foodList = Array.isArray(foodRes.data) ? foodRes.data : [];
         setFoods(foodList);
+        if (featuredFoodName) setFoodQuery(featuredFoodName);
 
         // 2. Fetch Restaurant Info
         try {
@@ -74,6 +80,15 @@ function FoodItemList() {
         } catch {
           setRestaurant({ name: "Nhà hàng SkyDish", location: "Trung tâm ẩm thực" });
         }
+
+        try {
+          const reviewRes = await axios.get(
+            `${API_URLS.RESTAURANT}/api/reviews/restaurant/${restaurantId}/foods`
+          );
+          setFoodReviews(reviewRes.data && typeof reviewRes.data === "object" ? reviewRes.data : {});
+        } catch {
+          setFoodReviews({});
+        }
       } catch (err) {
         console.error("Food items load error:", err);
         setError("Không thể tải danh sách món ăn của nhà hàng này. Vui lòng kiểm tra lại kết nối.");
@@ -83,7 +98,7 @@ function FoodItemList() {
     };
 
     if (restaurantId) fetchData();
-  }, [restaurantId]);
+  }, [restaurantId, featuredFoodName]);
 
   const toggleFavorite = (foodId) => {
     setFavorites((prev) => ({
@@ -143,6 +158,10 @@ function FoodItemList() {
       );
     });
   const restaurantVisual = restaurant?.coverImage || restaurant?.bannerImage || restaurant?.imageURL || restaurant?.image || restaurant?.profilePicture;
+
+  const toggleFoodReviews = (foodId) => {
+    setExpandedReviews((current) => ({ ...current, [foodId]: !current[foodId] }));
+  };
 
   return (
     <div className="customer-experience customer-menu-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
@@ -494,6 +513,38 @@ function FoodItemList() {
                           <span className="food-menu-rating">
                             <FaStar /> {food.rating}
                           </span>
+                        )}
+                        {foodReviews[food._id] ? (
+                          <div className="food-review-summary">
+                            <div className="food-review-summary-line">
+                              <span className="food-review-stars" aria-label={`${foodReviews[food._id].averageRating} trên 5 sao`}>
+                                {"★".repeat(Math.round(foodReviews[food._id].averageRating))}{"☆".repeat(5 - Math.round(foodReviews[food._id].averageRating))}
+                              </span>
+                              <strong>{foodReviews[food._id].averageRating}</strong>
+                              <span>({foodReviews[food._id].totalReviews} đánh giá)</span>
+                              <button type="button" onClick={() => toggleFoodReviews(food._id)} aria-label={`Xem đánh giá món ${food.name}`}>
+                                <FaCommentAlt /> {expandedReviews[food._id] ? "Ẩn đánh giá món" : "Xem đánh giá món"}
+                              </button>
+                            </div>
+                            {expandedReviews[food._id] && (
+                              <div className="food-review-details">
+                                <div className="food-review-distribution">
+                                  {[5, 4, 3, 2, 1].map((star) => (
+                                    <span key={star}>{star}★ {foodReviews[food._id].distribution?.[star] || 0}</span>
+                                  ))}
+                                </div>
+                                {foodReviews[food._id].comments?.map((review, index) => (
+                                  <blockquote key={`${food._id}-review-${index}`}>
+                                    <strong>{review.customerName || "Khách hàng"} · {review.rating}★</strong>
+                                    <span>{review.comment}</span>
+                                    {review.images?.length > 0 && <div className="food-review-images">{review.images.map((image) => <img key={image} src={resolveImageUrl(image, "food")} alt="Ảnh món từ khách hàng" />)}</div>}
+                                  </blockquote>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="food-review-empty"><FaCommentAlt /> Chưa có đánh giá từ đơn đã giao</div>
                         )}
                         <p
                           style={{

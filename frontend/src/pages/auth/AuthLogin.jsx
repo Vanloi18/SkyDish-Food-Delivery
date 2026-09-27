@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { API_URLS } from "../../config/api";
 import {
+  GoogleOAuthProvider,
   GoogleLogin,
 } from "@react-oauth/google";
 
@@ -20,7 +21,6 @@ import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
-import "../../styles/auth.css";
 
 export default function AuthLogin() {
   const [credentials, setCredentials] = useState({
@@ -207,7 +207,7 @@ export default function AuthLogin() {
   };
 
   return (
-    <>
+    <GoogleOAuthProvider clientId="782759222925-f28343j2js4tc6hm0hicsfvn21362ulm.apps.googleusercontent.com">
       <style>{`
         /* =====================================================
            AUTH LOGIN
@@ -364,6 +364,33 @@ export default function AuthLogin() {
             font-size: 13px;
           }
         }
+        .google-login-section {
+        margin-top: 24px;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  color: #999999;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #eeeeee;
+}
+
+.google-login-button {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
       `}</style>
 
       <div className="login-page">
@@ -541,6 +568,6 @@ export default function AuthLogin() {
 
         <Footer />
       </div>
-    </>
+    </GoogleOAuthProvider>
   );
 }
