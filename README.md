@@ -76,6 +76,23 @@ Hệ thống đã tự động tạo sẵn dữ liệu mẫu (Seeded Data) bao g
 | **Tài xế Shipper** *(Driver)* | `driver@skydish.com` | `password123` | [http://localhost:3300/delivery/login](http://localhost:3300/delivery/login) | Nhận đơn hàng cần giao, cập nhật tiến trình đơn (Đã lấy món, Đang giao, Đã giao), cập nhật vị trí GPS. |
 | **Quản trị viên** *(Super Admin)* | `admin@skydish.com` | `password123` | [http://localhost:3300/superadmin/login](http://localhost:3300/superadmin/login) | Bảng điều khiển tổng thể toàn sàn: quản lý tất cả nhà hàng, người dùng, tài xế, doanh thu, nhật ký hệ thống. |
 
+### Đối tác nhà hàng được seed thêm
+
+Các tài khoản dưới đây chỉ dành cho local/demo và đều dùng mật khẩu `password123`:
+
+| Nhà hàng | Email đối tác | Địa chỉ |
+| :--- | :--- | :--- |
+| Bánh Mì Huỳnh Hoa | `partner.banhmi.huynhhoa@skydish.local` | 26 Lê Thị Riêng, Quận 1, TP.HCM |
+| Cơm Tấm Ba Ghiền | `partner.comtam.baghien@skydish.local` | 84 Đặng Văn Ngữ, Phú Nhuận, TP.HCM |
+| Bún Bò Huế Đông Ba | `partner.bunbo.dongba@skydish.local` | 110A Nguyễn Du, Quận 1, TP.HCM |
+| Bún Chả Đắc Kim | `partner.bunchadackim@skydish.local` | 1 Hàng Mành, Hoàn Kiếm, Hà Nội |
+| Chả Cá Thăng Long Đường Thành | `partner.chacathanglong@skydish.local` | 21 Đường Thành, Hoàn Kiếm, Hà Nội |
+| Ngon Garden Nguyễn Du | `partner.ngongarden.nguyendu@skydish.local` | 70 Nguyễn Du, Hai Bà Trưng, Hà Nội |
+| Bánh Cuốn Bà Hoành | `partner.banhcuon.bahoanh@skydish.local` | 29 Thụy Khuê, Tây Hồ, Hà Nội |
+| Hủ Tiếu Thanh Xuân | `partner.hutieu.thanhxuan@skydish.local` | 62 Tôn Thất Thiệp, Quận 1, TP.HCM |
+
+Chi tiết seed và giới hạn cấp phép hình ảnh xem tại [REAL_RESTAURANT_DATA.md](REAL_RESTAURANT_DATA.md).
+
 ---
 
 ## 🌐 BẢNG CỔNG & DỊCH VỤ HỆ THỐNG
@@ -88,9 +105,13 @@ Toàn bộ hệ thống chạy độc lập qua 7 container Docker:
 | `skydish-auth-service` | **Auth Service** | `4000` | [http://localhost:4000/health](http://localhost:4000/health) | Đăng ký, đăng nhập, mã hóa bcrypt, cấp phát và xác thực JWT token |
 | `skydish-restaurant-service` | **Restaurant Service** | `5002` | [http://localhost:5002/health](http://localhost:5002/health) | Quản lý danh mục nhà hàng, món ăn, tìm kiếm fuzzy search, upload ảnh, khuyến mãi, đánh giá |
 | `skydish-delivery-service` | **Delivery Service** | `5003` | [http://localhost:5003/health](http://localhost:5003/health) | Điều phối giao hàng, quản lý shipper, theo dõi trạng thái giao vận thời gian thực |
-| `skydish-payment-service` | **Payment Service** | `5004` | [http://localhost:5004/health](http://localhost:5004/health) | Xử lý thanh toán MoMo, VNPay, VietQR, Stripe, COD; xác thực chữ ký HMAC; Swagger `/api-docs` |
+| `skydish-payment-service` | **Payment Service** | `5004` | [http://localhost:5004/health](http://localhost:5004/health) | Xử lý thanh toán PayOS, MoMo, VNPay, VietQR, Stripe, COD; xác thực chữ ký; Swagger `/api-docs` |
 | `skydish-order-service` | **Order Service** | `5005` | [http://localhost:5005/health](http://localhost:5005/health) | Tính toán giá máy chủ (Anti-Tamper), tạo đơn hàng, quản lý vòng đời đơn, gửi email xác nhận |
 | `skydish-mongo` | **MongoDB Database** | `27017` | `mongodb://localhost:27017` | Cơ sở dữ liệu NoSQL lưu trữ tập trung `food_delivery_db` |
+
+### Cấu hình PayOS
+
+Điền `PAYOS_CLIENT_ID`, `PAYOS_API_KEY` và `PAYOS_CHECKSUM_KEY` trong `.env` từ kênh thanh toán PayOS của bạn. Đặt `PAYOS_RETURN_URL` và `PAYOS_CANCEL_URL` theo địa chỉ frontend đang mở. Đăng ký `PAYOS_WEBHOOK_URL` trong trang quản lý kênh PayOS; URL webhook cần truy cập được công khai từ Internet (dùng HTTPS khi triển khai production). Sau khi cập nhật cấu hình, chạy `docker compose up -d --build payment-service`.
 
 ---
 
