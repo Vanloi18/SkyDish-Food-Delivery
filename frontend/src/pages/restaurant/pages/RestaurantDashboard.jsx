@@ -1745,36 +1745,31 @@ export default function RestaurantDashboard() {
         }
       >
         {selectedOrder && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", fontSize: "0.85rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.6rem" }}>
-              <span style={{ color: "#64748b" }}>Khách hàng:</span>
-              <strong style={{ color: "#0f172a" }}>{selectedOrder.customerName || selectedOrder.customerId || "Khách Hàng"}</strong>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", fontSize: "0.85rem", maxHeight: "70vh", overflowY: "auto", paddingRight: "0.25rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "0.85rem" }}>
+              <div>
+                <span style={{ color: "#64748b" }}>Khách hàng</span>
+                <strong style={{ display: "block", color: "#0f172a", marginTop: "0.2rem" }}>{selectedOrder.customerName && selectedOrder.customerName !== selectedOrder.customerId ? selectedOrder.customerName : "Chưa có tên khách hàng"}</strong>
+                {selectedOrder.customerId && <small style={{ color: "#94a3b8" }}>Mã khách: {selectedOrder.customerId}</small>}
+              </div>
+              {selectedOrder.customerPhone && <div><span style={{ color: "#64748b" }}>Điện thoại</span><strong style={{ display: "block", marginTop: "0.2rem" }}>{selectedOrder.customerPhone}</strong></div>}
+              {selectedOrder.customerEmail && <div><span style={{ color: "#64748b" }}>Email</span><strong style={{ display: "block", marginTop: "0.2rem", overflowWrap: "anywhere" }}>{selectedOrder.customerEmail}</strong></div>}
+              <div>
+                <span style={{ color: "#64748b" }}>Nhà hàng</span>
+                <strong style={{ display: "block", color: "#0f172a", marginTop: "0.2rem" }}>{selectedOrder.restaurantName && selectedOrder.restaurantName !== selectedOrder.restaurantId ? selectedOrder.restaurantName : "Chưa có tên nhà hàng"}</strong>
+                {selectedOrder.restaurantId && <small style={{ color: "#94a3b8" }}>Mã nhà hàng: {selectedOrder.restaurantId}</small>}
+              </div>
+              <div><span style={{ color: "#64748b" }}>Thời gian đặt</span><strong style={{ display: "block", marginTop: "0.2rem" }}>{selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleString("vi-VN") : "Không có dữ liệu"}</strong></div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.6rem" }}>
-              <span style={{ color: "#64748b" }}>Địa chỉ giao:</span>
-              <strong style={{ color: "#0f172a", textAlign: "right", maxWidth: "300px" }}>{selectedOrder.deliveryAddress || "Hà Nội"}</strong>
+            <div style={{ padding: "0.75rem", backgroundColor: "#f8fafc", borderRadius: "8px" }}>
+              <span style={{ color: "#64748b" }}>Địa chỉ giao hàng</span>
+              <strong style={{ display: "block", color: "#0f172a", marginTop: "0.2rem" }}>{selectedOrder.deliveryAddress || "Chưa có địa chỉ"}</strong>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.6rem" }}>
-              <span style={{ color: "#64748b" }}>Thanh toán:</span>
-              <strong style={{ color: "#0f172a" }}>
-                {selectedOrder.paymentMethod === "BANK_TRANSFER" ? "Chuyển khoản (MB Bank)" : (selectedOrder.paymentMethod || "COD")} ({selectedOrder.paymentStatus === "Completed" ? "Đã thanh toán" : selectedOrder.paymentStatus === "Failed" ? "Thất bại/Đã hủy" : "Chờ thanh toán"})
-              </strong>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.6rem" }}>
-              <span style={{ color: "#64748b" }}>Trạng thái:</span>
-              <span style={{
-                padding: "0.2rem 0.6rem",
-                borderRadius: "9999px",
-                fontSize: "0.75rem",
-                fontWeight: "700",
-                backgroundColor: selectedOrder.status === "Delivered" ? "#ecfdf5" : selectedOrder.status === "Preparing" ? "#eff6ff" : selectedOrder.status === "Confirmed" ? "#f0fdf4" : selectedOrder.status === "Canceled" ? "#fef2f2" : "#fff7ed",
-                color: selectedOrder.status === "Delivered" ? "#047857" : selectedOrder.status === "Preparing" ? "#2563eb" : selectedOrder.status === "Confirmed" ? "#16a34a" : selectedOrder.status === "Canceled" ? "#dc2626" : "#ea580c"
-              }}>
-                {selectedOrder.status === "Pending" ? "Chờ xác nhận" : selectedOrder.status === "Confirmed" ? "Đã xác nhận" : selectedOrder.status === "Preparing" ? "Đang chuẩn bị" : selectedOrder.status === "Out for Delivery" ? "Đang giao" : selectedOrder.status === "Delivered" ? "Đã giao" : "Đã hủy"}
-              </span>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
+              <div><span style={{ color: "#64748b" }}>Thanh toán</span><strong style={{ display: "block", marginTop: "0.2rem" }}>{selectedOrder.paymentMethod === "BANK_TRANSFER" ? "Chuyển khoản (MB Bank)" : selectedOrder.paymentMethod || "COD"} · { ["Paid", "Completed"].includes(selectedOrder.paymentStatus) ? "Đã thanh toán" : selectedOrder.paymentStatus === "Failed" ? "Thất bại/Đã hủy" : "Chờ thanh toán"}</strong></div>
+              <div><span style={{ color: "#64748b" }}>Trạng thái đơn</span><strong style={{ display: "block", marginTop: "0.2rem" }}>{selectedOrder.status === "Pending" ? "Chờ xác nhận" : selectedOrder.status === "Confirmed" ? "Đã xác nhận" : selectedOrder.status === "Preparing" ? "Đang chuẩn bị" : selectedOrder.status === "Out for Delivery" || selectedOrder.status === "Delivering" ? "Đang giao" : selectedOrder.status === "Delivered" ? "Đã giao" : "Đã hủy"}</strong></div>
             </div>
 
             {selectedOrder.status === "Canceled" && (
@@ -1803,19 +1798,29 @@ export default function RestaurantDashboard() {
                 <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#64748b", display: "block", marginBottom: "0.4rem" }}>Danh sách món:</span>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
                   {selectedOrder.items.map((item, idx) => (
-                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem" }}>
-                      <span>{item.name} <span style={{ color: "#94a3b8" }}>x{item.quantity}</span></span>
-                      <strong style={{ color: "#0f172a" }}>{formatCurrency((item.price || 0) * (item.quantity || 1))}</strong>
+                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", gap: "1rem", fontSize: "0.82rem" }}>
+                      <span>{item.name || item.foodId} <span style={{ color: "#64748b" }}>× {item.quantity} · {formatCurrency(item.price || 0)}/món</span></span>
+                      <strong style={{ color: "#0f172a", whiteSpace: "nowrap" }}>{formatCurrency((item.price || 0) * (item.quantity || 1))}</strong>
                     </div>
                   ))}
+                  <div style={{ borderTop: "1px solid var(--sd-border)", paddingTop: "0.65rem", marginTop: "0.65rem", display: "flex", flexDirection: "column", gap: "0.35rem", color: "#475569" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span>Tạm tính</span><span>{formatCurrency(selectedOrder.subtotal ?? selectedOrder.totalPrice ?? 0)}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span>Phí giao hàng</span><span>{formatCurrency(selectedOrder.deliveryFee || 0)}</span></div>
+                    {(selectedOrder.discount || 0) > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: "#059669" }}><span>Giảm giá{selectedOrder.couponCode ? ` · ${selectedOrder.couponCode}` : ""}</span><span>-{formatCurrency(selectedOrder.discount)}</span></div>}
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1rem", fontWeight: "800", color: "#0f172a", borderTop: "1px solid var(--sd-border)", paddingTop: "0.5rem", marginTop: "0.2rem" }}><span>Tổng thanh toán</span><span style={{ color: "var(--merch-primary)" }}>{formatCurrency(selectedOrder.totalPrice || 0)}</span></div>
+                  </div>
                 </div>
               </div>
             )}
 
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.05rem", fontWeight: "800", borderTop: "2px solid #f1f5f9", paddingTop: "0.75rem" }}>
-              <span>Tổng tiền thanh toán:</span>
-              <span style={{ color: "var(--merch-primary)" }}>{formatCurrency(selectedOrder.totalPrice || 0)}</span>
-            </div>
+            {selectedOrder.status === "Canceled" && (
+              <div style={{ padding: "0.75rem", backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", color: "#991b1b" }}>
+                <strong>Thông tin hủy đơn</strong>
+                <div style={{ marginTop: "0.3rem" }}>Lý do: {selectedOrder.cancellationReason || "Không nêu lý do"}</div>
+                {selectedOrder.cancelledBy && <div>Hủy bởi: {selectedOrder.cancelledBy}</div>}
+                {selectedOrder.cancelledAt && <div>Thời gian: {new Date(selectedOrder.cancelledAt).toLocaleString("vi-VN")}</div>}
+              </div>
+            )}
           </div>
         )}
       </AdminModal>

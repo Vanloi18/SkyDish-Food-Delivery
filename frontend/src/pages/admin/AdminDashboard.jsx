@@ -157,7 +157,7 @@ const AdminDashboard = () => {
   }, [orders]);
 
   const paymentStats = useMemo(() => {
-    const counts = { STRIPE: 0, VNPAY: 0, MOMO: 0, COD: 0 };
+    const counts = { STRIPE: 0, VNPAY: 0, MOMO: 0, PAYOS: 0, BANK_TRANSFER: 0, COD: 0 };
     orders.forEach((o) => {
       const method = (o.paymentMethod || "STRIPE").toUpperCase();
       if (counts[method] !== undefined) counts[method]++;
@@ -872,7 +872,7 @@ const AdminDashboard = () => {
               <div className="admin-page-header">
                 <div className="admin-page-title-group">
                   <h1>Quản lý thanh toán</h1>
-                  <p>Giám sát sổ cái các giao dịch thanh toán qua Stripe, VNPay, MoMo và COD</p>
+                  <p>Giám sát sổ cái các giao dịch thanh toán qua PayOS, Stripe, VNPay, MoMo và COD</p>
                 </div>
               </div>
 
@@ -1087,7 +1087,7 @@ const AdminDashboard = () => {
                       { time: "30/08/2026 20:30", user: superAdminName, action: "Đồng bộ 16 nhà hàng Việt Nam", target: "Restaurants Catalog", result: "Thành công" },
                       { time: "30/08/2026 19:20", user: superAdminName, action: "Chuẩn hóa tiền tệ VND (₫)", target: "Platform Currency", result: "Thành công" },
                       { time: "30/08/2026 19:15", user: superAdminName, action: "Đăng nhập Cổng Quản Trị", target: "SuperAdmin Auth", result: "Thành công" },
-                      { time: "30/08/2026 18:45", user: "System Scheduler", action: "Kiểm tra cổng thanh toán", target: "Stripe / VNPay / MoMo", result: "Hoạt động" },
+                      { time: "30/08/2026 18:45", user: "System Scheduler", action: "Kiểm tra cổng thanh toán", target: "PayOS / Stripe / VNPay / MoMo", result: "Hoạt động" },
                     ].map((log, i) => (
                       <tr key={i}>
                         <td><code>{log.time}</code></td>
@@ -1130,7 +1130,7 @@ const AdminDashboard = () => {
                     </div>
                     <div>
                       <span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Cổng thanh toán hỗ trợ</span>
-                      <p style={{ margin: "0.2rem 0 0 0", fontWeight: "600" }}>Stripe, VNPay (SHA512), MoMo (SHA256), COD</p>
+                      <p style={{ margin: "0.2rem 0 0 0", fontWeight: "600" }}>PayOS, Stripe, VNPay (SHA512), MoMo (SHA256), COD</p>
                     </div>
                   </div>
                 </div>
@@ -1205,7 +1205,7 @@ const AdminDashboard = () => {
           ========================================================================= */}
       {selectedOrder && (
         <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "1rem" }}>
-          <div style={{ backgroundColor: "#ffffff", borderRadius: "12px", width: "100%", maxWidth: "560px", padding: "2rem", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}>
+          <div style={{ backgroundColor: "#ffffff", borderRadius: "12px", width: "100%", maxWidth: "680px", maxHeight: "calc(100vh - 2rem)", overflowY: "auto", padding: "2rem", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
               <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: "700" }}>Chi tiết đơn hàng: <code>{selectedOrder._id}</code></h3>
               <button type="button" onClick={() => setSelectedOrder(null)} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--admin-text-muted)" }}>
@@ -1213,34 +1213,37 @@ const AdminDashboard = () => {
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", fontSize: "0.875rem" }}>
-              <div>
-                <span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Khách hàng</span>
-                <p style={{ margin: "0.15rem 0 0 0", fontWeight: "700" }}>{selectedOrder.customerId}</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem", fontSize: "0.875rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "0.85rem" }}>
+                <div><span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Khách hàng</span><p style={{ margin: "0.15rem 0 0", fontWeight: "700" }}>{selectedOrder.customerName && selectedOrder.customerName !== selectedOrder.customerId ? selectedOrder.customerName : "Chưa có tên khách hàng"}</p>{selectedOrder.customerId && <small style={{ color: "var(--admin-text-muted)" }}>Mã khách: {selectedOrder.customerId}</small>}</div>
+                {selectedOrder.customerPhone && <div><span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Điện thoại</span><p style={{ margin: "0.15rem 0 0", fontWeight: "700" }}>{selectedOrder.customerPhone}</p></div>}
+                {selectedOrder.customerEmail && <div><span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Email</span><p style={{ margin: "0.15rem 0 0", fontWeight: "700", overflowWrap: "anywhere" }}>{selectedOrder.customerEmail}</p></div>}
+                <div><span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Nhà hàng</span><p style={{ margin: "0.15rem 0 0", fontWeight: "700" }}>{selectedOrder.restaurantName && selectedOrder.restaurantName !== selectedOrder.restaurantId ? selectedOrder.restaurantName : "Chưa có tên nhà hàng"}</p>{selectedOrder.restaurantId && <small style={{ color: "var(--admin-text-muted)" }}>Mã nhà hàng: {selectedOrder.restaurantId}</small>}</div>
+                <div><span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Thời gian đặt</span><p style={{ margin: "0.15rem 0 0", fontWeight: "700" }}>{selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleString("vi-VN") : "Không có dữ liệu"}</p></div>
               </div>
-              <div>
-                <span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Nhà hàng</span>
-                <p style={{ margin: "0.15rem 0 0 0", fontWeight: "700" }}>{selectedOrder.restaurantId}</p>
-              </div>
-              <div>
-                <span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Địa chỉ giao hàng</span>
-                <p style={{ margin: "0.15rem 0 0 0" }}>{selectedOrder.deliveryAddress}</p>
+              <div><span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Địa chỉ giao hàng</span><p style={{ margin: "0.15rem 0 0" }}>{selectedOrder.deliveryAddress || "Chưa có địa chỉ"}</p></div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+                <div><span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Phương thức / thanh toán</span><p style={{ margin: "0.15rem 0 0", fontWeight: "700" }}>{selectedOrder.paymentMethod || "COD"} · { ["Paid", "Completed"].includes(selectedOrder.paymentStatus) ? "Đã thanh toán" : selectedOrder.paymentStatus === "Failed" ? "Thất bại/Đã hủy" : "Chờ thanh toán"}</p></div>
+                <div><span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Trạng thái đơn</span><p style={{ margin: "0.15rem 0 0", fontWeight: "700" }}>{selectedOrder.status === "Pending" ? "Chờ xác nhận" : selectedOrder.status === "Confirmed" ? "Đã xác nhận" : selectedOrder.status === "Preparing" ? "Đang chuẩn bị" : selectedOrder.status === "Out for Delivery" || selectedOrder.status === "Delivering" ? "Đang giao" : selectedOrder.status === "Delivered" ? "Đã giao" : "Đã hủy"}</p></div>
               </div>
               <div>
                 <span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>Danh sách món ăn</span>
                 <div style={{ marginTop: "0.4rem", backgroundColor: "var(--admin-canvas)", borderRadius: "8px", padding: "0.75rem" }}>
                   {selectedOrder.items?.map((it, idx) => (
-                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.35rem", fontSize: "0.82rem" }}>
-                      <span>{it.foodId} x{it.quantity}</span>
-                      <span style={{ fontWeight: "700" }}>{formatCurrency((it.price || 0) * (it.quantity || 1))}</span>
+                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", gap: "1rem", marginBottom: "0.4rem", fontSize: "0.82rem" }}>
+                      <span>{it.name || it.foodId} × {it.quantity} <small style={{ color: "var(--admin-text-muted)" }}>({formatCurrency(it.price || 0)}/món)</small></span>
+                      <span style={{ fontWeight: "700", whiteSpace: "nowrap" }}>{formatCurrency((it.price || 0) * (it.quantity || 1))}</span>
                     </div>
                   ))}
-                  <div style={{ borderTop: "1px solid var(--admin-border)", paddingTop: "0.5rem", marginTop: "0.5rem", display: "flex", justifyContent: "space-between", fontWeight: "800" }}>
-                    <span>Tổng tiền thanh toán:</span>
-                    <span style={{ color: "var(--admin-primary)" }}>{formatCurrency(selectedOrder.totalPrice)}</span>
+                  <div style={{ borderTop: "1px solid var(--admin-border)", paddingTop: "0.6rem", marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span>Tạm tính</span><span>{formatCurrency(selectedOrder.subtotal ?? selectedOrder.totalPrice ?? 0)}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span>Phí giao hàng</span><span>{formatCurrency(selectedOrder.deliveryFee || 0)}</span></div>
+                    {(selectedOrder.discount || 0) > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: "#059669" }}><span>Giảm giá{selectedOrder.couponCode ? ` · ${selectedOrder.couponCode}` : ""}</span><span>-{formatCurrency(selectedOrder.discount)}</span></div>}
+                    <div style={{ borderTop: "1px solid var(--admin-border)", paddingTop: "0.5rem", marginTop: "0.2rem", display: "flex", justifyContent: "space-between", fontWeight: "800" }}><span>Tổng tiền thanh toán</span><span style={{ color: "var(--admin-primary)" }}>{formatCurrency(selectedOrder.totalPrice || 0)}</span></div>
                   </div>
                 </div>
               </div>
+              {selectedOrder.status === "Canceled" && <div style={{ padding: "0.75rem", backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", color: "#991b1b" }}><strong>Thông tin hủy đơn</strong><div style={{ marginTop: "0.3rem" }}>Lý do: {selectedOrder.cancellationReason || "Không nêu lý do"}</div>{selectedOrder.cancelledBy && <div>Hủy bởi: {selectedOrder.cancelledBy}</div>}{selectedOrder.cancelledAt && <div>Thời gian: {new Date(selectedOrder.cancelledAt).toLocaleString("vi-VN")}</div>}</div>}
             </div>
 
             <div style={{ marginTop: "1.5rem", textAlign: "right" }}>

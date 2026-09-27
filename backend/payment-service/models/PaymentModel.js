@@ -7,7 +7,7 @@ const PaymentSchema = new mongoose.Schema({
   currency: { type: String, default: "vnd" },
   paymentMethod: {
     type: String,
-    enum: ["STRIPE", "VNPAY", "MOMO", "COD", "BANK_TRANSFER"],
+    enum: ["STRIPE", "VNPAY", "MOMO", "PAYOS", "COD", "BANK_TRANSFER"],
     default: "STRIPE",
   },
   status: {
@@ -33,6 +33,8 @@ const PaymentSchema = new mongoose.Schema({
   stripeClientSecret: { type: String },
   // VNPay / MoMo / Provider fields
   providerTransactionId: { type: String },
+  payosOrderCode: { type: Number },
+  payosCheckoutUrl: { type: String },
   providerResponse: { type: mongoose.Schema.Types.Mixed },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
