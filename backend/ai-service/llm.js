@@ -1,8 +1,13 @@
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
 
 function modelEnabled() {
-  return Boolean(process.env.OPENAI_API_KEY)
-    && (process.env.AI_PROVIDER || "openai").toLowerCase() !== "rules";
+  const provider = (process.env.AI_PROVIDER || "openai").toLowerCase();
+  if (provider === "gemini") return Boolean(process.env.GEMINI_API_KEY);
+  return Boolean(process.env.OPENAI_API_KEY) && provider !== "rules";
+}
+
+function providerName() {
+  return (process.env.AI_PROVIDER || "openai").toLowerCase();
 }
 
 function compactContext(context = {}) {
@@ -34,6 +39,35 @@ export async function enhanceResponse({ message, result, intent, context = {} })
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
   try {
+    if (providerName() === "gemini") {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${process.env.AI_MODEL || "gemini-flash-latest"}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`,
+        {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: system }] },
+            contents: [
+              ...compactContext(context).map((entry) => ({
+                role: entry.role === "assistant" ? "model" : "user",
+                parts: [{ text: entry.content }],
+              })),
+              { role: "user", parts: [{ text: `DỮ LIỆU SKYDISH:\n${JSON.stringify(payload)}` }] },
+            ],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 220 },
+          }),
+        },
+      );
+      if (!response.ok) throw new Error(`Gemini request failed: ${response.status}`);
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts
+        ?.map((part) => part.text || "")
+        .join("")
+        .trim();
+      return text ? { ...result, text, modelEnhanced: true, modelProvider: "gemini" } : result;
+    }
+
     const response = await fetch(`${process.env.AI_BASE_URL || DEFAULT_BASE_URL}/chat/completions`, {
       method: "POST",
       signal: controller.signal,
