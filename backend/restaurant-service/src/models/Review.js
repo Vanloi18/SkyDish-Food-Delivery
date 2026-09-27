@@ -33,6 +33,10 @@ const reviewSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    images: {
+      type: [String],
+      default: [],
+    },
     status: {
       type: String,
       enum: ['active', 'hidden', 'flagged'],
