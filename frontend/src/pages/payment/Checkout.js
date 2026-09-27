@@ -18,7 +18,9 @@ import {
   FaShoppingCart,
   FaUtensils,
   FaMapMarkerAlt,
-  FaSpinner
+  FaSpinner,
+  FaTicketAlt,
+  FaTimes,
 } from "react-icons/fa";
 import { CartContext } from "../contexts/CartContext";
 import Header from "../../components/Header";
@@ -30,6 +32,17 @@ import { getValidToken, getAuthCustomer, clearCustomerAuth, getAuthHeaders } fro
 import "../../styles/checkout.css";
 
 const API_BASE_URL = API_URLS.PAYMENT;
+
+function couponDiscountLabel(coupon) {
+  if (coupon.discountType === "percentage") return `Giảm ${coupon.discountValue}%`;
+  if (coupon.discountType === "shipping") return "Giảm phí vận chuyển";
+  return `Giảm ${formatCurrency(coupon.discountValue)}`;
+}
+
+function couponExpiryLabel(endAt) {
+  if (!endAt) return "Không giới hạn thời gian";
+  return `HSD ${new Date(endAt).toLocaleDateString("vi-VN")}`;
+}
 
 const CheckoutForm = () => {
   const navigate = useNavigate();
@@ -104,6 +117,9 @@ const CheckoutForm = () => {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponFeedback, setCouponFeedback] = useState({ type: "", message: "" });
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [couponModalOpen, setCouponModalOpen] = useState(false);
+  const [couponListLoading, setCouponListLoading] = useState(false);
 
   const [currentOrderId] = useState(() => `ORDER${Math.floor(10000 + Math.random() * 90000)}`);
   const [placedOrder, setPlacedOrder] = useState(null);
@@ -299,9 +315,9 @@ const CheckoutForm = () => {
     return true;
   }, [checkAuthOrRedirect, cartItems.length, hasMixedRestaurants, addrCity, addrDistrict, addrDetail, effectiveRestaurantId]);
 
-  const handleApplyCoupon = async (e) => {
+  const handleApplyCoupon = async (e, selectedCode = couponCode) => {
     if (e) e.preventDefault();
-    if (!couponCode.trim()) {
+    if (!selectedCode.trim()) {
       setCouponFeedback({ type: "error", message: "Vui lòng nhập mã giảm giá." });
       return;
     }
@@ -313,7 +329,7 @@ const CheckoutForm = () => {
     setCouponFeedback({ type: "", message: "" });
     try {
       const res = await axios.post(`${API_URLS.RESTAURANT}/api/coupons/validate`, {
-        code: couponCode.trim(),
+        code: selectedCode.trim(),
         orderAmount: subtotal,
         restaurantId: effectiveRestaurantId || cartItems[0]?.restaurantId || "",
         customerId: authCustomer?.id || "",
@@ -342,6 +358,29 @@ const CheckoutForm = () => {
     setCouponFeedback({ type: "", message: "" });
   };
 
+  const handleOpenCouponModal = async () => {
+    setCouponModalOpen(true);
+    if (availableCoupons.length > 0) return;
+    setCouponListLoading(true);
+    try {
+      const endpoint = effectiveRestaurantId
+        ? `${API_URLS.RESTAURANT}/api/coupons/restaurant/${effectiveRestaurantId}`
+        : `${API_URLS.RESTAURANT}/api/coupons`;
+      const res = await axios.get(endpoint);
+      setAvailableCoupons(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      setCouponFeedback({ type: "error", message: "Không thể tải danh sách voucher lúc này." });
+    } finally {
+      setCouponListLoading(false);
+    }
+  };
+
+  const handleSelectCoupon = async (coupon) => {
+    setCouponCode(coupon.code);
+    setCouponModalOpen(false);
+    await handleApplyCoupon(null, coupon.code);
+  };
+
   // Order creation helper — always sends Bearer token and rejects unauthenticated guests
   const createOrderInOrderService = useCallback(async (method, status = "Pending") => {
     const validToken = getValidToken();
@@ -357,6 +396,9 @@ const CheckoutForm = () => {
         {
           restaurantId: orderData.restaurantId,
           restaurantName: orderData.restaurantName,
+          customerName: `${orderData.firstName} ${orderData.lastName}`.trim(),
+          customerEmail: orderData.email,
+          customerPhone: orderData.phone,
           items: orderData.items.map((it) => ({
             foodId: it.foodId,
             name: it.name,
@@ -366,6 +408,7 @@ const CheckoutForm = () => {
           totalPrice: orderData.amount,
           deliveryAddress: orderData.deliveryAddress,
           paymentMethod: method,
+          couponCode: orderData.couponCode,
           status: status === "Paid" ? "Confirmed" : "Pending",
         },
         { headers: { Authorization: `Bearer ${validToken}` } }
@@ -627,6 +670,33 @@ const CheckoutForm = () => {
     } catch (err) {
       const msg = err.response?.data?.error || "Không thể kết nối đến dịch vụ MoMo. Vui lòng chọn phương thức khác.";
       setError(msg);
+      setLoading(false);
+    }
+  };
+
+  const handlePayOSRedirect = async (event) => {
+    event.preventDefault();
+    if (!validateCheckout()) return;
+    if (loading || disablePayment) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const createdOrder = await createOrderInOrderService("PAYOS", "Pending");
+      if (!createdOrder?._id) throw new Error("Không lấy được mã đơn hàng từ hệ thống.");
+      const response = await axios.post(`${API_BASE_URL}/api/payment/payos/create`, {
+        orderId: createdOrder._id,
+        amount: orderData.amount,
+        email: orderData.email,
+        phone: orderData.phone,
+      }, { headers: getAuthHeaders() });
+      if (response.data.checkoutUrl) {
+        window.location.href = response.data.checkoutUrl;
+      } else {
+        setError("Không thể tạo liên kết thanh toán PayOS.");
+        setLoading(false);
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || "Không thể kết nối đến PayOS. Vui lòng thử lại.");
       setLoading(false);
     }
   };
@@ -1238,8 +1308,34 @@ const CheckoutForm = () => {
           </div>
         )}
 
+        {paymentMethod === "PAYOS" && (
+          <form onSubmit={handlePayOSRedirect} style={{ marginTop: "1.5rem" }}>
+            <div style={{ backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "12px", padding: "1.5rem", marginBottom: "1.25rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.65rem" }}>
+                <FaQrcode size={24} style={{ color: "#0068ff" }} />
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: "700", color: "#1e3a8a" }}>
+                  Thanh toán an toàn với PayOS
+                </h3>
+              </div>
+              <p style={{ margin: 0, fontSize: "0.875rem", color: "#1d4ed8", lineHeight: "1.6" }}>
+                Tiếp tục đến trang PayOS để quét VietQR hoặc chọn ứng dụng ngân hàng. Tổng thanh toán: <strong>{formatCurrency(displayedTotal)}</strong>.
+              </p>
+            </div>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              icon={FaExternalLinkAlt}
+              disabled={disablePayment || loading}
+              style={{ width: "100%", backgroundColor: "#0068ff", borderColor: "#0068ff" }}
+            >
+              {loading ? "Đang kết nối PayOS..." : `Thanh toán qua PayOS (${formatCurrency(displayedTotal)})`}
+            </Button>
+          </form>
+        )}
+
         {/* =========================================================================
-            4. CASH ON DELIVERY (COD) FLOW
+            5. CASH ON DELIVERY (COD) FLOW
             ========================================================================= */}
         {paymentMethod === "COD" && (
           <form onSubmit={handleCODSubmit} style={{ marginTop: "1.5rem" }}>
@@ -1394,76 +1490,81 @@ const CheckoutForm = () => {
 
         {/* Coupon Code Box */}
         {!placedOrder && (
-          <div className="checkout-coupon-box" style={{ marginBottom: "1.25rem", padding: "0.85rem", backgroundColor: "#fff7ed", borderRadius: "10px", border: "1px dashed var(--sd-primary)" }}>
-            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", color: "#9a3412", marginBottom: "0.4rem" }}>
-              Mã khuyến mãi / Giảm giá
-            </label>
-            <div style={{ display: "flex", gap: "0.4rem" }}>
+          <div className="checkout-coupon-box" style={{ marginBottom: "1.25rem" }}>
+            <div className="checkout-coupon-heading">
+              <span className="checkout-coupon-title"><FaTicketAlt /> Voucher giảm giá</span>
+              <button type="button" className="checkout-coupon-picker" onClick={handleOpenCouponModal} disabled={!!appliedCoupon}>
+                Chọn voucher <span aria-hidden="true">›</span>
+              </button>
+            </div>
+
+            <div className="checkout-coupon-entry">
               <input
                 type="text"
-                placeholder="VD: SKYDISH20K"
+                placeholder="Nhập mã voucher"
                 value={couponCode}
                 disabled={!!appliedCoupon}
                 onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                style={{
-                  flex: 1,
-                  padding: "0.45rem 0.65rem",
-                  borderRadius: "6px",
-                  border: "1px solid #fed7aa",
-                  fontSize: "0.85rem",
-                  fontWeight: "700",
-                  textTransform: "uppercase",
-                  backgroundColor: appliedCoupon ? "#ffedd5" : "#ffffff",
-                }}
+                aria-label="Mã voucher"
               />
               {appliedCoupon ? (
-                <button
-                  type="button"
-                  onClick={handleRemoveCoupon}
-                  style={{
-                    padding: "0.45rem 0.75rem",
-                    borderRadius: "6px",
-                    backgroundColor: "#fee2e2",
-                    color: "#dc2626",
-                    border: "none",
-                    fontSize: "0.8rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                  }}
-                >
-                  Hủy mã
-                </button>
+                <button type="button" className="checkout-coupon-remove" onClick={handleRemoveCoupon}>Hủy mã</button>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleApplyCoupon}
-                  disabled={couponLoading}
-                  style={{
-                    padding: "0.45rem 0.85rem",
-                    borderRadius: "6px",
-                    backgroundColor: "var(--sd-primary)",
-                    color: "#ffffff",
-                    border: "none",
-                    fontSize: "0.8rem",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                  }}
-                >
-                  {couponLoading ? "..." : "Áp dụng"}
+                <button type="button" className="checkout-coupon-apply" onClick={handleApplyCoupon} disabled={couponLoading}>
+                  {couponLoading ? "Đang kiểm tra" : "Áp dụng"}
                 </button>
               )}
             </div>
+
+            {appliedCoupon && (
+              <div className="checkout-coupon-applied"><FaCheckCircle /> Đã áp dụng {appliedCoupon.code}</div>
+            )}
             {couponFeedback.message && (
-              <p
-                style={{
-                  margin: "0.4rem 0 0 0",
-                  fontSize: "0.75rem",
-                  fontWeight: "600",
-                  color: couponFeedback.type === "success" ? "#047857" : "#b91c1c",
-                }}
-              >
+              <p className={`checkout-coupon-feedback ${couponFeedback.type === "success" ? "is-success" : "is-error"}`}>
                 {couponFeedback.message}
               </p>
+            )}
+
+            {couponModalOpen && (
+              <div className="checkout-voucher-modal-backdrop" role="presentation" onClick={() => setCouponModalOpen(false)}>
+                <section className="checkout-voucher-modal" role="dialog" aria-modal="true" aria-labelledby="voucher-modal-title" onClick={(e) => e.stopPropagation()}>
+                  <div className="checkout-voucher-modal-header">
+                    <div>
+                      <span className="checkout-voucher-kicker">Ưu đãi dành cho bạn</span>
+                      <h3 id="voucher-modal-title">Chọn voucher</h3>
+                    </div>
+                    <button type="button" className="checkout-voucher-close" onClick={() => setCouponModalOpen(false)} aria-label="Đóng danh sách voucher">
+                      <FaTimes />
+                    </button>
+                  </div>
+
+                  {couponListLoading ? (
+                    <div className="checkout-voucher-empty">Đang tải voucher...</div>
+                  ) : availableCoupons.length === 0 ? (
+                    <div className="checkout-voucher-empty">Hiện chưa có voucher phù hợp cho nhà hàng này.</div>
+                  ) : (
+                    <div className="checkout-voucher-list">
+                      {availableCoupons.map((coupon) => (
+                        <article className="checkout-voucher-card" key={coupon._id || coupon.code}>
+                          <div className="checkout-voucher-icon"><FaTicketAlt /></div>
+                          <div className="checkout-voucher-content">
+                            <div className="checkout-voucher-code-row">
+                              <strong>{coupon.code}</strong>
+                              <span>{coupon.restaurantId === "PLATFORM" ? "Toàn sàn" : "Voucher quán"}</span>
+                            </div>
+                            <h4>{couponDiscountLabel(coupon)}</h4>
+                            <p>{coupon.description || "Ưu đãi đặc biệt cho đơn hàng của bạn"}</p>
+                            <small>Đơn tối thiểu {formatCurrency(coupon.minOrderValue || 0)} · {couponExpiryLabel(coupon.endAt)}</small>
+                          </div>
+                          <button type="button" className="checkout-voucher-use" onClick={() => handleSelectCoupon(coupon)} disabled={couponLoading}>
+                            Dùng ngay
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
             )}
           </div>
         )}
