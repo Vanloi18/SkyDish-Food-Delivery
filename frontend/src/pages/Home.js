@@ -72,7 +72,7 @@ const steps = [
   {
     num: "03",
     title: "Thanh toán",
-    desc: "Linh hoạt qua Stripe, VNPay, MoMo hoặc nhận hàng trả tiền (COD)."
+    desc: "Linh hoạt qua PayOS, Stripe, VNPay, MoMo hoặc nhận hàng trả tiền (COD)."
   },
   {
     num: "04",
@@ -291,7 +291,7 @@ function CategoryCarousel({ onCategoryClick }) {
         role="region"
         aria-label="Danh mục món ăn — dùng phím mũi tên để duyệt"
       >
-        {categories.map((cat) => (
+        {categories.map((cat, index) => (
           <div
             key={cat.name}
             className="category-carousel-item"
@@ -315,8 +315,12 @@ function CategoryCarousel({ onCategoryClick }) {
                 draggable={false}
                 onError={(e) => handleImageError(e, "food")}
               />
+              <span className="category-carousel-index">{String(index + 1).padStart(2, "0")}</span>
             </div>
-            <span className="category-carousel-name">{cat.name}</span>
+            <div className="category-carousel-copy">
+              <span className="category-carousel-name">{cat.name}</span>
+              <span className="category-carousel-hint">Khám phá ngay</span>
+            </div>
           </div>
         ))}
       </div>
@@ -522,7 +526,7 @@ const Home = () => {
       }
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        setRestaurants(data.slice(0, 8));
+        setRestaurants(data.slice(0, 6));
         setRestaurantStatus("success");
       } else {
         setRestaurants([]);
@@ -652,24 +656,36 @@ const Home = () => {
                   <span className="landing-food-board-shape landing-food-board-shape--teal" />
                   <span className="landing-food-board-shape landing-food-board-shape--orange" />
                   <div className="landing-food-sticker landing-food-sticker--fresh">Tươi ngon mỗi ngày</div>
-                  <div className="landing-food-photo landing-food-photo--produce">
+                  <Link
+                    to="/customer/restaurant/6aa43e2fc7180e019fa543bb/foods"
+                    className="landing-food-photo landing-food-photo--produce"
+                    aria-label="Xem Salad Phô Mai Burrata tại Pizza 4P's Tràng Tiền"
+                  >
                     <img
                       src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=700&auto=format&fit=crop&q=85"
                       alt="Rau củ và trái cây tươi"
                     />
-                  </div>
-                  <div className="landing-food-photo landing-food-photo--burger">
+                  </Link>
+                  <Link
+                    to="/customer/restaurant/6ab41a4bdca1a78e1e0eced5/foods"
+                    className="landing-food-photo landing-food-photo--burger"
+                    aria-label="Xem Burger Bulgogi tại Lotteria Cầu Giấy"
+                  >
                     <img
                       src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=700&auto=format&fit=crop&q=85"
                       alt="Burger nóng hổi"
                     />
-                  </div>
-                  <div className="landing-food-photo landing-food-photo--pizza">
+                  </Link>
+                  <Link
+                    to="/customer/restaurant/6ab41a4bdca1a78e1e0eced3/foods"
+                    className="landing-food-photo landing-food-photo--pizza"
+                    aria-label="Xem Pizza Pepperoni tại The Pizza Company Cầu Giấy"
+                  >
                     <img
                       src="https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=700&auto=format&fit=crop&q=85"
                       alt="Pizza phô mai"
                     />
-                  </div>
+                  </Link>
                   <div className="landing-food-board-caption">
                     <strong>Đặt món thật ngon</strong>
                     <span>Giao nhanh tận cửa</span>
@@ -703,6 +719,7 @@ const Home = () => {
           <div className="sd-container">
             <div className="landing-section-header">
               <div className="landing-section-title-group">
+                <span className="landing-section-eyebrow">Khám phá theo khẩu vị</span>
                 <h2 id="categories-heading" className="landing-section-title">Danh mục món ăn</h2>
                 <p className="landing-section-subtitle">
                   Khám phá thực đơn phong phú từ các nhóm món được yêu thích nhất

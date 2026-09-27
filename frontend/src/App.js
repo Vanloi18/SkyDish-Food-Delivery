@@ -22,6 +22,7 @@ import Home from "./pages/Home";
 import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import ContactAndFeedback from "./pages/ContactAndFeedback";
+import RestaurantShowcase from "./pages/RestaurantShowcase";
 
 // ============================================================
 // CUSTOMER & AUTH
@@ -47,6 +48,7 @@ import AddToCartPage from "./pages/customer/AddToCartPage";
 import Checkout from "./pages/payment/Checkout";
 import VNPayCallback from "./pages/payment/VNPayCallback";
 import MoMoCallback from "./pages/payment/MoMoCallback";
+import PayOSCallback from "./pages/payment/PayOSCallback";
 
 // ============================================================
 // ORDER MANAGEMENT
@@ -56,6 +58,7 @@ import OrderHome from "./pages/orderManagement/OrderHome";
 import OrderForm from "./components/OrderForm";
 import DeleteOrder from "./components/DeleteOrder";
 import OrderDetails from "./components/OrderDetails";
+import ReviewPage from "./pages/customer/ReviewPage";
 
 // ============================================================
 // RESTAURANT PARTNER
@@ -217,6 +220,11 @@ function App() {
               />
 
               <Route
+                path="/restaurants/showcase"
+                element={<RestaurantShowcase />}
+              />
+
+              <Route
                 path="/customer/restaurant/:restaurantId/foods"
                 element={<FoodItemList />}
               />
@@ -262,6 +270,11 @@ function App() {
                 element={<MoMoCallback />}
               />
 
+              <Route
+                path="/payment/payos/callback"
+                element={<PayOSCallback />}
+              />
+
               {/* =====================================================
                   ORDER MANAGEMENT
               ===================================================== */}
@@ -305,6 +318,15 @@ function App() {
                 element={
                   <CustomerGuard>
                     <OrderDetails />
+                  </CustomerGuard>
+                }
+              />
+
+              <Route
+                path="/reviews/write/:orderId"
+                element={
+                  <CustomerGuard>
+                    <ReviewPage />
                   </CustomerGuard>
                 }
               />

@@ -238,6 +238,14 @@ function Header() {
               Nhà hàng
             </Link>
             <Link
+              to="/restaurants/showcase"
+              className={`nav-link-item ${
+                isActive("/restaurants/showcase") ? "active" : ""
+              }`}
+            >
+              Video món ngon
+            </Link>
+            <Link
               to="/orders"
               className={`nav-link-item ${isActive("/orders") ? "active" : ""}`}
             >
