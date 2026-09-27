@@ -23,7 +23,7 @@ const orderSchema = new mongoose.Schema(
         couponCode: { type: String, default: null },
         paymentMethod: {
             type: String,
-            enum: ["STRIPE", "VNPAY", "MOMO", "COD", "BANK_TRANSFER", "Stripe", "VNPay", "MoMo", "Cash on Delivery", "Bank Transfer", "Chuyển khoản ngân hàng"],
+            enum: ["STRIPE", "VNPAY", "MOMO", "PAYOS", "COD", "BANK_TRANSFER", "Stripe", "VNPay", "MoMo", "Cash on Delivery", "Bank Transfer", "Chuyển khoản ngân hàng"],
             default: "STRIPE"
         },
         paymentStatus: { type: String, enum: ["Pending", "Paid", "Failed"], default: "Pending" },

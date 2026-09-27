@@ -6,6 +6,7 @@ const Payment = require("../models/PaymentModel");
 const { processStripePayment } = require("../services/paymentProviders/stripeProvider");
 const { createVNPayUrl, verifyVNPayReturn, processVNPayIpn } = require("../services/paymentProviders/vnpayProvider");
 const { createMoMoPayment, verifyMoMoNotification } = require("../services/paymentProviders/momoProvider");
+const { createPayOSPayment, verifyPayOSWebhook, verifyPayOSReturn } = require("../services/paymentProviders/payosProvider");
 const { processCodPayment } = require("../services/paymentProviders/codProvider");
 const {
   getBankTransferConfig,
@@ -216,8 +217,55 @@ router.get("/momo/callback", async (req, res) => {
 });
 
 // ==========================================
+// 4. PAYOS PAYMENT FLOW
 // ==========================================
-// 4. CASH ON DELIVERY (COD) FLOW
+router.post("/payos/create", async (req, res) => {
+  try {
+    if (!validatePaymentAmount(req.body.amount)) {
+      return res.status(400).json({ error: "Invalid payment amount: must be greater than 0" });
+    }
+    const authUser = getAuthUser(req);
+    if (!authUser) {
+      return res.status(401).json({ error: "Unauthorized: Authentication required" });
+    }
+    req.body.userId = authUser.id;
+
+    const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
+    if (existingPayment && authUser.role !== "admin" && authUser.role !== "superAdmin" && existingPayment.userId && existingPayment.userId !== authUser.id) {
+      return res.status(403).json({ error: "Access denied: This order belongs to another user" });
+    }
+
+    const result = await createPayOSPayment(req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("PayOS payment creation error:", error.message || error);
+    return res.status(error.statusCode || 500).json({ error: error.statusCode === 503 ? error.message : "Không thể tạo liên kết thanh toán PayOS." });
+  }
+});
+
+router.post("/payos/webhook", async (req, res) => {
+  try {
+    const result = await verifyPayOSWebhook(req.body);
+    return res.status(200).json({ code: "00", desc: "success", result });
+  } catch (error) {
+    console.error("PayOS webhook rejected:", error.message || error);
+    return res.status(error.statusCode || 400).json({ error: error.message || "PayOS webhook verification failed." });
+  }
+});
+
+router.get("/payos/return", async (req, res) => {
+  try {
+    const result = await verifyPayOSReturn(req.query.orderCode);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("PayOS return verification error:", error.message || error);
+    return res.status(error.statusCode || 500).json({ error: error.message || "PayOS payment verification failed." });
+  }
+});
+
+// ==========================================
+// ==========================================
+// 5. CASH ON DELIVERY (COD) FLOW
 // ==========================================
 router.post("/cod/process", async (req, res) => {
   try {

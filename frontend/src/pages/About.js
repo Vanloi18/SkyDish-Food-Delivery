@@ -136,7 +136,7 @@ function About() {
                 Kiến trúc Microservices Hiện đại & Đa Cổng Thanh toán
               </h2>
               <p style={{ color: "var(--sd-text-secondary)", fontSize: "var(--sd-font-size-sm)", lineHeight: "1.7", marginBottom: "2rem" }}>
-                Nền tảng SkyDish hoạt động dựa trên 5 microservices độc lập: <strong>Auth Service</strong>, <strong>Restaurant Service</strong>, <strong>Order Service</strong>, <strong>Delivery Service</strong>, và <strong>Payment Service</strong> hỗ trợ Stripe, VNPay, MoMo, COD cùng Socket.IO truyền dữ liệu trực tiếp.
+                Nền tảng SkyDish hoạt động dựa trên 5 microservices độc lập: <strong>Auth Service</strong>, <strong>Restaurant Service</strong>, <strong>Order Service</strong>, <strong>Delivery Service</strong>, và <strong>Payment Service</strong> hỗ trợ PayOS, Stripe, VNPay, MoMo, COD cùng Socket.IO truyền dữ liệu trực tiếp.
               </p>
               <div
                 style={{
