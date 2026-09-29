@@ -127,10 +127,26 @@ export default function CustomerProfile() {
       try {
         const response = await axios.get(`${API_URLS.ORDER}/api/orders`, {
           headers: { Authorization: `Bearer ${token}` },
+          params: { page: 1, limit: 50 },
         });
-        const orderList = Array.isArray(response.data)
+        const firstPageOrders = Array.isArray(response.data)
           ? response.data
           : (Array.isArray(response.data?.data) ? response.data.data : []);
+        const totalPages = Math.max(1, Number(response.data?.pagination?.totalPages) || 1);
+        const remainingPages = await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, index) =>
+            axios.get(`${API_URLS.ORDER}/api/orders`, {
+              headers: { Authorization: `Bearer ${token}` },
+              params: { page: index + 2, limit: 50 },
+            })
+          )
+        );
+        const orderList = [
+          ...firstPageOrders,
+          ...remainingPages.flatMap((pageResponse) =>
+            Array.isArray(pageResponse.data?.data) ? pageResponse.data.data : []
+          ),
+        ];
         setOrders(orderList);
 
         const deliveredOrders = orderList.filter((order) => {
@@ -170,13 +186,15 @@ export default function CustomerProfile() {
     navigate("/auth/login");
   };
 
-  const completedOrders = orders.filter((order) => {
+  const isCompletedOrder = (order) => {
     const status = String(order.status || "").toLowerCase();
     return status.includes("deliver") || status.includes("complete");
-  });
-  const totalSpent = orders.reduce((total, order) => total + Number(order.totalAmount || order.total || 0), 0);
-  const purchasedItemCount = orders.reduce(
-    (total, order) => total + (order.items || []).reduce((itemTotal, item) => itemTotal + Number(item.quantity || 1), 0),
+  };
+  const getOrderTotal = (order) => Number(order.totalPrice ?? order.totalAmount ?? order.total ?? order.subtotal ?? 0);
+  const completedOrders = orders.filter(isCompletedOrder);
+  const totalSpent = completedOrders.reduce((total, order) => total + getOrderTotal(order), 0);
+  const purchasedItemCount = completedOrders.reduce(
+    (total, order) => total + (Array.isArray(order.items) ? order.items : []).reduce((itemTotal, item) => itemTotal + Number(item.quantity || 1), 0),
     0
   );
 
@@ -550,7 +568,7 @@ export default function CustomerProfile() {
                             </div>
                           </div>
                           <div className="profile-history-side">
-                            <strong>{formatCurrency(order.totalAmount || order.total || 0)}</strong>
+                            <strong>{formatCurrency(getOrderTotal(order))}</strong>
                             <span className={`profile-history-status profile-history-status--${isCompleted ? "done" : "pending"}`}>
                               {getOrderStatusLabel(order.status)}
                             </span>

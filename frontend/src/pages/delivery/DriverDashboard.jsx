@@ -69,6 +69,41 @@ export default function DriverDashboard() {
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
+  const isOpaqueId = (value) => typeof value === "string" && /^[a-f0-9]{12,24}$/i.test(value.trim()) && value.trim().length >= 12;
+
+  const getOrderCustomerName = (orderItem) => orderItem?.customerName || orderItem?.customer?.name || orderItem?.customerId || "Khách Hàng SkyDish";
+  const getOrderCustomerPhone = (orderItem) => orderItem?.customerPhone || orderItem?.customer?.phone || orderItem?.phone || "";
+  const getOrderRestaurantName = (orderItem) => {
+    const restaurantName = orderItem?.restaurantName || orderItem?.restaurant?.name || "";
+    if (restaurantName) return restaurantName;
+    if (typeof orderItem?.restaurantId === "string" && !isOpaqueId(orderItem.restaurantId)) return orderItem.restaurantId;
+    return "Nhà hàng đối tác SkyDish";
+  };
+  const getPickupAddressLabel = (orderItem) => {
+    const restaurantName = getOrderRestaurantName(orderItem);
+    const candidate = orderItem?.pickupAddressString || orderItem?.pickupAddress || orderItem?.restaurantAddress || orderItem?.restaurant?.location || orderItem?.restaurant?.address || "";
+    const normalizedCandidate = typeof candidate === "string" ? candidate.trim() : "";
+
+    if (restaurantName && restaurantName !== "Nhà hàng đối tác SkyDish" && normalizedCandidate && !isOpaqueId(normalizedCandidate)) {
+      return `${restaurantName} • ${normalizedCandidate}`;
+    }
+
+    if (restaurantName && restaurantName !== "Nhà hàng đối tác SkyDish") return restaurantName;
+    if (normalizedCandidate && !isOpaqueId(normalizedCandidate)) return normalizedCandidate;
+    return "Nhà hàng đối tác SkyDish";
+  };
+  const getDeliveryAddressLabel = (orderItem) => {
+    const candidate = orderItem?.deliveryAddressString || orderItem?.deliveryAddress || orderItem?.customerAddress || "";
+    const normalizedCandidate = typeof candidate === "string" ? candidate.trim() : "";
+    if (normalizedCandidate && !isOpaqueId(normalizedCandidate)) return normalizedCandidate;
+    return "45 Phố Huế, Hai Bà Trưng, Hà Nội";
+  };
+  const getOrderItemSummary = (orderItem) => {
+    const items = Array.isArray(orderItem?.items) ? orderItem.items : [];
+    if (!items.length) return "Không có dữ liệu món ăn";
+    return items.map((item) => `${item.name || item.foodName || item.foodId || "Món ăn"} x${item.quantity || 1}`).join(" • ");
+  };
+
   // Auth Verification
   const token = localStorage.getItem("driverToken") || localStorage.getItem("token");
 
@@ -201,8 +236,8 @@ export default function DriverDashboard() {
         {
           orderId: order._id || order.orderId || `ORD_${Date.now()}`,
           customerId: order.customerId || "Khách Hàng SkyDish",
-          pickupAddress: order.restaurantId ? `${order.restaurantId}, Hà Nội` : "11B Tràng Tiền, Hoàn Kiếm, Hà Nội",
-          deliveryAddress: order.deliveryAddress || "45 Phố Huế, Hai Bà Trưng, Hà Nội",
+          pickupAddress: getPickupAddressLabel(order),
+          deliveryAddress: getDeliveryAddressLabel(order),
         },
         { headers: { Authorization: token } }
       );
@@ -405,14 +440,14 @@ export default function DriverDashboard() {
                         <div className="shipper-step-pin pickup"><FaStore size={11} /></div>
                         <div className="shipper-step-info">
                           <span className="shipper-step-label">Lấy món</span>
-                          <p className="shipper-step-addr">{activeDelivery.pickupAddressString || activeDelivery.pickupAddress || "Nhà hàng đối tác SkyDish"}</p>
+                          <p className="shipper-step-addr">{getPickupAddressLabel(activeDelivery)}</p>
                         </div>
                       </div>
                       <div className="shipper-route-step">
                         <div className="shipper-step-pin dropoff"><FaMapMarkerAlt size={11} /></div>
                         <div className="shipper-step-info">
                           <span className="shipper-step-label">Giao tận cửa</span>
-                          <p className="shipper-step-addr">{activeDelivery.deliveryAddressString || activeDelivery.deliveryAddress}</p>
+                          <p className="shipper-step-addr">{getDeliveryAddressLabel(activeDelivery)}</p>
                         </div>
                       </div>
                     </div>
@@ -469,16 +504,22 @@ export default function DriverDashboard() {
                           <div className="shipper-step-pin pickup"><FaStore size={11} /></div>
                           <div className="shipper-step-info">
                             <span className="shipper-step-label">Nhà hàng</span>
-                            <h4 className="shipper-step-name">{ord.restaurantId || "Pizza 4P's Tràng Tiền"}</h4>
+                            <h4 className="shipper-step-name">{getOrderRestaurantName(ord)}</h4>
                           </div>
                         </div>
                         <div className="shipper-route-step">
                           <div className="shipper-step-pin dropoff"><FaMapMarkerAlt size={11} /></div>
                           <div className="shipper-step-info">
                             <span className="shipper-step-label">Địa chỉ giao</span>
-                            <p className="shipper-step-addr">{ord.deliveryAddress || "11B Tràng Tiền, Hoàn Kiếm, Hà Nội"}</p>
+                            <p className="shipper-step-addr">{getDeliveryAddressLabel(ord)}</p>
                           </div>
                         </div>
+                      </div>
+
+                      <div style={{ display: "grid", gap: "0.45rem", marginBottom: "0.8rem", padding: "0.75rem 0.85rem", backgroundColor: "#f8fafc", borderRadius: "10px", border: "1px solid var(--shipper-border)", fontSize: "0.75rem", color: "#475569" }}>
+                        <div><strong style={{ color: "#0f172a" }}>Khách hàng:</strong> {getOrderCustomerName(ord)}</div>
+                        <div><strong style={{ color: "#0f172a" }}>SĐT:</strong> {getOrderCustomerPhone(ord) || "Chưa cung cấp"}</div>
+                        <div><strong style={{ color: "#0f172a" }}>Món ăn:</strong> {getOrderItemSummary(ord)}</div>
                       </div>
 
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem", fontSize: "0.8rem", color: "#64748b" }}>
@@ -570,7 +611,7 @@ export default function DriverDashboard() {
                             <div className="shipper-step-pin pickup"><FaStore size={11} /></div>
                             <div className="shipper-step-info">
                               <span className="shipper-step-label">Nhà hàng</span>
-                              <h4 className="shipper-step-name">{ord.restaurantId || "Pizza 4P's Tràng Tiền"}</h4>
+                              <h4 className="shipper-step-name">{getOrderRestaurantName(ord)}</h4>
                             </div>
                           </div>
                           <div className="shipper-route-step">
@@ -580,6 +621,12 @@ export default function DriverDashboard() {
                               <p className="shipper-step-addr">{ord.deliveryAddress || "11B Tràng Tiền, Hoàn Kiếm, Hà Nội"}</p>
                             </div>
                           </div>
+                        </div>
+
+                        <div style={{ display: "grid", gap: "0.45rem", marginBottom: "0.8rem", padding: "0.75rem 0.85rem", backgroundColor: "#f8fafc", borderRadius: "10px", border: "1px solid var(--shipper-border)", fontSize: "0.75rem", color: "#475569" }}>
+                          <div><strong style={{ color: "#0f172a" }}>Khách hàng:</strong> {getOrderCustomerName(ord)}</div>
+                          <div><strong style={{ color: "#0f172a" }}>SĐT:</strong> {getOrderCustomerPhone(ord) || "Chưa cung cấp"}</div>
+                          <div><strong style={{ color: "#0f172a" }}>Món ăn:</strong> {getOrderItemSummary(ord)}</div>
                         </div>
 
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem", fontSize: "0.8rem", color: "#64748b" }}>
@@ -659,16 +706,23 @@ export default function DriverDashboard() {
                               <div className="shipper-step-pin pickup"><FaStore size={11} /></div>
                               <div className="shipper-step-info">
                                 <span className="shipper-step-label">Lấy món tại</span>
-                                <p className="shipper-step-addr">{del.pickupAddressString || del.pickupAddress || "Nhà hàng đối tác SkyDish"}</p>
+                                <p className="shipper-step-addr">{getPickupAddressLabel(del)}</p>
                               </div>
                             </div>
                             <div className="shipper-route-step">
                               <div className="shipper-step-pin dropoff"><FaMapMarkerAlt size={11} /></div>
                               <div className="shipper-step-info">
                                 <span className="shipper-step-label">Giao tới khách</span>
-                                <p className="shipper-step-addr">{del.deliveryAddressString || del.deliveryAddress}</p>
+                                <p className="shipper-step-addr">{getDeliveryAddressLabel(del)}</p>
                               </div>
                             </div>
+                          </div>
+
+                          <div style={{ display: "grid", gap: "0.45rem", marginBottom: "0.8rem", padding: "0.75rem 0.85rem", backgroundColor: "#f8fafc", borderRadius: "10px", border: "1px solid var(--shipper-border)", fontSize: "0.75rem", color: "#475569" }}>
+                            <div><strong style={{ color: "#0f172a" }}>Khách hàng:</strong> {getOrderCustomerName(del)}</div>
+                            <div><strong style={{ color: "#0f172a" }}>SĐT:</strong> {getOrderCustomerPhone(del) || "Chưa cung cấp"}</div>
+                            <div><strong style={{ color: "#0f172a" }}>Nhà hàng:</strong> {getOrderRestaurantName(del)}</div>
+                            <div><strong style={{ color: "#0f172a" }}>Món ăn:</strong> {getOrderItemSummary(del)}</div>
                           </div>
 
                           {/* Interactive Action Transition Buttons */}
@@ -785,12 +839,12 @@ export default function DriverDashboard() {
                   <div style={{ marginBottom: "1rem" }}>
                     <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Điểm đón (Nhà hàng)</span>
                     <p style={{ margin: "0.2rem 0 0.5rem 0", fontSize: "0.85rem", fontWeight: "600" }}>
-                      {activeDelivery ? (activeDelivery.pickupAddressString || activeDelivery.pickupAddress) : "Pizza 4P's Tràng Tiền, 11B Tràng Tiền, Hoàn Kiếm, Hà Nội"}
+                      {activeDelivery ? getPickupAddressLabel(activeDelivery) : "Pizza 4P's Tràng Tiền"}
                     </p>
 
                     <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Điểm giao (Khách hàng)</span>
                     <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.85rem", fontWeight: "600" }}>
-                      {activeDelivery ? (activeDelivery.deliveryAddressString || activeDelivery.deliveryAddress) : "45 Phố Huế, Quận Hai Bà Trưng, Hà Nội"}
+                      {activeDelivery ? getDeliveryAddressLabel(activeDelivery) : "45 Phố Huế, Quận Hai Bà Trưng, Hà Nội"}
                     </p>
                   </div>
 
@@ -858,7 +912,7 @@ export default function DriverDashboard() {
                   <div key={del._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.85rem 1rem", backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid var(--shipper-border)", marginBottom: "0.6rem" }}>
                     <div>
                       <span style={{ fontWeight: "700", fontSize: "0.85rem", color: "#0f172a" }}>#{del.orderId}</span>
-                      <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.75rem", color: "#64748b" }}>{del.deliveryAddressString || del.deliveryAddress}</p>
+                      <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.75rem", color: "#64748b" }}>{getDeliveryAddressLabel(del)}</p>
                     </div>
                     <span style={{ fontWeight: "700", fontSize: "0.9rem", color: "#059669" }}>+25.000 ₫</span>
                   </div>
