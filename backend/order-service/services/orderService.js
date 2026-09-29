@@ -538,3 +538,108 @@ export const updateOrderStatusService = async (orderId, newStatus, user, updateD
 export const cancelOrderService = async (orderId, user, reason = null) => {
     return await updateOrderStatusService(orderId, "Canceled", user, { cancellationReason: reason });
 };
+
+const orderReportCategories = [
+    "Đơn hàng bị hủy",
+    "Thiếu hoặc sai món",
+    "Vấn đề giao hàng",
+    "Vấn đề thanh toán",
+    "Chất lượng món ăn",
+    "Khác",
+];
+
+export const createOrderReportService = async (orderId, reportData, user) => {
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+        const error = new Error("Mã đơn hàng không hợp lệ.");
+        error.statusCode = 400;
+        throw error;
+    }
+    if (user?.role !== "customer") {
+        const error = new Error("Chỉ khách hàng mới có thể gửi báo cáo đơn hàng.");
+        error.statusCode = 403;
+        throw error;
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+        const error = new Error("Không tìm thấy đơn hàng.");
+        error.statusCode = 404;
+        throw error;
+    }
+    if (!checkOrderOwnership(order, user)) {
+        const error = new Error("Bạn không có quyền gửi báo cáo cho đơn hàng này.");
+        error.statusCode = 403;
+        throw error;
+    }
+
+    const category = String(reportData?.category || "").trim();
+    const message = String(reportData?.message || "").trim();
+    if (!orderReportCategories.includes(category)) {
+        const error = new Error("Vui lòng chọn loại vấn đề hợp lệ.");
+        error.statusCode = 400;
+        throw error;
+    }
+    if (message.length < 10 || message.length > 2000) {
+        const error = new Error("Nội dung báo cáo phải từ 10 đến 2000 ký tự.");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const report = {
+        reporterId: String(user.id),
+        reporterName: user.name || order.customerName || "Khách hàng",
+        reporterEmail: user.email || order.customerEmail || "",
+        category,
+        message,
+        status: "New",
+    };
+    order.reports.push(report);
+    await order.save();
+    return order.reports[order.reports.length - 1];
+};
+
+export const updateOrderReportService = async (orderId, reportId, updates, user) => {
+    if (user?.role !== "admin") {
+        const error = new Error("Chỉ quản trị viên mới có thể xử lý báo cáo.");
+        error.statusCode = 403;
+        throw error;
+    }
+    const order = await Order.findById(orderId);
+    if (!order) {
+        const error = new Error("Không tìm thấy đơn hàng.");
+        error.statusCode = 404;
+        throw error;
+    }
+    const report = order.reports.id(reportId);
+    if (!report) {
+        const error = new Error("Không tìm thấy báo cáo của đơn hàng.");
+        error.statusCode = 404;
+        throw error;
+    }
+
+    const validStatuses = ["New", "InProgress", "Resolved"];
+    if (updates.status && !validStatuses.includes(updates.status)) {
+        const error = new Error("Trạng thái xử lý báo cáo không hợp lệ.");
+        error.statusCode = 400;
+        throw error;
+    }
+    const adminResponse = String(updates.adminResponse ?? report.adminResponse ?? "").trim();
+    if (adminResponse.length > 2000) {
+        const error = new Error("Phản hồi tối đa 2000 ký tự.");
+        error.statusCode = 400;
+        throw error;
+    }
+    if (updates.status === "Resolved" && !adminResponse) {
+        const error = new Error("Vui lòng nhập phản hồi trước khi đánh dấu đã giải quyết.");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (updates.status) report.status = updates.status;
+    report.adminResponse = adminResponse;
+    report.handledBy = user.name || String(user.id);
+    report.updatedAt = new Date();
+    report.resolvedAt = report.status === "Resolved" ? (report.resolvedAt || new Date()) : null;
+    await order.save();
+    return report;
+};

@@ -5,7 +5,9 @@ import {
     getOrderById,
     updateOrderStatus,
     cancelOrder,
-    updateOrderDetails
+    updateOrderDetails,
+    createOrderReport,
+    updateOrderReport
 } from "../controllers/orderController.js";
 
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
@@ -19,6 +21,8 @@ router.post("/", protect, authorizeRoles("customer", "admin"), createOrder);
 
 // All authenticated roles (customer, restaurant, driver, admin) access orders scoped by ownership
 router.get("/", protect, getOrders);
+router.post("/:id/reports", protect, createOrderReport);
+router.patch("/:id/reports/:reportId", protect, authorizeRoles("admin"), updateOrderReport);
 router.get("/:id", protect, getOrderById);
 
 // Update order status or details (verified by role and ownership)

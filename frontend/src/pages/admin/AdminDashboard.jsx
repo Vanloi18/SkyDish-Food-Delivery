@@ -66,6 +66,8 @@ const AdminDashboard = () => {
   // Selected Detail Modal States
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [reportEdits, setReportEdits] = useState({});
+  const [savingReportId, setSavingReportId] = useState(null);
 
   // Edit Restaurant Modal State
   const [editingRestaurant, setEditingRestaurant] = useState(null);
@@ -137,6 +139,38 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   }, [navigate]);
+
+  const handleSaveOrderReport = async (orderId, reportId) => {
+    const report = selectedOrder?.reports?.find((item) => item._id === reportId);
+    if (!report) return;
+    const draft = reportEdits[reportId] || { status: report.status, adminResponse: report.adminResponse || "" };
+    setSavingReportId(reportId);
+    try {
+      const response = await fetch(`${API_URLS.ORDER}/api/orders/${orderId}/reports/${reportId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(draft),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Không thể cập nhật báo cáo.");
+
+      const updatedReport = result.report;
+      const mergeReport = (order) => order && order._id === orderId
+        ? { ...order, reports: (order.reports || []).map((item) => item._id === reportId ? updatedReport : item) }
+        : order;
+      setOrders((current) => current.map(mergeReport));
+      setSelectedOrder((current) => mergeReport(current));
+      setReportEdits((current) => ({ ...current, [reportId]: { status: updatedReport.status, adminResponse: updatedReport.adminResponse || "" } }));
+      setSuccessMessage("Đã cập nhật xử lý khiếu nại.");
+    } catch (saveError) {
+      setError(saveError.message || "Không thể cập nhật báo cáo.");
+    } finally {
+      setSavingReportId(null);
+    }
+  };
 
   useEffect(() => {
     const name = localStorage.getItem("superAdminName");
@@ -523,7 +557,7 @@ const AdminDashboard = () => {
                   <tbody>
                     {orders.slice(0, 5).map((ord) => (
                       <tr key={ord._id} style={{ cursor: "pointer" }} onClick={() => setSelectedOrder(ord)}>
-                        <td><code>{ord._id}</code></td>
+                        <td><code>{ord._id}</code>{ord.reports?.some((report) => report.status !== "Resolved") && <span className="admin-badge warning" style={{ marginLeft: "0.4rem" }}>Có khiếu nại</span>}</td>
                         <td><strong>{ord.customerId}</strong></td>
                         <td>{ord.restaurantId}</td>
                         <td style={{ fontWeight: "700", color: "var(--admin-primary)" }}>{formatCurrency(ord.totalPrice)}</td>
@@ -1244,6 +1278,38 @@ const AdminDashboard = () => {
                 </div>
               </div>
               {selectedOrder.status === "Canceled" && <div style={{ padding: "0.75rem", backgroundColor: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", color: "#991b1b" }}><strong>Thông tin hủy đơn</strong><div style={{ marginTop: "0.3rem" }}>Lý do: {selectedOrder.cancellationReason || "Không nêu lý do"}</div>{selectedOrder.cancelledBy && <div>Hủy bởi: {selectedOrder.cancelledBy}</div>}{selectedOrder.cancelledAt && <div>Thời gian: {new Date(selectedOrder.cancelledAt).toLocaleString("vi-VN")}</div>}</div>}
+              {selectedOrder.reports?.length > 0 && (
+                <section style={{ paddingTop: "0.75rem", borderTop: "1px solid var(--admin-border)" }}>
+                  <h4 style={{ margin: "0 0 0.75rem", fontSize: "0.9rem" }}>Báo cáo / khiếu nại ({selectedOrder.reports.length})</h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+                    {selectedOrder.reports.map((report) => {
+                      const draft = reportEdits[report._id] || { status: report.status, adminResponse: report.adminResponse || "" };
+                      return (
+                        <article key={report._id} style={{ padding: "0.85rem", border: "1px solid var(--admin-border)", borderRadius: "8px", backgroundColor: "#fff" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", flexWrap: "wrap" }}>
+                            <strong>{report.category}</strong>
+                            <span style={{ color: "var(--admin-text-muted)", fontSize: "0.75rem" }}>{report.createdAt ? new Date(report.createdAt).toLocaleString("vi-VN") : ""}</span>
+                          </div>
+                          <p style={{ margin: "0.45rem 0", whiteSpace: "pre-wrap" }}>{report.message}</p>
+                          <small style={{ color: "var(--admin-text-muted)" }}>{report.reporterName}{report.reporterEmail ? ` · ${report.reporterEmail}` : ""}</small>
+                          <div style={{ display: "grid", gridTemplateColumns: "minmax(140px, 0.7fr) minmax(200px, 1.3fr)", gap: "0.6rem", marginTop: "0.75rem" }}>
+                            <select aria-label="Trạng thái khiếu nại" value={draft.status} onChange={(event) => setReportEdits((current) => ({ ...current, [report._id]: { ...draft, status: event.target.value } }))} style={{ padding: "0.55rem", border: "1px solid var(--admin-border)", borderRadius: "6px", background: "#fff" }}>
+                              <option value="New">Mới gửi</option>
+                              <option value="InProgress">Đang xử lý</option>
+                              <option value="Resolved">Đã giải quyết</option>
+                            </select>
+                            <textarea aria-label="Phản hồi khách hàng" rows={2} maxLength={2000} value={draft.adminResponse} onChange={(event) => setReportEdits((current) => ({ ...current, [report._id]: { ...draft, adminResponse: event.target.value } }))} placeholder="Phản hồi khách hàng..." style={{ width: "100%", padding: "0.55rem", border: "1px solid var(--admin-border)", borderRadius: "6px", resize: "vertical", font: "inherit" }} />
+                          </div>
+                          {report.handledBy && <small style={{ display: "block", marginTop: "0.4rem", color: "var(--admin-text-muted)" }}>Cập nhật bởi {report.handledBy}{report.updatedAt ? ` · ${new Date(report.updatedAt).toLocaleString("vi-VN")}` : ""}</small>}
+                          <div style={{ textAlign: "right", marginTop: "0.55rem" }}>
+                            <button type="button" className="admin-action-btn" disabled={savingReportId === report._id} onClick={() => handleSaveOrderReport(selectedOrder._id, report._id)}>{savingReportId === report._id ? "Đang lưu..." : "Lưu phản hồi"}</button>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
             </div>
 
             <div style={{ marginTop: "1.5rem", textAlign: "right" }}>

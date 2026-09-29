@@ -7,7 +7,9 @@ import {
   createOrderService,
   getOrdersService,
   getOrderByIdService,
-  cancelOrderService
+  cancelOrderService,
+  createOrderReportService,
+  updateOrderReportService
 } from '../services/orderService.js';
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27000/food_delivery_db';
@@ -132,6 +134,46 @@ describe('Order Service Architecture, Security & Business Rules', () => {
     const order = await getOrderByIdService(orderAId, adminUser);
     assert.ok(order);
     assert.strictEqual(order._id.toString(), orderAId);
+  });
+
+  it('REPORTS: Order owner can submit a report and admin can resolve it', async () => {
+    const submitted = await createOrderReportService(orderAId, {
+      category: 'Vấn đề giao hàng',
+      message: 'Đơn giao trễ hơn thời gian dự kiến.',
+    }, userA);
+    assert.strictEqual(submitted.status, 'New');
+    assert.strictEqual(submitted.reporterId, userA.id);
+
+    const resolved = await updateOrderReportService(orderAId, submitted._id.toString(), {
+      status: 'Resolved',
+      adminResponse: 'Đã tiếp nhận và xử lý khiếu nại.',
+    }, adminUser);
+    assert.strictEqual(resolved.status, 'Resolved');
+    assert.strictEqual(resolved.adminResponse, 'Đã tiếp nhận và xử lý khiếu nại.');
+    assert.ok(resolved.resolvedAt);
+  });
+
+  it('REPORT SECURITY: A different customer cannot report another customer order', async () => {
+    await assert.rejects(
+      async () => await createOrderReportService(orderAId, {
+        category: 'Khác',
+        message: 'Tôi muốn báo cáo đơn hàng này.',
+      }, userB),
+      (err) => err.statusCode === 403
+    );
+  });
+
+  it('REPORT SECURITY: Customers cannot update report resolution', async () => {
+    const submitted = await createOrderReportService(orderAId, {
+      category: 'Khác',
+      message: 'Tôi cần admin kiểm tra giúp.',
+    }, userA);
+    await assert.rejects(
+      async () => await updateOrderReportService(orderAId, submitted._id.toString(), {
+        status: 'Resolved',
+      }, userA),
+      (err) => err.statusCode === 403
+    );
   });
 
   it('DATA LEAK PREVENTION: getOrdersService only returns User A orders for User A', async () => {

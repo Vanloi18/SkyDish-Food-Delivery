@@ -2,6 +2,52 @@ import mongoose from "mongoose";
 import Delivery from "../models/Delivery.js";
 import { geocodeAddress } from "../utils/geocode.js";
 
+const getOrderSnapshot = async (orderId) => {
+  if (!orderId) return null;
+
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return null;
+
+    const ordersCol = db.collection("orders");
+    const baseQuery = mongoose.Types.ObjectId.isValid(String(orderId))
+      ? { $or: [{ _id: new mongoose.Types.ObjectId(String(orderId)) }, { _id: String(orderId) }] }
+      : { _id: String(orderId) };
+
+    const order = await ordersCol.findOne(baseQuery);
+    return order || null;
+  } catch (error) {
+    console.warn("Order snapshot lookup failed:", error.message);
+    return null;
+  }
+};
+
+const attachOrderMetadata = async (deliveryDoc) => {
+  if (!deliveryDoc) return deliveryDoc;
+
+  const plain = deliveryDoc.toObject ? deliveryDoc.toObject() : deliveryDoc;
+  const order = await getOrderSnapshot(plain.orderId);
+
+  if (!order) return plain;
+
+  return {
+    ...plain,
+    customerName: plain.customerName || order.customerName || order.customerId || "Khách hàng",
+    customerPhone: plain.customerPhone || order.customerPhone || order.phone || "",
+    customerEmail: plain.customerEmail || order.customerEmail || order.email || "",
+    restaurantName: plain.restaurantName || order.restaurantName || order.restaurant?.name || order.restaurantId || "Nhà hàng đối tác SkyDish",
+    items: Array.isArray(order.items) ? order.items : (Array.isArray(plain.items) ? plain.items : []),
+    totalPrice: order.totalPrice ?? plain.totalPrice ?? 0,
+    subtotal: order.subtotal ?? plain.subtotal ?? 0,
+    deliveryFee: order.deliveryFee ?? plain.deliveryFee ?? 0,
+    discount: order.discount ?? plain.discount ?? 0,
+    paymentMethod: order.paymentMethod ?? plain.paymentMethod ?? "COD",
+    paymentStatus: order.paymentStatus ?? plain.paymentStatus ?? "Pending",
+    createdAt: order.createdAt ?? plain.createdAt,
+    updatedAt: order.updatedAt ?? plain.updatedAt,
+  };
+};
+
 export const createDelivery = async (req, res) => {
   try {
     const { orderId, customerId, pickupAddress, deliveryAddress } = req.body;
@@ -25,17 +71,25 @@ export const createDelivery = async (req, res) => {
       status: "assigned"
     });
 
+    const enrichedDelivery = await attachOrderMetadata(delivery);
+
     return res.status(201).json({
       success: true,
       message: "Delivery created successfully!",
       delivery: {
-        _id: delivery._id,
-        orderId: delivery.orderId,
-        customerId: delivery.customerId,
-        pickupAddress: delivery.pickupAddressString,
-        deliveryAddress: delivery.deliveryAddressString,
-        status: delivery.status,
-        createdAt: delivery.createdAt
+        _id: enrichedDelivery._id,
+        orderId: enrichedDelivery.orderId,
+        customerId: enrichedDelivery.customerId,
+        customerName: enrichedDelivery.customerName,
+        customerPhone: enrichedDelivery.customerPhone,
+        customerEmail: enrichedDelivery.customerEmail,
+        restaurantName: enrichedDelivery.restaurantName,
+        items: enrichedDelivery.items,
+        pickupAddress: enrichedDelivery.pickupAddressString,
+        deliveryAddress: enrichedDelivery.deliveryAddressString,
+        status: enrichedDelivery.status,
+        createdAt: enrichedDelivery.createdAt,
+        totalPrice: enrichedDelivery.totalPrice,
       }
     });
 
@@ -57,11 +111,16 @@ export const getDriverDeliveries = async (req, res) => {
       Delivery.countDocuments(filter),
       Delivery.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit)
     ]);
+
+    const enrichedDeliveries = await Promise.all(
+      deliveries.map(async (delivery) => attachOrderMetadata(delivery))
+    );
+
     const totalPages = Math.ceil(totalItems / limit) || 1;
 
     res.status(200).json({
       success: true,
-      deliveries,
+      deliveries: enrichedDeliveries,
       pagination: {
         currentPage: page,
         totalPages,
@@ -91,16 +150,24 @@ export const getDelivery = async (req, res) => {
       return res.status(403).json({ success: false, message: "Access denied: Not your assigned delivery" });
     }
 
+    const enrichedDelivery = await attachOrderMetadata(delivery);
+
     res.json({
       success: true,
       delivery: {
-        _id: delivery._id,
-        orderId: delivery.orderId,
-        customerId: delivery.customerId,
-        pickupAddressString: delivery.pickupAddressString,
-        deliveryAddressString: delivery.deliveryAddressString,
-        status: delivery.status,
-        createdAt: delivery.createdAt
+        _id: enrichedDelivery._id,
+        orderId: enrichedDelivery.orderId,
+        customerId: enrichedDelivery.customerId,
+        customerName: enrichedDelivery.customerName,
+        customerPhone: enrichedDelivery.customerPhone,
+        customerEmail: enrichedDelivery.customerEmail,
+        restaurantName: enrichedDelivery.restaurantName,
+        items: enrichedDelivery.items,
+        pickupAddressString: enrichedDelivery.pickupAddressString,
+        deliveryAddressString: enrichedDelivery.deliveryAddressString,
+        status: enrichedDelivery.status,
+        createdAt: enrichedDelivery.createdAt,
+        totalPrice: enrichedDelivery.totalPrice,
       }
     });
   } catch (error) {
@@ -195,9 +262,11 @@ export const getDeliveryByOrderId = async (req, res) => {
       return res.status(404).json({ success: false, message: "Delivery not found by order ID" });
     }
 
+    const enrichedDelivery = await attachOrderMetadata(delivery);
+
     res.json({
       success: true,
-      delivery
+      delivery: enrichedDelivery
     });
   } catch (error) {
     console.error("🚨 Get delivery by order ID error:", error);
