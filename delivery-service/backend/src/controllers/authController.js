@@ -176,6 +176,7 @@ export const getDriverProfile = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      driver,
       data: driver
     });
     
