@@ -74,17 +74,10 @@ function App() {
 
           <Route path="/" element={<Home />} />
 
-<<<<<<< HEAD
-          {/* Customer Authentication */}
-          <Route path="/auth/login" element={<AuthLogin />} />
-          <Route path="/customer/login" element={<Navigate to="/auth/login" replace />} />
-          <Route path="/auth/register" element={<AuthRegister />} />
-=======
           <Route
             path="/about"
             element={<About />}
           />
->>>>>>> 67bef31 (feat(auth): add forgot password OTP flow)
 
           <Route
             path="/privacy"
@@ -95,7 +88,6 @@ function App() {
             path="/contact"
             element={<ContactAndFeedback />}
           />
-
 
           {/* =====================================================
               CUSTOMER AUTHENTICATION
