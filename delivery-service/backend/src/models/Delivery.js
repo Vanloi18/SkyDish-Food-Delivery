@@ -4,7 +4,7 @@ const deliverySchema = new mongoose.Schema({
   driver: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Driver",
-    required: true
+    required: false
   },
   orderId: {
     type: String,

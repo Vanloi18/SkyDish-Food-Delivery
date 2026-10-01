@@ -77,8 +77,19 @@ const DriverSchema = new mongoose.Schema({
       delete ret.__v;
       return ret;
     }
+  },
+  toObject: {
+    virtuals: true
   }
 });
+
+DriverSchema.virtual('isAvailable')
+  .get(function() {
+    return this.status === 'available';
+  })
+  .set(function(val) {
+    this.status = val ? 'available' : 'offline';
+  });
 
 DriverSchema.index({ location: "2dsphere" });
 
