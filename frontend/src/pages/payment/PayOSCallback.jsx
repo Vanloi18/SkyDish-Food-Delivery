@@ -18,6 +18,7 @@ const PayOSCallback = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    sessionStorage.removeItem("skydish_payos_return_pending");
     const verifyPayment = async () => {
       const orderCode = searchParams.get("orderCode");
       if (!orderCode) {
@@ -32,7 +33,11 @@ const PayOSCallback = () => {
         );
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Không thể xác minh giao dịch PayOS.");
-        setResult(data);
+        const wasCancelled = searchParams.get("cancel") === "true"
+          || searchParams.get("status")?.toUpperCase() === "CANCELLED";
+        setResult(wasCancelled && !data.isSuccess
+          ? { ...data, message: "Thanh toán chưa hoàn tất. Vui lòng quay lại trang đặt món để thử lại." }
+          : data);
         if (data.isSuccess) clearCart();
       } catch (verificationError) {
         setError(verificationError.message || "Không thể xác minh giao dịch PayOS.");
