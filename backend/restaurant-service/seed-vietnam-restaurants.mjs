@@ -62,7 +62,7 @@ const VIETNAM_RESTAURANTS = [
         description: "Quẩy chiên vàng ruộm giòn tan ăn kèm phở",
         price: 10000,
         category: "Phở",
-        image: "https://images.unsplash.com/photo-1509722747041-616f39b57569?w=500&auto=format&fit=crop&q=80",
+        image: "https://upload.wikimedia.org/wikipedia/commons/7/78/Youtiao.jpg",
       },
       {
         name: "Trứng Gà Chần Nước Béo",

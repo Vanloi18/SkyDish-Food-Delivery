@@ -10,7 +10,10 @@ import {
   FaReceipt, 
   FaCheckCircle,
   FaStar,
-  FaTimes
+  FaTimes,
+  FaMotorcycle,
+  FaFlag,
+  FaPaperPlane
 } from "react-icons/fa";
 import { jsPDF } from "jspdf";
 import Header from "./Header";
@@ -26,6 +29,7 @@ function OrderDetails() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   // Review states
   const [isReviewModalOpen, setReviewModalOpen] = useState(false);
@@ -34,6 +38,11 @@ function OrderDetails() {
   const [existingReview, setExistingReview] = useState(null);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewMsg, setReviewMsg] = useState({ type: "", text: "" });
+  const [isReportModalOpen, setReportModalOpen] = useState(false);
+  const [reportCategory, setReportCategory] = useState("Vấn đề giao hàng");
+  const [reportMessage, setReportMessage] = useState("");
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportMsg, setReportMsg] = useState({ type: "", text: "" });
 
   const checkExistingReview = useCallback(async () => {
     try {
@@ -47,27 +56,34 @@ function OrderDetails() {
   }, [id]);
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      setLoading(true);
-      setError("");
+    const fetchOrder = async (silent = false) => {
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
       try {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
         const res = await axios.get(`${API_URLS.ORDER}/api/orders/${id}`, { headers });
         setOrder(res.data);
+        setLastUpdated(new Date());
       } catch (err) {
         console.error("Error fetching order details:", err);
         setError("Không thể tải chi tiết đơn hàng. Vui lòng kiểm tra lại mã đơn.");
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     };
 
+    let refreshTimer;
     if (id) {
       fetchOrder();
       checkExistingReview();
+      refreshTimer = window.setInterval(() => fetchOrder(true), 15000);
     }
+
+    return () => window.clearInterval(refreshTimer);
   }, [id, checkExistingReview]);
 
   const handleSubmitReview = async (e) => {
@@ -112,13 +128,52 @@ function OrderDetails() {
     }
   };
 
+  const handleSubmitOrderReport = async (e) => {
+    e.preventDefault();
+    if (reportMessage.trim().length < 10) {
+      setReportMsg({ type: "error", text: "Vui lòng mô tả vấn đề ít nhất 10 ký tự." });
+      return;
+    }
+
+    setReportLoading(true);
+    setReportMsg({ type: "", text: "" });
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_URLS.ORDER}/api/orders/${id}/reports`,
+        { category: reportCategory, message: reportMessage.trim() },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      const submittedReport = response.data.report;
+      setOrder((previous) => ({
+        ...previous,
+        reports: [...(previous.reports || []), submittedReport],
+      }));
+      setReportMessage("");
+      setReportModalOpen(false);
+      setReportMsg({ type: "success", text: "Báo cáo đã được gửi đến quản trị viên." });
+    } catch (err) {
+      setReportMsg({ type: "error", text: err.response?.data?.error || "Không thể gửi báo cáo. Vui lòng thử lại." });
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   const generatePDF = () => {
     if (!order) return;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const customerName = order.customerName || order.customer?.name || localStorage.getItem("customerName") || "Khách hàng";
+    const customerPhone = order.customerPhone || order.customer?.phone || order.customer?.phoneNumber || order.phone || localStorage.getItem("customerPhone") || "";
+    const customerEmail = order.customerEmail || localStorage.getItem("customerEmail") || "";
+    const restaurantName = order.restaurantName || order.restaurant?.name || "Nhà hàng đối tác SkyDish";
+    const deliveryAddress = order.deliveryAddress || order.deliveryAddressString || order.customerAddress || "Chưa có địa chỉ giao hàng";
+    const items = Array.isArray(order.items) ? order.items : [];
+    const subtotal = Number(order.subtotal || order.totalPrice || 0);
+    const deliveryFee = Number(order.deliveryFee || 0);
+    const discount = Number(order.discount || 0);
 
-    // Brand Header
-    doc.setFillColor(255, 87, 34); // SkyDish primary orange
+    doc.setFillColor(255, 87, 34);
     doc.rect(0, 0, pageWidth, 24, "F");
 
     doc.setFontSize(16);
@@ -126,7 +181,6 @@ function OrderDetails() {
     doc.setFont("helvetica", "bold");
     doc.text("SkyDish Food Delivery — Official Invoice", pageWidth / 2, 16, { align: "center" });
 
-    // Order Info Section
     let currentY = 38;
     doc.setFontSize(12);
     doc.setTextColor(15, 23, 42);
@@ -152,17 +206,28 @@ function OrderDetails() {
     doc.line(20, currentY, pageWidth - 20, currentY);
 
     currentY += 10;
-    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
     doc.setTextColor(15, 23, 42);
-    doc.text(`Customer Name: ${order.customerId}`, 20, currentY);
-    doc.text(`Restaurant: ${order.restaurantId}`, pageWidth - 90, currentY);
+    const customerDetails = [
+      ["Customer Name", customerName],
+      ...(customerPhone ? [["Phone", customerPhone]] : []),
+      ...(customerEmail ? [["Email", customerEmail]] : []),
+      ["Restaurant", restaurantName],
+      ["Delivery Address", deliveryAddress],
+    ];
+    customerDetails.forEach(([label, value]) => {
+      const labelText = `${label}:`;
+      doc.setFont("helvetica", "bold");
+      doc.text(labelText, 20, currentY);
+      const valueX = 20 + doc.getTextWidth(`${labelText} `);
+      const valueLines = doc.splitTextToSize(String(value), pageWidth - 40 - (valueX - 20));
+      doc.setFont("helvetica", "normal");
+      doc.text(valueLines, valueX, currentY);
+      currentY += Math.max(6, valueLines.length * 5);
+    });
+    currentY += 4;
 
-    currentY += 8;
-    doc.setFont("helvetica", "normal");
-    doc.text(`Delivery Address: ${order.deliveryAddress}`, 20, currentY);
-
-    currentY += 14;
-    // Table Header
+    currentY += 6;
     doc.setFillColor(241, 245, 249);
     doc.rect(20, currentY, pageWidth - 40, 8, "F");
     doc.setFont("helvetica", "bold");
@@ -175,29 +240,43 @@ function OrderDetails() {
     currentY += 12;
     doc.setFont("helvetica", "normal");
 
-    order.items?.forEach((item) => {
-      const itemPrice = Number(item.price) || 0;
-      const itemQty = item.quantity || 1;
-      const total = itemPrice * itemQty;
-
-      doc.text(String(item.foodId || "Food Item"), 25, currentY);
-      doc.text(String(itemQty), 125, currentY);
-      doc.text(Number(itemPrice).toLocaleString("vi-VN"), 145, currentY);
-      doc.text(Number(total).toLocaleString("vi-VN"), pageWidth - 45, currentY);
+    if (items.length === 0) {
+      doc.text("No item details available", 25, currentY);
       currentY += 8;
-    });
+    } else {
+      items.forEach((item) => {
+        const itemName = item.name || item.foodName || item.foodId || "Food Item";
+        const itemPrice = Number(item.price) || 0;
+        const itemQty = Number(item.quantity) || 1;
+        const total = itemPrice * itemQty;
+        const nameLines = doc.splitTextToSize(String(itemName), 85);
+        nameLines.forEach((line) => {
+          doc.text(line, 25, currentY);
+          currentY += 6;
+        });
+        doc.text(String(itemQty), 125, currentY - 6);
+        doc.text(Number(itemPrice).toLocaleString("vi-VN"), 145, currentY - 6);
+        doc.text(Number(total).toLocaleString("vi-VN"), pageWidth - 45, currentY - 6);
+        currentY += 4;
+      });
+    }
 
-    currentY += 6;
+    currentY += 8;
     doc.line(20, currentY, pageWidth - 20, currentY);
     currentY += 10;
 
-    // Total Due
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Subtotal: ${Number(subtotal).toLocaleString("vi-VN")} VND`, 20, currentY);
+    doc.text(`Delivery Fee: ${Number(deliveryFee).toLocaleString("vi-VN")} VND`, 20, currentY + 8);
+    doc.text(`Discount: -${Number(discount).toLocaleString("vi-VN")} VND`, 20, currentY + 16);
+
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 87, 34);
-    doc.text(`Total Amount: ${Number(order.totalPrice || 0).toLocaleString("vi-VN")} VND`, pageWidth - 80, currentY);
+    doc.text(`Total Amount: ${Number(order.totalPrice || 0).toLocaleString("vi-VN")} VND`, pageWidth - 80, currentY + 9);
 
-    // Footer note
     doc.setFontSize(8);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(148, 163, 184);
@@ -213,19 +292,29 @@ function OrderDetails() {
     confirmed: 1,
     preparing: 2,
     "out for delivery": 3,
+    delivering: 3,
     delivered: 4,
   };
   const currentStepIdx = mapStatusToIdx[currentStatus.toLowerCase()] ?? 0;
+  const isCancelled = currentStatus.toLowerCase().includes("cancel");
+  const deliveryPartner = order?.deliveryPartner || order?.driver || order?.shipper || order?.delivery?.driver;
+  const deliveryPartnerName = typeof deliveryPartner === "object"
+    ? (deliveryPartner.name || deliveryPartner.fullName || deliveryPartner.driverName || "")
+    : "";
+  const deliveryPartnerPhone = typeof deliveryPartner === "object"
+    ? (deliveryPartner.phone || deliveryPartner.phoneNumber || deliveryPartner.contactNumber || "")
+    : "";
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
+    <div className="customer-experience order-details-experience" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
 
-      <main style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
+      <main className="order-details-main" style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
         <div className="sd-container">
           <div style={{ marginBottom: "1.5rem" }}>
             <button
               type="button"
+              className="order-details-back-link"
               onClick={() => navigate("/orders")}
               style={{
                 display: "inline-flex",
@@ -264,6 +353,7 @@ function OrderDetails() {
             <div style={{ maxWidth: "800px", margin: "0 auto" }}>
               {/* Main Card */}
               <motion.div
+                className="order-details-card"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 style={{
@@ -304,6 +394,7 @@ function OrderDetails() {
                     </h2>
                     <p style={{ margin: 0, fontSize: "var(--sd-font-size-xs)", color: "var(--sd-text-muted)" }}>
                       Đặt lúc: {order.createdAt ? new Date(order.createdAt).toLocaleString() : "Gần đây"}
+                      {lastUpdated && ` · Cập nhật ${lastUpdated.toLocaleTimeString("vi-VN")}`}
                     </p>
                   </div>
 
@@ -317,7 +408,13 @@ function OrderDetails() {
                   <h4 style={{ fontSize: "var(--sd-font-size-xs)", fontWeight: "700", textTransform: "uppercase", color: "var(--sd-text-muted)", marginBottom: "1rem" }}>
                     Tiến trình giao hàng
                   </h4>
+                  {isCancelled && (
+                    <div style={{ marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: "var(--sd-radius-md)", backgroundColor: "var(--sd-danger-light)", color: "var(--sd-danger-hover)", fontSize: "var(--sd-font-size-sm)", fontWeight: "600" }}>
+                      Đơn hàng này đã được hủy và không còn được giao.
+                    </div>
+                  )}
                   <div
+                    className="order-tracking-timeline"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -331,8 +428,9 @@ function OrderDetails() {
                     {steps.map((stepName, sIdx) => {
                       const isCompleted = sIdx <= currentStepIdx;
                       return (
-                        <div key={stepName} style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: "90px", textAlign: "center" }}>
+                        <div key={stepName} className={`order-tracking-step ${isCompleted ? "is-complete" : ""}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: "90px", textAlign: "center" }}>
                           <div
+                            className="order-tracking-marker"
                             style={{
                               width: "36px",
                               height: "36px",
@@ -364,7 +462,7 @@ function OrderDetails() {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                     gap: "1.5rem",
                     backgroundColor: "var(--sd-bg-muted)",
                     padding: "1.25rem",
@@ -377,8 +475,10 @@ function OrderDetails() {
                       Tên khách hàng
                     </p>
                     <p style={{ margin: 0, fontWeight: "700", color: "var(--sd-text-primary)" }}>
-                      {order.customerId}
+                      {order.customerName || localStorage.getItem("customerName") || "Khách hàng"}
                     </p>
+                    {(order.customerEmail || localStorage.getItem("customerEmail")) && <p style={{ margin: "0.2rem 0 0", color: "var(--sd-text-secondary)", overflowWrap: "anywhere" }}>{order.customerEmail || localStorage.getItem("customerEmail")}</p>}
+                    {(order.customerPhone || localStorage.getItem("customerPhone")) && <p style={{ margin: "0.2rem 0 0", color: "var(--sd-text-secondary)" }}>{order.customerPhone || localStorage.getItem("customerPhone")}</p>}
                   </div>
 
                   <div>
@@ -386,7 +486,7 @@ function OrderDetails() {
                       Đối tác nhà hàng
                     </p>
                     <p style={{ margin: 0, fontWeight: "700", color: "var(--sd-text-primary)" }}>
-                      {order.restaurantId}
+                              {order.restaurantName || order.restaurant?.name || order.restaurantId || "Nhà hàng đối tác SkyDish"}
                     </p>
                   </div>
 
@@ -398,6 +498,18 @@ function OrderDetails() {
                       <FaMapMarkerAlt style={{ color: "var(--sd-primary)" }} /> {order.deliveryAddress}
                     </p>
                   </div>
+
+                  {deliveryPartnerName && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <p style={{ margin: "0 0 0.25rem 0", fontSize: "var(--sd-font-size-xs)", fontWeight: "600", color: "var(--sd-text-muted)" }}>
+                        Đối tác giao hàng
+                      </p>
+                      <p style={{ margin: 0, fontWeight: "600", color: "var(--sd-text-primary)", display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+                        <FaMotorcycle style={{ color: "var(--sd-primary)" }} /> {deliveryPartnerName}
+                        {deliveryPartnerPhone && <span style={{ color: "var(--sd-text-secondary)", fontWeight: "500" }}>· {deliveryPartnerPhone}</span>}
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <p style={{ margin: "0 0 0.25rem 0", fontSize: "var(--sd-font-size-xs)", fontWeight: "600", color: "var(--sd-text-muted)" }}>
@@ -444,7 +556,7 @@ function OrderDetails() {
                     <tbody>
                       {order.items?.map((item, idx) => (
                         <tr key={idx} style={{ borderBottom: "1px solid var(--sd-border)" }}>
-                          <td style={{ padding: "0.75rem 0", fontWeight: "600" }}>{item.foodId}</td>
+                          <td style={{ padding: "0.75rem 0", fontWeight: "600" }}>{item.name || item.foodId}</td>
                           <td style={{ padding: "0.75rem", textAlign: "center" }}>{item.quantity}</td>
                           <td style={{ padding: "0.75rem", textAlign: "right" }}>{formatCurrency(item.price)}</td>
                           <td style={{ padding: "0.75rem 0", textAlign: "right", fontWeight: "700" }}>
@@ -474,6 +586,26 @@ function OrderDetails() {
                   </div>
                 </div>
 
+                {order.reports?.length > 0 && (
+                  <section style={{ marginBottom: "1.5rem" }}>
+                    <h4 style={{ fontSize: "var(--sd-font-size-xs)", fontWeight: "700", textTransform: "uppercase", color: "var(--sd-text-muted)", marginBottom: "0.75rem" }}>Báo cáo / khiếu nại</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                      {order.reports.map((report) => (
+                        <article key={report._id} style={{ padding: "0.9rem 1rem", border: "1px solid var(--sd-border)", borderRadius: "10px", backgroundColor: "#fff" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", marginBottom: "0.4rem" }}>
+                            <strong>{report.category}</strong>
+                            <span style={{ color: report.status === "Resolved" ? "var(--sd-success)" : "var(--sd-primary)", fontWeight: "700", fontSize: "var(--sd-font-size-xs)" }}>
+                              {report.status === "Resolved" ? "Đã giải quyết" : report.status === "InProgress" ? "Đang xử lý" : "Đã gửi · Chờ xử lý"}
+                            </span>
+                          </div>
+                          <p style={{ margin: 0, color: "var(--sd-text-secondary)", whiteSpace: "pre-wrap" }}>{report.message}</p>
+                          {report.adminResponse && <div style={{ marginTop: "0.65rem", paddingTop: "0.65rem", borderTop: "1px solid var(--sd-border)" }}><strong>Phản hồi từ SkyDish</strong><p style={{ margin: "0.25rem 0 0", color: "var(--sd-text-secondary)", whiteSpace: "pre-wrap" }}>{report.adminResponse}</p></div>}
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
                 {/* Footer Controls */}
                 <div
                   style={{
@@ -487,11 +619,9 @@ function OrderDetails() {
                   }}
                 >
                   <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <Link to={`/orders/edit/${order._id}`}>
-                      <Button variant="secondary" size="sm">
-                        Chỉnh sửa đơn hàng
-                      </Button>
-                    </Link>
+                    <Button type="button" variant="secondary" size="sm" icon={FaFlag} onClick={() => { setReportMsg({ type: "", text: "" }); setReportModalOpen(true); }}>
+                      Báo cáo vấn đề
+                    </Button>
 
                     {/* Review Button for Delivered / Completed orders */}
                     {order.status === "Delivered" && (
@@ -500,7 +630,7 @@ function OrderDetails() {
                         variant={existingReview ? "outline" : "primary"}
                         size="sm"
                         icon={FaStar}
-                        onClick={() => setReviewModalOpen(true)}
+                        onClick={() => navigate(`/reviews/write/${id}`)}
                       >
                         {existingReview ? `Đã đánh giá (${existingReview.rating}⭐)` : "Đánh giá đơn hàng"}
                       </Button>
@@ -517,6 +647,28 @@ function OrderDetails() {
             </div>
           )}
         </div>
+
+        {isReportModalOpen && (
+          <div role="presentation" onClick={() => !reportLoading && setReportModalOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", backgroundColor: "rgba(15, 23, 42, 0.6)" }}>
+            <form onSubmit={handleSubmitOrderReport} onClick={(event) => event.stopPropagation()} style={{ width: "100%", maxWidth: "500px", padding: "1.5rem", borderRadius: "12px", backgroundColor: "#fff", boxShadow: "0 20px 50px rgba(15, 23, 42, 0.2)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1.25rem" }}>
+                <div><h3 style={{ margin: 0 }}>Báo cáo / khiếu nại</h3><p style={{ margin: "0.25rem 0 0", color: "var(--sd-text-secondary)", fontSize: "var(--sd-font-size-xs)" }}>Đơn #{order._id?.slice(-8)}</p></div>
+                <button type="button" onClick={() => setReportModalOpen(false)} disabled={reportLoading} aria-label="Đóng báo cáo" style={{ border: 0, background: "transparent", color: "var(--sd-text-muted)", cursor: "pointer" }}><FaTimes /></button>
+              </div>
+              <label htmlFor="order-report-category" style={{ display: "block", marginBottom: "0.35rem", fontWeight: "600", fontSize: "var(--sd-font-size-sm)" }}>Loại vấn đề</label>
+              <select id="order-report-category" value={reportCategory} onChange={(event) => setReportCategory(event.target.value)} style={{ width: "100%", marginBottom: "1rem", padding: "0.7rem", border: "1px solid var(--sd-border)", borderRadius: "8px", background: "#fff" }}>
+                {["Đơn hàng bị hủy", "Thiếu hoặc sai món", "Vấn đề giao hàng", "Vấn đề thanh toán", "Chất lượng món ăn", "Khác"].map((category) => <option key={category} value={category}>{category}</option>)}
+              </select>
+              <label htmlFor="order-report-message" style={{ display: "block", marginBottom: "0.35rem", fontWeight: "600", fontSize: "var(--sd-font-size-sm)" }}>Mô tả chi tiết</label>
+              <textarea id="order-report-message" required minLength={10} maxLength={2000} rows={5} value={reportMessage} onChange={(event) => setReportMessage(event.target.value)} placeholder="Mô tả vấn đề để quản trị viên hỗ trợ..." style={{ width: "100%", resize: "vertical", padding: "0.75rem", border: "1px solid var(--sd-border)", borderRadius: "8px", font: "inherit" }} />
+              {reportMsg.text && <p role="status" style={{ margin: "0.75rem 0 0", color: reportMsg.type === "error" ? "var(--sd-danger)" : "var(--sd-success)" }}>{reportMsg.text}</p>}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem", marginTop: "1rem" }}>
+                <Button type="button" variant="outline" size="sm" disabled={reportLoading} onClick={() => setReportModalOpen(false)}>Hủy</Button>
+                <Button type="submit" variant="primary" size="sm" icon={FaPaperPlane} disabled={reportLoading}>{reportLoading ? "Đang gửi..." : "Gửi báo cáo"}</Button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* REVIEW MODAL */}
         {isReviewModalOpen && (

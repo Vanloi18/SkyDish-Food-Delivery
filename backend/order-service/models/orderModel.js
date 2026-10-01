@@ -23,7 +23,7 @@ const orderSchema = new mongoose.Schema(
         couponCode: { type: String, default: null },
         paymentMethod: {
             type: String,
-            enum: ["STRIPE", "VNPAY", "MOMO", "COD", "BANK_TRANSFER", "Stripe", "VNPay", "MoMo", "Cash on Delivery", "Bank Transfer", "Chuyển khoản ngân hàng"],
+            enum: ["STRIPE", "VNPAY", "MOMO", "PAYOS", "COD", "BANK_TRANSFER", "Stripe", "VNPay", "MoMo", "Cash on Delivery", "Bank Transfer", "Chuyển khoản ngân hàng"],
             default: "STRIPE"
         },
         paymentStatus: { type: String, enum: ["Pending", "Paid", "Failed"], default: "Pending" },
@@ -36,6 +36,21 @@ const orderSchema = new mongoose.Schema(
         cancellationReason: { type: String, default: null },
         cancelledBy: { type: String, default: null },
         cancelledAt: { type: Date, default: null },
+        reports: [
+            {
+                reporterId: { type: String, required: true },
+                reporterName: { type: String, default: "Khách hàng" },
+                reporterEmail: { type: String, default: "" },
+                category: { type: String, required: true },
+                message: { type: String, required: true, maxlength: 2000 },
+                status: { type: String, enum: ["New", "InProgress", "Resolved"], default: "New" },
+                adminResponse: { type: String, default: "", maxlength: 2000 },
+                handledBy: { type: String, default: "" },
+                resolvedAt: { type: Date, default: null },
+                createdAt: { type: Date, default: Date.now },
+                updatedAt: { type: Date, default: Date.now },
+            }
+        ],
         emailConfirmationSent: { type: Boolean, default: false }
     },
     { timestamps: true }

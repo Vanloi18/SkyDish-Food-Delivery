@@ -8,7 +8,7 @@ function PrivacyPolicy() {
   const sections = [
     {
       title: "1. Thông tin chúng tôi thu thập",
-      content: "Khi sử dụng SkyDish, chúng tôi thu thập các thông tin khách hàng cần thiết như họ tên, địa chỉ email, số điện thoại và địa chỉ giao nhận. Chúng tôi không lưu trữ thông tin thẻ ngân hàng nhạy cảm trên máy chủ; mọi giao dịch trực tuyến đều được mã hóa và xử lý trực tiếp qua các cổng thanh toán Stripe, VNPay và MoMo.",
+      content: "Khi sử dụng SkyDish, chúng tôi thu thập các thông tin khách hàng cần thiết như họ tên, địa chỉ email, số điện thoại và địa chỉ giao nhận. Chúng tôi không lưu trữ thông tin thẻ ngân hàng nhạy cảm trên máy chủ; mọi giao dịch trực tuyến đều được mã hóa và xử lý trực tiếp qua các cổng thanh toán PayOS, Stripe, VNPay và MoMo.",
       icon: FaDatabase,
     },
     {

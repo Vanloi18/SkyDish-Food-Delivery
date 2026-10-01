@@ -7,7 +7,10 @@ import {
   FaTimes,
   FaRedo,
   FaFilter,
-  FaSortAmountDown
+  FaSortAmountDown,
+  FaMotorcycle,
+  FaStar,
+  FaArrowRight
 } from "react-icons/fa";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
@@ -21,11 +24,19 @@ function CustomerHome() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
   const [sortBy, setSortBy] = useState("recommended");
+  const [onlyOpen, setOnlyOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [searchParams] = useSearchParams();
   const [foodsMap, setFoodsMap] = useState({});
+  const [favoriteRestaurants, setFavoriteRestaurants] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("skydish_favorite_restaurants")) || {};
+    } catch {
+      return {};
+    }
+  });
 
   const categories = [
     "Tất cả", 
@@ -47,6 +58,10 @@ function CustomerHome() {
     const cat = searchParams.get("category");
     if (cat) setSelectedCategory(cat);
   }, [searchParams]);
+
+  useEffect(() => {
+    localStorage.setItem("skydish_favorite_restaurants", JSON.stringify(favoriteRestaurants));
+  }, [favoriteRestaurants]);
 
   const fetchRestaurants = useCallback(async () => {
     setLoading(true);
@@ -110,63 +125,43 @@ function CustomerHome() {
         matchesCategory = hasFoodCategory || nameHasCategory;
       }
 
-      return matchesSearch && matchesCategory;
+      const matchesAvailability = !onlyOpen || r.availability !== false;
+      return matchesSearch && matchesCategory && matchesAvailability;
     })
     .sort((a, b) => {
       if (sortBy === "name") {
         return (a.name || "").localeCompare(b.name || "");
       }
-      return 0; // default recommended order
+      if (sortBy === "menu") {
+        return (foodsMap[b._id] || []).length - (foodsMap[a._id] || []).length;
+      }
+      // Recommended: open restaurants first, then restaurants with more available choices.
+      const availabilityDiff = Number(b.availability !== false) - Number(a.availability !== false);
+      if (availabilityDiff) return availabilityDiff;
+      return (foodsMap[b._id] || []).length - (foodsMap[a._id] || []).length;
     });
 
+  const toggleFavoriteRestaurant = (restaurantId, isFavorite) => {
+    if (!restaurantId) return;
+    setFavoriteRestaurants((prev) => ({ ...prev, [restaurantId]: isFavorite }));
+  };
+
+  const totalMenuItems = Object.values(foodsMap).reduce((total, items) => total + items.length, 0);
+  const hasActiveFilters = searchQuery.trim() || selectedCategory !== "Tất cả" || !onlyOpen;
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
+    <div className="customer-experience customer-marketplace" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
 
-      <main style={{ flex: 1, padding: "2.5rem 0 5rem 0" }}>
+      <main className="marketplace-main" style={{ flex: 1 }}>
         <div className="sd-container">
-          {/* Marketplace Hero Header */}
-          <div style={{ textAlign: "center", maxWidth: "780px", margin: "0 auto 2.5rem auto" }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                padding: "0.35rem 0.85rem",
-                borderRadius: "var(--sd-radius-full)",
-                backgroundColor: "var(--sd-primary-light)",
-                color: "var(--sd-primary)",
-                fontSize: "var(--sd-font-size-xs)",
-                fontWeight: "700",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                marginBottom: "0.75rem",
-              }}
-            >
-              <FaUtensils /> Giao đồ ăn tận nơi khắp thành phố
-            </span>
-            <h1 className="sd-heading-1" style={{ marginBottom: "0.5rem" }}>
-              Khám phá nhà hàng & quán ăn
-            </h1>
-            <p style={{ color: "var(--sd-text-secondary)", fontSize: "var(--sd-font-size-base)" }}>
-              Đặt những món ăn yêu thích từ các nhà hàng hàng đầu với dịch vụ giao hàng nhanh trong 30 phút.
-            </p>
+          <section className="marketplace-hero">
+            <div className="marketplace-hero-copy">
+              <span className="marketplace-eyebrow"><FaUtensils /> SkyDish food marketplace</span>
+              <h1>Hôm nay, bạn muốn<br /><em>ăn món gì?</em></h1>
+              <p>Khám phá thực đơn tươi ngon từ những nhà hàng được yêu thích. Chọn món, theo dõi đơn và tận hưởng bữa ăn của bạn.</p>
 
-            {/* Integrated Search & Filter Bar */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                maxWidth: "620px",
-                margin: "1.75rem auto 1rem auto",
-                backgroundColor: "#ffffff",
-                border: "2px solid var(--sd-border)",
-                borderRadius: "var(--sd-radius-full)",
-                padding: "0.4rem 0.6rem 0.4rem 1.25rem",
-                boxShadow: "var(--sd-shadow-sm)",
-                transition: "all var(--sd-transition-fast)",
-              }}
-            >
+              <div className="marketplace-search-shell">
               <FaSearch style={{ color: "var(--sd-text-muted)", marginRight: "0.75rem" }} />
               <input
                 type="text"
@@ -197,90 +192,93 @@ function CustomerHome() {
                   <FaTimes size={14} />
                 </button>
               )}
+              </div>
+
+              <div className="marketplace-quick-meta">
+                <span><FaMotorcycle /> Dễ dàng theo dõi đơn</span>
+                <span><FaStar /> Lưu quán yêu thích</span>
+              </div>
             </div>
 
-            {/* Category Filter Chips Bar */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexWrap: "wrap",
-                gap: "0.5rem",
-                marginTop: "1.25rem",
-              }}
-            >
+            <aside className="marketplace-hero-panel" aria-label="Tổng quan thực đơn">
+              <div className="marketplace-panel-highlight">
+                <span>Khám phá hôm nay</span>
+                <strong>{loading ? "..." : filteredRestaurants.length}</strong>
+                <small>nhà hàng phù hợp với bạn</small>
+              </div>
+              <div className="marketplace-panel-row">
+                <span><FaUtensils /> Thực đơn</span>
+                <strong>{totalMenuItems || "Nhiều"} món</strong>
+              </div>
+              <div className="marketplace-panel-row">
+                <span><FaMotorcycle /> Trạng thái</span>
+                <strong>{onlyOpen ? "Đang mở cửa" : "Tất cả quán"}</strong>
+              </div>
+              <button type="button" className="marketplace-panel-link" onClick={() => document.getElementById("restaurant-results")?.scrollIntoView({ behavior: "smooth" })}>
+                Xem nhà hàng <FaArrowRight />
+              </button>
+            </aside>
+          </section>
+
+          <section className="marketplace-categories" aria-label="Danh mục món ăn">
+            <div className="marketplace-section-kicker">Chọn nhanh theo khẩu vị</div>
+            <div className="marketplace-category-row">
               {categories.map((cat) => {
                 const isActive = selectedCategory === cat;
+                const categoryFoodCount = cat === "Tất cả"
+                  ? totalMenuItems
+                  : Object.values(foodsMap).flat().filter((food) => {
+                    const foodCategory = String(food.category || "").toLowerCase();
+                    return foodCategory && (foodCategory.includes(cat.toLowerCase()) || cat.toLowerCase().includes(foodCategory));
+                  }).length;
                 return (
                   <button
                     key={cat}
                     type="button"
                     onClick={() => setSelectedCategory(cat)}
-                    style={{
-                      padding: "0.45rem 1.1rem",
-                      borderRadius: "var(--sd-radius-full)",
-                      fontSize: "var(--sd-font-size-xs)",
-                      fontWeight: isActive ? "700" : "500",
-                      border: "1px solid",
-                      borderColor: isActive ? "var(--sd-primary)" : "var(--sd-border)",
-                      backgroundColor: isActive ? "var(--sd-primary)" : "#ffffff",
-                      color: isActive ? "#ffffff" : "var(--sd-text-secondary)",
-                      cursor: "pointer",
-                      boxShadow: isActive ? "0 2px 8px rgba(255, 87, 34, 0.3)" : "var(--sd-shadow-xs)",
-                      transition: "all var(--sd-transition-fast)",
-                    }}
+                    className={`marketplace-category-chip ${isActive ? "is-active" : ""}`}
                   >
-                    {cat}
+                    <span>{cat}</span>
+                    {categoryFoodCount > 0 && <small>{categoryFoodCount}</small>}
                   </button>
                 );
               })}
             </div>
-          </div>
+          </section>
 
-          {/* Results Header & Sorting Controls */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: "1rem",
-              marginBottom: "1.75rem",
-              paddingBottom: "1rem",
-              borderBottom: "1px solid var(--sd-border)",
-            }}
-          >
+          <section id="restaurant-results" className="marketplace-results">
+          <div className="marketplace-results-toolbar">
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: "800", color: "var(--sd-secondary)" }}>
+              <span className="marketplace-section-kicker">Nhà hàng dành cho bạn</span>
+              <h2>
                 {selectedCategory === "Tất cả" ? "Tất cả nhà hàng" : `Nhà hàng ${selectedCategory}`}
               </h2>
-              <span style={{ fontSize: "var(--sd-font-size-xs)", color: "var(--sd-text-muted)" }}>
-                Đang hiển thị {filteredRestaurants.length} nhà hàng đang hoạt động
-              </span>
+              <p>
+                Đang hiển thị {filteredRestaurants.length} nhà hàng{onlyOpen ? " đang mở cửa" : ""}
+              </p>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "var(--sd-font-size-xs)", color: "var(--sd-text-secondary)" }}>
+            <div className="marketplace-controls">
+              <label className="marketplace-sort-control">
                 <FaSortAmountDown />
-                <span>Sắp xếp theo:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  style={{
-                    padding: "0.35rem 0.75rem",
-                    borderRadius: "var(--sd-radius-md)",
-                    border: "1px solid var(--sd-border)",
-                    backgroundColor: "#ffffff",
-                    fontSize: "var(--sd-font-size-xs)",
-                    color: "var(--sd-text-primary)",
-                    outline: "none",
-                  }}
                 >
                   <option value="recommended">Đề xuất</option>
                   <option value="name">Tên (A-Z)</option>
+                  <option value="menu">Nhiều món nhất</option>
                 </select>
-              </div>
+              </label>
+
+              <label className="marketplace-open-toggle">
+                <input
+                  type="checkbox"
+                  checked={onlyOpen}
+                  onChange={(event) => setOnlyOpen(event.target.checked)}
+                />
+                Đang mở cửa
+              </label>
 
               <Button
                 variant="outline"
@@ -289,9 +287,11 @@ function CustomerHome() {
                 onClick={() => {
                   setSelectedCategory("Tất cả");
                   setSearchQuery("");
+                  setOnlyOpen(true);
                 }}
+                disabled={!hasActiveFilters}
               >
-                Xóa bộ lọc
+                Đặt lại
               </Button>
             </div>
           </div>
@@ -338,21 +338,19 @@ function CustomerHome() {
             />
           ) : (
             /* Restaurant Grid */
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))",
-                gap: "2rem",
-              }}
-            >
+            <div className="marketplace-restaurant-grid">
               {filteredRestaurants.map((rest, index) => (
                 <RestaurantCard
                   key={rest._id || index}
                   restaurant={rest}
+                  menuItemCount={(foodsMap[rest._id] || []).length}
+                  isFavorite={!!favoriteRestaurants[rest._id || rest.id]}
+                  onFavoriteToggle={toggleFavoriteRestaurant}
                 />
               ))}
             </div>
           )}
+          </section>
         </div>
       </main>
 

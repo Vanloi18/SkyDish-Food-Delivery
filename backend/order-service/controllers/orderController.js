@@ -4,7 +4,9 @@ import {
     getOrderByIdService,
     updateOrderDetailsService,
     updateOrderStatusService,
-    cancelOrderService
+    cancelOrderService,
+    createOrderReportService,
+    updateOrderReportService
 } from "../services/orderService.js";
 
 // @desc Create new order
@@ -119,5 +121,27 @@ export const cancelOrder = async (req, res) => {
             error: error.message || "Lỗi máy chủ nội bộ",
             code: statusCode === 403 ? "FORBIDDEN" : statusCode === 404 ? "NOT_FOUND" : "BAD_REQUEST"
         });
+    }
+};
+
+// @desc Submit a customer report for an order
+// @route POST /api/orders/:id/reports
+export const createOrderReport = async (req, res) => {
+    try {
+        const report = await createOrderReportService(req.params.id, req.body, req.user);
+        return res.status(201).json({ report });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({ error: error.message || "Không thể gửi báo cáo đơn hàng." });
+    }
+};
+
+// @desc Update an order report as admin
+// @route PATCH /api/orders/:id/reports/:reportId
+export const updateOrderReport = async (req, res) => {
+    try {
+        const report = await updateOrderReportService(req.params.id, req.params.reportId, req.body, req.user);
+        return res.status(200).json({ report });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({ error: error.message || "Không thể cập nhật báo cáo đơn hàng." });
     }
 };
