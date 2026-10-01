@@ -25,12 +25,9 @@
    1. HERO SECTION (Editorial 2-Column Composition)
    ========================================================================== */
 .landing-hero-section {
-  padding: 3.5rem 0 4.5rem 0;
-  background:
-    radial-gradient(circle at 8% 10%, rgba(255, 122, 69, 0.14), transparent 25rem),
-    radial-gradient(circle at 83% 45%, rgba(251, 191, 36, 0.12), transparent 21rem),
-    linear-gradient(180deg, #fffaf7 0%, #ffffff 100%);
-  border-bottom: 1px solid #f1f5f9;
+  padding: 4rem 0 5rem 0;
+  background: var(--sd-gradient-hero);
+  border-bottom: 1px solid var(--sd-border);
 }
 
 .landing-hero-grid {
@@ -47,38 +44,42 @@
 }
 
 .landing-hero-eyebrow {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #ea580c;
-  letter-spacing: 0.02em;
-  margin-bottom: 0.75rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--sd-primary);
+  letter-spacing: 0.03em;
+  margin-bottom: 1rem;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.42rem 0.75rem;
-  background: rgba(255, 237, 226, 0.86);
-  border: 1px solid rgba(255, 122, 69, 0.18);
-  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  background: var(--sd-primary-light);
+  border: 1px solid rgba(255, 74, 34, 0.2);
+  border-radius: var(--sd-radius-pill);
 }
 
 .landing-hero-title {
-  font-size: clamp(2.25rem, 3.8vw, 3.25rem);
-  font-weight: 700;
-  line-height: 1.18;
-  color: #0f172a;
+  font-family: var(--sd-font-family-display);
+  font-size: clamp(2.35rem, 4vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--sd-navy);
   margin: 0 0 1.25rem 0;
   letter-spacing: -0.04em;
 }
 
 .landing-hero-title span {
-  color: #ff5722;
+  color: var(--sd-primary);
+  background: linear-gradient(135deg, #ff6338 0%, #e23812 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .landing-hero-desc {
   font-size: 1.05rem;
   font-weight: 400;
-  line-height: 1.6;
-  color: #475569;
+  line-height: 1.65;
+  color: var(--sd-text-secondary);
   margin: 0 0 2rem 0;
   max-width: 520px;
 }
@@ -90,17 +91,17 @@
   display: flex;
   align-items: center;
   background-color: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 9999px;
+  border: 1.5px solid var(--sd-border);
+  border-radius: var(--sd-radius-pill);
   padding: 0.35rem 0.45rem 0.35rem 1.25rem;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
-  transition: all 0.2s ease;
+  box-shadow: 0 8px 24px -6px rgba(28, 25, 23, 0.08);
+  transition: all var(--sd-transition-fast);
   margin-bottom: 1.25rem;
 }
 
 .landing-hero-search:focus-within {
-  border-color: #ff5722;
-  box-shadow: 0 4px 20px -2px rgba(255, 87, 34, 0.15);
+  border-color: var(--sd-primary);
+  box-shadow: 0 8px 28px -4px var(--sd-primary-glow);
 }
 
 .landing-search-input {
@@ -109,35 +110,35 @@
   outline: none;
   font-size: 0.95rem;
   font-weight: 400;
-  color: #0f172a;
+  color: var(--sd-text-primary);
   background: transparent;
   padding-right: 0.5rem;
 }
 
 .landing-search-input::placeholder {
-  color: #94a3b8;
+  color: var(--sd-text-placeholder);
 }
 
 .landing-search-btn {
-  background: linear-gradient(135deg, #ff7543, #ed4918);
+  background: var(--sd-gradient-primary);
   color: #ffffff;
   border: none;
-  border-radius: 9999px;
-  padding: 0.65rem 1.35rem;
+  border-radius: var(--sd-radius-pill);
+  padding: 0.65rem 1.4rem;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  transition: transform var(--sd-transition-fast), box-shadow var(--sd-transition-fast);
   white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(255, 74, 34, 0.35);
 }
 
 .landing-search-btn:hover {
-  background-color: #ea580c;
-  transform: translateY(-1px);
-  box-shadow: 0 7px 14px -8px rgba(234, 79, 27, 0.8);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 18px rgba(255, 74, 34, 0.5);
 }
 
 /* Quick Search Chips */
@@ -150,31 +151,32 @@
 }
 
 .landing-tag-label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--sd-text-secondary);
   margin-right: 0.25rem;
 }
 
 .landing-tag-chip {
-  background-color: #f1f5f9;
-  color: #334155;
+  background-color: #ffffff;
+  color: var(--sd-text-secondary);
   font-size: 0.8rem;
   font-weight: 500;
   font-family: inherit;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  border: none;
+  padding: 0.28rem 0.8rem;
+  border-radius: var(--sd-radius-pill);
+  border: 1px solid var(--sd-border);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--sd-transition-fast);
   text-decoration: none;
 }
 
 .landing-tag-chip:hover {
-  background-color: #ffe8e0;
-  color: #ea580c;
+  background-color: var(--sd-primary-light);
+  border-color: var(--sd-primary);
+  color: var(--sd-primary);
+  transform: translateY(-1px);
 }
-
 
 /* Hero Action CTAs */
 .landing-hero-actions {
@@ -185,46 +187,47 @@
 }
 
 .landing-btn-primary {
-  background: linear-gradient(135deg, #ff7543, #eb4b1b);
+  background: var(--sd-gradient-primary);
   color: #ffffff;
-  padding: 0.75rem 1.6rem;
-  border-radius: 8px;
+  padding: 0.8rem 1.75rem;
+  border-radius: var(--sd-radius-pill);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.18s ease;
-  box-shadow: 0 12px 22px -14px rgba(234, 79, 27, 0.8);
+  transition: all var(--sd-transition-fast);
+  box-shadow: 0 4px 14px -2px rgba(255, 74, 34, 0.45);
 }
 
 .landing-btn-primary:hover {
-  background-color: #ea580c;
   color: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 16px 28px -15px rgba(234, 79, 27, 0.9);
+  box-shadow: 0 8px 24px -2px rgba(255, 74, 34, 0.6);
 }
 
 .landing-btn-secondary {
-  background-color: transparent;
-  color: #334155;
-  border: 1px solid #cbd5e1;
-  padding: 0.75rem 1.4rem;
-  border-radius: 8px;
+  background-color: #ffffff;
+  color: var(--sd-text-primary);
+  border: 1px solid var(--sd-border);
+  padding: 0.8rem 1.6rem;
+  border-radius: var(--sd-radius-pill);
   font-size: 0.95rem;
   font-weight: 600;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.15s ease;
+  transition: all var(--sd-transition-fast);
+  box-shadow: var(--sd-shadow-xs);
 }
 
 .landing-btn-secondary:hover {
-  border-color: #94a3b8;
-  background-color: #f8fafc;
-  color: #0f172a;
+  border-color: var(--sd-border-strong);
+  background-color: var(--sd-bg-muted);
+  color: var(--sd-text-primary);
+  transform: translateY(-1px);
 }
 
 /* Hero Food Visual */
@@ -292,12 +295,16 @@
   align-items: center;
   gap: 0.65rem;
   padding: 0.7rem 0.85rem;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.95);
   border-radius: 14px;
-  box-shadow: 0 18px 28px -20px rgba(15, 23, 42, 0.64);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 12px 24px -16px rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform;
 }
 
 .landing-hero-float-card strong,
@@ -482,51 +489,45 @@
 
 .category-carousel-item {
   flex: 0 0 auto;
-  width: 204px;
+  width: 200px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(0, 75, 70, 0.12);
-  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid var(--sd-border);
+  border-radius: var(--sd-radius-lg);
   overflow: hidden;
   cursor: pointer;
   text-decoration: none;
-  transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
-  box-shadow: 0 18px 32px -24px rgba(0, 55, 52, 0.42);
-  backdrop-filter: blur(12px);
+  transition: transform var(--sd-transition-normal), box-shadow var(--sd-transition-normal), border-color var(--sd-transition-normal);
+  box-shadow: var(--sd-shadow-sm);
 }
 
 .category-carousel-item:hover {
-  background: rgba(255, 255, 255, 0.98);
-  border-color: rgba(0, 184, 170, 0.5);
-  box-shadow: 0 26px 42px -25px rgba(0, 100, 94, 0.48);
-  transform: translateY(-8px);
+  background: #ffffff;
+  border-color: rgba(255, 74, 34, 0.4);
+  box-shadow: var(--sd-shadow-card-hover);
+  transform: translateY(-6px);
 }
 
 .category-carousel-item:focus {
-  outline: 2px solid #ff5722;
+  outline: 2px solid var(--sd-primary);
   outline-offset: 2px;
 }
 
 .category-carousel-item:active {
-  transform: translateY(0);
-  box-shadow: none;
+  transform: translateY(-2px);
+  box-shadow: var(--sd-shadow-sm);
 }
 
 .category-carousel-img-box {
   width: 100%;
-  height: 174px;
+  height: 165px;
   overflow: hidden;
-  background-color: #f1f5f9;
+  background-color: var(--sd-bg-muted);
   flex-shrink: 0;
-  transition: transform 0.2s ease;
-  border-bottom: 1px solid rgba(0, 75, 70, 0.08);
   position: relative;
-}
-
-.category-carousel-item:hover .category-carousel-img-box {
-  transform: scale(1.04);
+  border-bottom: 1px solid var(--sd-border-light);
 }
 
 .category-carousel-img {
@@ -540,31 +541,31 @@
 
 .category-carousel-item:hover .category-carousel-img {
   transform: scale(1.08);
-  filter: saturate(1.08) contrast(1.03);
+  filter: saturate(1.06) contrast(1.02);
 }
 
 .category-carousel-img-box::after {
   content: "";
   position: absolute;
-  inset: 45% 0 0;
-  background: linear-gradient(180deg, transparent, rgba(0, 32, 31, 0.42));
+  inset: 50% 0 0;
+  background: linear-gradient(180deg, transparent, rgba(28, 25, 23, 0.35));
   pointer-events: none;
 }
 
 .category-carousel-index {
   position: absolute;
-  top: 0.8rem;
-  left: 0.8rem;
+  top: 0.75rem;
+  left: 0.75rem;
   z-index: 1;
   display: grid;
-  width: 2rem;
-  height: 2rem;
+  width: 1.85rem;
+  height: 1.85rem;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  border-radius: 10px;
-  background: rgba(0, 43, 42, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--sd-radius-xs);
+  background: rgba(28, 25, 23, 0.55);
   color: #ffffff;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   backdrop-filter: blur(8px);
@@ -575,15 +576,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  min-height: 75px;
-  padding: 1rem 1rem 1.05rem;
+  min-height: 64px;
+  padding: 0.85rem 1rem;
 }
 
 .category-carousel-name {
-  font-size: 1.02rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: #2b241f;
-  text-align: center;
+  color: var(--sd-text-primary);
+  text-align: left;
   line-height: 1.3;
   padding: 0;
   user-select: none;
@@ -592,10 +593,10 @@
 
 .category-carousel-hint {
   flex: 0 0 auto;
-  color: #008f85;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  color: var(--sd-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   opacity: 0;
   transform: translateX(-4px);
   transition: opacity 220ms ease, transform 220ms ease;
@@ -609,41 +610,43 @@
 
 /* Carousel Navigation Arrow Buttons */
 .carousel-nav-btn {
-  display: none; /* hidden on mobile */
+  display: none;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
   z-index: 10;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid #e2e8f0;
-  background-color: #ffffff;
-  color: #334155;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--sd-radius-pill);
+  border: 1px solid var(--sd-border);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  color: var(--sd-text-primary);
+  box-shadow: var(--sd-shadow-md);
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: all var(--sd-transition-fast);
 }
 
 .carousel-nav-btn:hover {
-  background-color: #ff5722;
-  border-color: #ff5722;
+  background: var(--sd-gradient-primary);
+  border-color: var(--sd-primary);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.3);
+  box-shadow: 0 4px 14px rgba(255, 74, 34, 0.4);
+  transform: translateY(-50%) scale(1.05);
 }
 
 .carousel-nav-btn:active {
-  transform: translateY(-50%) scale(0.93);
+  transform: translateY(-50%) scale(0.95);
 }
 
 .carousel-nav-btn--left {
-  left: -18px;
+  left: -20px;
 }
 
 .carousel-nav-btn--right {
-  right: -18px;
+  right: -20px;
 }
 
 @media (min-width: 768px) {
@@ -1233,22 +1236,60 @@
   text-transform: none;
 }
 
+@keyframes skydish-marquee-ltr {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes skydish-marquee-rtl {
+  0% {
+    transform: translate3d(-50%, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .food-marquee-row {
   overflow: hidden;
   margin-top: 0.65rem;
+  contain: paint layout;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 2.5%, #000 97.5%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 2.5%, #000 97.5%, transparent 100%);
 }
 
 .food-marquee-track {
   display: flex;
   width: max-content;
-  /* Motion is controlled by Framer Motion in Home.js. Keeping CSS animation
-     disabled prevents browser-level reduced-motion or hover rules from
-     freezing the rail on one frame. */
-  animation: none !important;
   will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  animation: skydish-marquee-ltr 38s linear infinite;
 }
 
-.food-marquee-track.is-reverse { animation: none !important; }
+.food-marquee-track.is-reverse {
+  animation: skydish-marquee-rtl 44s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .food-marquee-track {
+    animation-duration: 60s !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  .food-marquee-track.is-reverse {
+    animation-duration: 68s !important;
+  }
+}
+
+.food-marquee-track:hover {
+  animation-play-state: paused;
+}
 
 .food-marquee-group {
   display: flex;
@@ -1265,25 +1306,22 @@
   border: 1px solid rgba(255, 255, 255, 0.88);
   border-radius: 14px;
   background: #fff;
-  box-shadow: 0 10px 20px -18px rgba(54, 29, 20, 0.54);
+  box-shadow: 0 6px 14px -8px rgba(54, 29, 20, 0.35);
   cursor: pointer;
   isolation: isolate;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
 .food-marquee-card:nth-child(3n) { width: clamp(205px, 15vw, 286px); }
 .food-marquee-card:nth-child(4n) { width: clamp(152px, 10.5vw, 198px); }
-.food-marquee-card:hover { z-index: 2; transform: translateY(-3px) scale(1.015); box-shadow: 0 16px 28px -18px rgba(70, 32, 18, 0.46); }
+.food-marquee-card:hover { z-index: 2; transform: translate3d(0, -4px, 0) scale(1.02); box-shadow: 0 12px 24px -10px rgba(70, 32, 18, 0.4); }
 .food-marquee-card:focus-visible { z-index: 2; outline: 3px solid rgba(244, 81, 30, 0.42); outline-offset: 3px; }
-.food-marquee-card img { width: 100%; height: 100%; object-fit: cover; transition: transform 300ms ease; }
-.food-marquee-card:hover img { transform: scale(1.06); }
+.food-marquee-card img { width: 100%; height: 100%; object-fit: cover; transition: transform 250ms ease; transform: translate3d(0, 0, 0); }
+.food-marquee-card:hover img { transform: scale(1.05); }
 .food-marquee-card::after { content: ""; position: absolute; inset: 42% 0 0; z-index: 0; background: linear-gradient(180deg, transparent, rgba(25, 22, 20, 0.56)); pointer-events: none; }
 .food-marquee-card-label { position: absolute; z-index: 1; right: 0.65rem; bottom: 0.55rem; left: 0.65rem; overflow: hidden; color: #fff; font-size: 0.73rem; font-weight: 750; text-align: left; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 5px rgba(0,0,0,0.36); }
-
-@keyframes skydish-food-marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
 
 @media (max-width: 640px) {
   .food-marquee-section { padding: 0.85rem 0 1rem; }
@@ -1728,10 +1766,13 @@
   border: 7px solid #fffdf9;
   background: #fffdf9;
   text-decoration: none;
-  box-shadow: 0 22px 34px -24px rgba(49, 36, 27, 0.68), 0 0 0 0 rgba(255, 255, 255, 0);
-  transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.55s ease, border-color 0.4s ease, z-index 0s;
+  box-shadow: 0 16px 28px -18px rgba(49, 36, 27, 0.55);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
   transform-origin: center center;
   will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .landing-food-photo::before {
@@ -1740,9 +1781,10 @@
   z-index: 1;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(115deg, transparent 25%, rgba(255, 255, 255, 0.5) 48%, transparent 70%);
-  transform: translateX(-125%);
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  background: linear-gradient(115deg, transparent 25%, rgba(255, 255, 255, 0.45) 48%, transparent 70%);
+  transform: translate3d(-125%, 0, 0);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
 }
 
 .landing-food-photo img {
@@ -1752,7 +1794,10 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.75s cubic-bezier(0.16, 1, 0.3, 1), filter 0.55s ease;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
 }
 
 .landing-food-photo--produce {
@@ -1761,7 +1806,7 @@
   width: 45%;
   height: 52%;
   border-radius: 50% 18px 42px 18px;
-  transform: rotate(-7deg);
+  transform: translate3d(0, 0, 0) rotate(-7deg);
 }
 
 .landing-food-photo--burger {
@@ -1770,7 +1815,7 @@
   width: 57%;
   height: 45%;
   border-radius: 42px 18px 18px 42px;
-  transform: rotate(5deg);
+  transform: translate3d(0, 0, 0) rotate(5deg);
 }
 
 .landing-food-photo--pizza {
@@ -1779,34 +1824,33 @@
   width: 57%;
   height: 47%;
   border-radius: 18px 48px 18px 18px;
-  transform: rotate(-4deg);
+  transform: translate3d(0, 0, 0) rotate(-4deg);
 }
 
 .landing-food-photo:hover {
   z-index: 5;
   border-color: #ffffff;
-  box-shadow: 0 46px 64px -22px rgba(49, 36, 27, 0.88), 0 0 0 6px rgba(255, 255, 255, 0.28), 0 0 30px rgba(255, 145, 94, 0.18);
+  box-shadow: 0 24px 44px -16px rgba(49, 36, 27, 0.5);
 }
 
 .landing-food-photo:hover::before {
-  transform: translateX(125%);
+  transform: translate3d(125%, 0, 0);
 }
 
 .landing-food-photo:hover img {
-  transform: scale(1.12);
-  filter: saturate(1.16) contrast(1.06) brightness(1.04);
+  transform: scale(1.06);
 }
 
 .landing-food-photo--produce:hover {
-  transform: translateY(-24px) scale(1.08) rotate(-7deg);
+  transform: translate3d(0, -12px, 0) scale(1.035) rotate(-7deg);
 }
 
 .landing-food-photo--burger:hover {
-  transform: translateY(-24px) scale(1.08) rotate(5deg);
+  transform: translate3d(0, -12px, 0) scale(1.035) rotate(5deg);
 }
 
 .landing-food-photo--pizza:hover {
-  transform: translateY(-24px) scale(1.08) rotate(-4deg);
+  transform: translate3d(0, -12px, 0) scale(1.035) rotate(-4deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2321,8 +2365,37 @@
   letter-spacing: 0.1em;
 }
 
-.food-marquee-row { margin-top: 0.9rem; }
-.food-marquee-group { padding-left: 0.75rem; }
+.food-marquee-row {
+  margin-top: 0.9rem;
+  contain: paint layout;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 2.5%, #000 97.5%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 2.5%, #000 97.5%, transparent 100%);
+}
+
+.food-marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  animation: skydish-marquee-ltr 38s linear infinite;
+}
+
+.food-marquee-track.is-reverse {
+  animation: skydish-marquee-rtl 44s linear infinite;
+}
+
+.food-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.food-marquee-group {
+  display: flex;
+  padding-left: 0.75rem;
+  gap: var(--food-marquee-gap);
+}
 
 .food-marquee-card,
 .food-marquee-card:nth-child(3n),
@@ -2332,21 +2405,38 @@
   border: 1px solid rgba(221, 255, 251, 0.2);
   border-radius: 18px;
   background: #0a4a45;
-  box-shadow: 0 18px 30px -22px rgba(0, 0, 0, 0.82), inset 0 1px 0 rgba(255,255,255,0.12);
-  transform: translateY(0);
-  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1), border-color 240ms ease, box-shadow 240ms ease;
+  box-shadow: 0 10px 24px -16px rgba(0, 0, 0, 0.75);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform;
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
 }
 
 .food-marquee-card::after {
   inset: 38% 0 0;
   background: linear-gradient(180deg, transparent, rgba(0, 32, 30, 0.82));
+  pointer-events: none;
 }
 
-.food-marquee-card img { opacity: 0.96; }
+.food-marquee-card img {
+  opacity: 0.96;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  transition: transform 250ms ease;
+}
+
 .food-marquee-card:hover {
   border-color: rgba(139, 232, 223, 0.72);
-  transform: translateY(-5px) scale(1.012);
-  box-shadow: 0 24px 38px -22px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(139, 232, 223, 0.18);
+  transform: translate3d(0, -6px, 0) scale(1.02);
+  box-shadow: 0 20px 32px -16px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(139, 232, 223, 0.18);
+}
+
+.food-marquee-card:hover img {
+  transform: scale(1.05);
 }
 
 .food-marquee-card-label {
@@ -2361,13 +2451,6 @@
 .food-marquee-card:focus-visible {
   outline: 3px solid rgba(139, 232, 223, 0.76);
   outline-offset: 4px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .food-marquee-card:nth-child(3n) { transform: translateY(4px); }
-  .food-marquee-card:nth-child(5n) { transform: translateY(-3px); }
-  .food-marquee-card:nth-child(3n):hover,
-  .food-marquee-card:nth-child(5n):hover { transform: translateY(-5px) scale(1.012); }
 }
 
 @media (max-width: 760px) {
