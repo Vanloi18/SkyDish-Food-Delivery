@@ -60,6 +60,18 @@ export const getAllDrivers = async (req, res) => {
 export const getDriverById = async (req, res) => {
   try {
     const { id } = req.params;
+    const isAdmin = req.role === "admin" || req.role === "superadmin";
+    const isOwner = req.role === "driver"
+      && req.driver
+      && req.driver.toString() === id.toString();
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "Từ chối truy cập: Không thể xem hồ sơ tài xế khác",
+      });
+    }
+
     const driver = await Driver.findById(id).select("-password");
 
     if (!driver) {
