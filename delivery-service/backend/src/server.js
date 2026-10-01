@@ -1,22 +1,20 @@
 import http from "http";
 import { Server } from "socket.io";
+import { authenticateSocket } from "./middleware/socketAuth.js";
 import app from "./app.js";
-import { setIO } from "./utils/socket.js"; // ✅ import setIO
+import { setIO } from "./utils/socket.js";
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
+io.use(authenticateSocket);
 
 // Save socket globally
 setIO(io);
 
 // WebSocket connection
 io.on("connection", (socket) => {
-  console.log("📡 Driver connected:", socket.id);
-
-  socket.on("join-driver-room", (driverId) => {
-    console.log(`🚕 Driver joined room: ${driverId}`);
-    socket.join(driverId);
-  });
+  console.log("📡 Delivery recipient connected:", socket.id);
+  socket.join(socket.data.userId);
 
   socket.on("disconnect", () => {
     console.log("❌ Driver disconnected");

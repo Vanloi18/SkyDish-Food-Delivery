@@ -31,10 +31,7 @@ export const sendDeliveryNotification = async ({
     try {
       const io = getIO();
       if (io) {
-        // Emit tới room của người nhận (driverId hoặc userId)
         io.to(String(userId)).emit("delivery-notification", notif);
-        // Đồng thời broadcast sự kiện giao vận chung
-        io.emit("delivery-update", { entityId, title, message, status: notif.type });
       }
     } catch (wsErr) {
       // Bỏ qua lỗi socket khi server test hoặc socket chưa gắn

@@ -178,13 +178,12 @@ export default function DriverDashboard() {
 
     // Socket.IO Realtime Connection
     try {
-      socket = io(getDeliverySocketUrl(), { path: "/delivery-socket.io", autoConnect: false });
+      socket = io(getDeliverySocketUrl(), {
+        path: "/delivery-socket.io",
+        autoConnect: false,
+        auth: { token: token.replace(/^Bearer\s+/i, "").trim() },
+      });
       socket.connect();
-
-      const driverId = localStorage.getItem("driverId");
-      if (driverId) {
-        socket.emit("join-driver-room", driverId);
-      }
 
       socket.on("new-delivery", (deliveryData) => {
         setMyDeliveries((prev) => [deliveryData, ...prev]);
