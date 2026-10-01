@@ -224,6 +224,18 @@ describe('Comprehensive SkyDish Delivery & Driver Test Suite', () => {
       assert.strictEqual(res.status, 200);
       assert.strictEqual(data.driver._id, driverA._id.toString());
     });
+
+    it('2.4 Tài xế chỉ được xem hồ sơ của mình, không xem hồ sơ tài xế khác', async () => {
+      const ownRes = await fetch(`${baseUrl}/api/delivery/drivers/${driverB._id}`, {
+        headers: { 'Authorization': `Bearer ${tokenDriverB}` }
+      });
+      assert.strictEqual(ownRes.status, 200);
+
+      const otherRes = await fetch(`${baseUrl}/api/delivery/drivers/${driverA._id}`, {
+        headers: { 'Authorization': `Bearer ${tokenDriverB}` }
+      });
+      assert.strictEqual(otherRes.status, 403);
+    });
   });
 
   // =========================================================================
@@ -252,6 +264,15 @@ describe('Comprehensive SkyDish Delivery & Driver Test Suite', () => {
       createdDeliveryId = data.delivery._id;
     });
 
+    it('3.1.1 Tài xế không thể dùng all=true để xem chuyến giao của người khác', async () => {
+      const res = await fetch(`${baseUrl}/api/delivery?all=true`, {
+        headers: { 'Authorization': `Bearer ${tokenDriverB}` }
+      });
+      const data = await res.json();
+      assert.strictEqual(res.status, 200);
+      assert.ok(data.deliveries.every(delivery => delivery._id !== createdDeliveryId));
+    });
+
     it('3.2 Tra cứu đơn giao hàng theo Order ID', async () => {
       const res = await fetch(`${baseUrl}/api/delivery/order/ORDER_SUITE_${ts}`, {
         headers: { 'Authorization': `Bearer ${tokenDriverA}` }
@@ -259,6 +280,47 @@ describe('Comprehensive SkyDish Delivery & Driver Test Suite', () => {
       const data = await res.json();
       assert.strictEqual(res.status, 200);
       assert.strictEqual(data.delivery.orderId, `ORDER_SUITE_${ts}`);
+    });
+
+    it('3.2.1 Customer khác không thể xem chi tiết đơn giao hàng', async () => {
+      const otherCustomerToken = jwt.sign(
+        { id: `other_customer_${ts}`, role: 'customer' },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+      const res = await fetch(`${baseUrl}/api/delivery/order/ORDER_SUITE_${ts}`, {
+        headers: { 'Authorization': `Bearer ${otherCustomerToken}` }
+      });
+      assert.strictEqual(res.status, 403);
+
+      const ownerToken = jwt.sign(
+        { id: 'Khách hàng Test Suite', role: 'customer' },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+      const ownerRes = await fetch(`${baseUrl}/api/delivery/order/ORDER_SUITE_${ts}`, {
+        headers: { 'Authorization': `Bearer ${ownerToken}` }
+      });
+      assert.strictEqual(ownerRes.status, 200);
+
+      const adminRes = await fetch(`${baseUrl}/api/delivery/order/ORDER_SUITE_${ts}`, {
+        headers: { 'Authorization': `Bearer ${tokenAdmin}` }
+      });
+      assert.strictEqual(adminRes.status, 200);
+    });
+
+    it('3.2.2 Tài xế không thể tự gán lại chuyến giao', async () => {
+      for (const method of ['PUT', 'POST']) {
+        const res = await fetch(`${baseUrl}/api/delivery/${createdDeliveryId}/assign`, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tokenDriverB}`
+          },
+          body: JSON.stringify({ driverId: driverB._id.toString() })
+        });
+        assert.strictEqual(res.status, 403);
+      }
     });
 
     it('3.3 Điều phối gán lại tài xế sang Driver B', async () => {
