@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { io } from "socket.io-client";
+import { CircleMarker, MapContainer, Polyline, TileLayer } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import { 
   FaHome,
   FaBoxOpen,
@@ -238,6 +240,8 @@ export default function DriverDashboard() {
           customerId: order.customerId || "Khách Hàng SkyDish",
           pickupAddress: getPickupAddressLabel(order),
           deliveryAddress: getDeliveryAddressLabel(order),
+          deliveryLatitude: order.deliveryLatitude,
+          deliveryLongitude: order.deliveryLongitude,
         },
         { headers: { Authorization: token } }
       );
@@ -305,6 +309,16 @@ export default function DriverDashboard() {
   const activeDelivery = useMemo(() => {
     return myDeliveries.find(d => d.status !== "Delivered");
   }, [myDeliveries]);
+
+  const pickupCoordinates = activeDelivery?.pickupLocation?.coordinates;
+  const deliveryCoordinates = activeDelivery?.deliveryLocation?.coordinates;
+  const routePoints = [pickupCoordinates, deliveryCoordinates]
+    .filter((coordinates) => Array.isArray(coordinates) && coordinates.length === 2)
+    .map(([longitude, latitude]) => [latitude, longitude]);
+  const mapCenter = routePoints[routePoints.length - 1] || [10.7769, 106.7009];
+  const directionsUrl = pickupCoordinates && deliveryCoordinates
+    ? `https://www.google.com/maps/dir/?api=1&origin=${pickupCoordinates[1]},${pickupCoordinates[0]}&destination=${deliveryCoordinates[1]},${deliveryCoordinates[0]}&travelmode=driving`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getDeliveryAddressLabel(activeDelivery || {}))}`;
 
   // Completed deliveries
   const completedDeliveries = useMemo(() => {
@@ -806,51 +820,50 @@ export default function DriverDashboard() {
               </div>
 
               <div className="shipper-map-container">
-                {/* Visual Route Canvas */}
-                <div className="shipper-map-view" style={{ background: "linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%)", flexDirection: "column", padding: "1.5rem" }}>
-                  <div style={{ width: "100%", height: "100%", border: "2px dashed #94a3b8", borderRadius: "12px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", backgroundColor: "rgba(255,255,255,0.7)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                      <div style={{ textAlign: "center" }}>
-                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "#fff7ed", color: "#ea580c", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 0.25rem auto", border: "1px solid #fed7aa" }}>
-                          <FaStore size={16} />
-                        </div>
-                        <span style={{ fontSize: "0.7rem", fontWeight: "700" }}>Nhà hàng</span>
-                      </div>
-
-                      <div style={{ height: "2px", width: "70px", backgroundColor: "#ff5722", position: "relative" }}>
-                        <FaMotorcycle size={14} style={{ color: "#ff5722", position: "absolute", top: "-14px", left: "26px" }} />
-                      </div>
-
-                      <div style={{ textAlign: "center" }}>
-                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", backgroundColor: "#ecfdf5", color: "#059669", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 0.25rem auto", border: "1px solid #a7f3d0" }}>
-                          <FaMapMarkerAlt size={16} />
-                        </div>
-                        <span style={{ fontSize: "0.7rem", fontWeight: "700" }}>Khách hàng</span>
-                      </div>
-                    </div>
-
-                    <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "600" }}>
-                      Khoảng cách: ~2.8 km • Thời gian di chuyển: ~12 phút
-                    </span>
-                  </div>
+                <div className="shipper-map-view" style={{ height: "300px", display: "block" }}>
+                  <MapContainer
+                    key={activeDelivery?._id || "no-active-delivery"}
+                    center={mapCenter}
+                    zoom={activeDelivery ? 14 : 5}
+                    style={{ height: "100%", width: "100%" }}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution="&copy; OpenStreetMap contributors"
+                    />
+                    {routePoints.map((point, index) => (
+                      <CircleMarker
+                        key={`${point[0]}-${point[1]}`}
+                        center={point}
+                        radius={9}
+                        pathOptions={{
+                          color: "#ffffff",
+                          weight: 3,
+                          fillColor: index === 0 ? "#e94b24" : "#059669",
+                          fillOpacity: 1,
+                        }}
+                      />
+                    ))}
+                    {routePoints.length === 2 && <Polyline positions={routePoints} pathOptions={{ color: "#e94b24", weight: 4, dashArray: "8 8" }} />}
+                  </MapContainer>
                 </div>
 
                 <div className="shipper-map-info-box">
                   <div style={{ marginBottom: "1rem" }}>
                     <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Điểm đón (Nhà hàng)</span>
                     <p style={{ margin: "0.2rem 0 0.5rem 0", fontSize: "0.85rem", fontWeight: "600" }}>
-                      {activeDelivery ? getPickupAddressLabel(activeDelivery) : "Pizza 4P's Tràng Tiền"}
+                      {activeDelivery ? getPickupAddressLabel(activeDelivery) : "Chưa có đơn đang giao"}
                     </p>
 
                     <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Điểm giao (Khách hàng)</span>
                     <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.85rem", fontWeight: "600" }}>
-                      {activeDelivery ? getDeliveryAddressLabel(activeDelivery) : "45 Phố Huế, Quận Hai Bà Trưng, Hà Nội"}
+                      {activeDelivery ? getDeliveryAddressLabel(activeDelivery) : "Chọn đơn đang giao để xem vị trí"}
                     </p>
                   </div>
 
                   <div style={{ display: "flex", gap: "0.5rem" }}>
                     <a
-                      href="https://maps.google.com/?q=11B+Trang+Tien+Hanoi"
+                      href={directionsUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="shipper-action-btn primary"
@@ -865,7 +878,7 @@ export default function DriverDashboard() {
               <div style={{ padding: "0.85rem", backgroundColor: "#ffffff", borderRadius: "12px", border: "1px solid var(--shipper-border)", fontSize: "0.75rem", color: "#64748b" }}>
                 <p style={{ margin: 0 }}>
                   <FaShieldAlt style={{ color: "var(--shipper-primary)", marginRight: "0.3rem" }} />
-                  Định vị lộ trình hiển thị theo thông số định vị thực tế của đơn hàng trên địa bàn Hà Nội.
+                  Bản đồ hiển thị vị trí nhà hàng và điểm giao đã lưu trong đơn; Google Maps mở lộ trình đường đi.
                 </p>
               </div>
             </div>

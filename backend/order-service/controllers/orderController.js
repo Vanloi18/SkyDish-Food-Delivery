@@ -6,8 +6,42 @@ import {
     updateOrderStatusService,
     cancelOrderService,
     createOrderReportService,
-    updateOrderReportService
+    updateOrderReportService,
+    getShippingLocationsService,
+    getShippingQuoteService
 } from "../services/orderService.js";
+import { reverseGeocodeCoordinates } from "../services/reverseGeocodeService.js";
+
+export const reverseGeocodeDeliveryLocation = async (req, res) => {
+    try {
+        const address = await reverseGeocodeCoordinates(req.body);
+        res.status(200).json({ success: true, address });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ success: false, error: error.message });
+    }
+};
+
+export const getShippingLocations = async (req, res) => {
+    try {
+        const result = await getShippingLocationsService({
+            type: req.params.type,
+            parentId: req.query.parentId,
+            provider: req.query.provider,
+        });
+        res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ success: false, error: error.message });
+    }
+};
+
+export const getShippingQuote = async (req, res) => {
+    try {
+        const quote = await getShippingQuoteService(req.body);
+        res.status(200).json({ success: true, ...quote });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ success: false, error: error.message });
+    }
+};
 
 // @desc Create new order
 // @route POST /api/orders

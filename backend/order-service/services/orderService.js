@@ -3,6 +3,91 @@ import Order from "../models/orderModel.js";
 import FoodItem from "../models/foodItemModel.js";
 import Coupon from "../models/couponModel.js";
 import { sendOrderConfirmationEmail } from "./emailService.js";
+import {
+    getGhnDistricts,
+    getGhnProvinces,
+    getGhnWards,
+    isGhnConfigured,
+    quoteGhnFee,
+} from "./ghnService.js";
+import {
+    getVietnamDistricts,
+    getVietnamProvinces,
+    getVietnamWards,
+} from "./vietnamLocationService.js";
+
+const GHN_FALLBACK_DELIVERY_FEE = 15000;
+
+const quoteGhnDeliveryForOrder = async ({ restaurantId, toDistrictId, toWardCode, deliveryAreaProvider }) => {
+    if (!isGhnConfigured()) {
+        return { enabled: false, deliveryFee: GHN_FALLBACK_DELIVERY_FEE };
+    }
+
+    if (!toDistrictId || !toWardCode) {
+        const error = new Error("Vui lòng chọn quận/huyện và phường/xã hợp lệ để báo giá GHN.");
+        error.statusCode = 400;
+        throw error;
+    }
+    if (deliveryAreaProvider !== "GHN") {
+        const error = new Error("Vui lòng chọn lại địa chỉ theo danh mục GHN trước khi báo giá.");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(String(restaurantId))) {
+        const error = new Error("Không xác định được nhà hàng gửi hàng để báo giá GHN.");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const db = mongoose.connection.db;
+    const restaurant = db && await db.collection("restaurants").findOne({
+        _id: new mongoose.Types.ObjectId(String(restaurantId)),
+    });
+    if (!restaurant?.ghnDistrictId || !restaurant?.ghnWardCode) {
+        const error = new Error("Nhà hàng chưa được cấu hình mã quận/phường gửi hàng GHN.");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const deliveryFee = await quoteGhnFee({
+        fromDistrictId: restaurant.ghnDistrictId,
+        fromWardCode: restaurant.ghnWardCode,
+        toDistrictId,
+        toWardCode,
+    });
+    return { enabled: true, deliveryFee };
+};
+
+export const getShippingQuoteService = async ({ restaurantId, toDistrictId, toWardCode, deliveryAreaProvider }) => {
+    if (!isGhnConfigured()) {
+        return { enabled: false, deliveryFee: GHN_FALLBACK_DELIVERY_FEE };
+    }
+    return quoteGhnDeliveryForOrder({ restaurantId, toDistrictId, toWardCode, deliveryAreaProvider });
+};
+
+export const getShippingLocationsService = async ({ type, parentId, provider }) => {
+    const useGhnDirectory = isGhnConfigured();
+    if (provider === "GHN" && !useGhnDirectory) {
+        const error = new Error("Dịch vụ báo giá GHN hiện chưa được cấu hình.");
+        error.statusCode = 503;
+        throw error;
+    }
+
+    if (useGhnDirectory) {
+        if (type === "provinces") return { provider: "GHN", data: await getGhnProvinces() };
+        if (type === "districts" && parentId) return { provider: "GHN", data: await getGhnDistricts(parentId) };
+        if (type === "wards" && parentId) return { provider: "GHN", data: await getGhnWards(parentId) };
+    } else {
+        if (type === "provinces") return { provider: "VN_PUBLIC", data: await getVietnamProvinces() };
+        if (type === "districts" && parentId) return { provider: "VN_PUBLIC", data: await getVietnamDistricts(parentId) };
+        if (type === "wards" && parentId) return { provider: "VN_PUBLIC", data: await getVietnamWards(parentId) };
+    }
+
+    const error = new Error("Tham số địa chỉ GHN không hợp lệ.");
+    error.statusCode = 400;
+    throw error;
+};
 
 /**
  * Helper to check ownership or admin role
@@ -70,10 +155,23 @@ export const createOrderService = async (orderData, authenticatedUser) => {
         throw error;
     }
 
+    const hasDeliveryLatitude = orderData.deliveryLatitude !== undefined && orderData.deliveryLatitude !== null;
+    const hasDeliveryLongitude = orderData.deliveryLongitude !== undefined && orderData.deliveryLongitude !== null;
+    const deliveryLatitude = Number(orderData.deliveryLatitude);
+    const deliveryLongitude = Number(orderData.deliveryLongitude);
+    if (hasDeliveryLatitude !== hasDeliveryLongitude || (hasDeliveryLatitude && (
+        !Number.isFinite(deliveryLatitude) || deliveryLatitude < -90 || deliveryLatitude > 90 ||
+        !Number.isFinite(deliveryLongitude) || deliveryLongitude < -180 || deliveryLongitude > 180
+    ))) {
+        const error = new Error("Vị trí giao hàng không hợp lệ.");
+        error.statusCode = 400;
+        throw error;
+    }
+
     // 3. Server Authority: Fetch authoritative items from DB and recalculate prices
     let subtotal = 0;
     const verifiedItems = [];
-    let detectedRestaurantId = orderData.restaurantId;
+    let detectedRestaurantId = null;
 
     for (const item of items) {
         const numQty = Number(item.quantity);
@@ -117,8 +215,14 @@ export const createOrderService = async (orderData, authenticatedUser) => {
         }
         officialPrice = Number(foodDoc.price);
         officialName = foodDoc.name;
-        if (!detectedRestaurantId && foodDoc.restaurant) {
-            detectedRestaurantId = foodDoc.restaurant.toString();
+        const itemRestaurantId = foodDoc.restaurant?.toString();
+        if (detectedRestaurantId && itemRestaurantId && detectedRestaurantId !== itemRestaurantId) {
+            const error = new Error("Mỗi đơn hàng chỉ được chứa món từ cùng một nhà hàng.");
+            error.statusCode = 400;
+            throw error;
+        }
+        if (itemRestaurantId) {
+            detectedRestaurantId = itemRestaurantId;
         }
 
         const itemTotal = officialPrice * quantity;
@@ -132,8 +236,16 @@ export const createOrderService = async (orderData, authenticatedUser) => {
         });
     }
 
-    // 4. Calculate Delivery Fee & Discounts
-    const deliveryFee = subtotal >= 300000 ? 0 : 15000;
+    // 4. Quote shipping from GHN when enabled; retain existing local fee otherwise.
+    const shippingQuote = await quoteGhnDeliveryForOrder({
+        restaurantId: detectedRestaurantId,
+        toDistrictId: orderData.deliveryDistrictId,
+        toWardCode: orderData.deliveryWardCode,
+        deliveryAreaProvider: orderData.deliveryAreaProvider,
+    });
+    const deliveryFee = shippingQuote.enabled
+        ? shippingQuote.deliveryFee
+        : (subtotal >= 300000 ? 0 : shippingQuote.deliveryFee);
     let discount = 0;
     let validCouponDoc = null;
 
@@ -190,7 +302,14 @@ export const createOrderService = async (orderData, authenticatedUser) => {
             paymentMethod: orderData.paymentMethod || "STRIPE",
             paymentStatus: paymentStatus || "Pending",
             status: orderData.status || "Pending",
-            deliveryAddress: deliveryAddress.trim()
+            deliveryAddress: deliveryAddress.trim(),
+            deliveryProvinceId: orderData.deliveryProvinceId || null,
+            deliveryDistrictId: orderData.deliveryDistrictId || null,
+            deliveryWardCode: orderData.deliveryWardCode || null,
+            deliveryAreaProvider: orderData.deliveryAreaProvider || "MANUAL",
+            deliveryLatitude: orderData.deliveryLatitude ?? null,
+            deliveryLongitude: orderData.deliveryLongitude ?? null,
+            deliveryFeeSource: shippingQuote.enabled ? "GHN" : "local"
         });
 
         if (useTransaction && session) {

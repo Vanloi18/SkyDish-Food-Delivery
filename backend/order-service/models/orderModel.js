@@ -33,6 +33,13 @@ const orderSchema = new mongoose.Schema(
             default: "Pending"
         },
         deliveryAddress: { type: String, required: true },
+        deliveryProvinceId: { type: Number, default: null },
+        deliveryDistrictId: { type: Number, default: null },
+        deliveryWardCode: { type: String, default: null },
+        deliveryAreaProvider: { type: String, enum: ["GHN", "VN_PUBLIC", "MANUAL"], default: "MANUAL" },
+        deliveryLatitude: { type: Number, min: -90, max: 90, default: null },
+        deliveryLongitude: { type: Number, min: -180, max: 180, default: null },
+        deliveryFeeSource: { type: String, enum: ["GHN", "local"], default: "local" },
         cancellationReason: { type: String, default: null },
         cancelledBy: { type: String, default: null },
         cancelledAt: { type: Date, default: null },

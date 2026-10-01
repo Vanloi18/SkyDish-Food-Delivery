@@ -38,7 +38,14 @@ function SuperAdminDashboard() {
     ownerName: "",
     location: "",
     contactNumber: "",
+    ghnProvinceId: "",
+    ghnDistrictId: "",
+    ghnWardCode: "",
   });
+  const [ghnProvinces, setGhnProvinces] = useState([]);
+  const [ghnDistricts, setGhnDistricts] = useState([]);
+  const [ghnWards, setGhnWards] = useState([]);
+  const [ghnLocationError, setGhnLocationError] = useState("");
   const [saveLoading, setSaveLoading] = useState(false);
 
   const handleLogout = () => {
@@ -82,6 +89,60 @@ function SuperAdminDashboard() {
     fetchRestaurants();
   }, [fetchRestaurants]);
 
+  useEffect(() => {
+    if (!editingRestaurant) return undefined;
+    let isMounted = true;
+    const token = localStorage.getItem("token");
+    fetch(`${API_URLS.ORDER}/api/orders/shipping/locations/provinces?provider=GHN`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(async (response) => {
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Không thể tải địa chỉ GHN.");
+      if (isMounted) setGhnProvinces(Array.isArray(result.data) ? result.data : []);
+    }).catch((err) => {
+      if (isMounted) setGhnLocationError(err.message);
+    });
+    return () => { isMounted = false; };
+  }, [editingRestaurant]);
+
+  useEffect(() => {
+    if (!editingRestaurant || !formData.ghnProvinceId) {
+      setGhnDistricts([]);
+      return undefined;
+    }
+    let isMounted = true;
+    const token = localStorage.getItem("token");
+    fetch(`${API_URLS.ORDER}/api/orders/shipping/locations/districts?provider=GHN&parentId=${encodeURIComponent(formData.ghnProvinceId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(async (response) => {
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Không thể tải quận/huyện GHN.");
+      if (isMounted) setGhnDistricts(Array.isArray(result.data) ? result.data : []);
+    }).catch((err) => {
+      if (isMounted) setGhnLocationError(err.message);
+    });
+    return () => { isMounted = false; };
+  }, [editingRestaurant, formData.ghnProvinceId]);
+
+  useEffect(() => {
+    if (!editingRestaurant || !formData.ghnDistrictId) {
+      setGhnWards([]);
+      return undefined;
+    }
+    let isMounted = true;
+    const token = localStorage.getItem("token");
+    fetch(`${API_URLS.ORDER}/api/orders/shipping/locations/wards?provider=GHN&parentId=${encodeURIComponent(formData.ghnDistrictId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(async (response) => {
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Không thể tải phường/xã GHN.");
+      if (isMounted) setGhnWards(Array.isArray(result.data) ? result.data : []);
+    }).catch((err) => {
+      if (isMounted) setGhnLocationError(err.message);
+    });
+    return () => { isMounted = false; };
+  }, [editingRestaurant, formData.ghnDistrictId]);
+
   const handleEditClick = (rest) => {
     setEditingRestaurant(rest._id);
     setFormData({
@@ -89,12 +150,22 @@ function SuperAdminDashboard() {
       ownerName: rest.ownerName || "",
       location: rest.location || "",
       contactNumber: rest.contactNumber || "",
+      ghnProvinceId: rest.ghnProvinceId ? String(rest.ghnProvinceId) : "",
+      ghnDistrictId: rest.ghnDistrictId ? String(rest.ghnDistrictId) : "",
+      ghnWardCode: rest.ghnWardCode || "",
     });
+    setGhnLocationError("");
   };
 
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     setSaveLoading(true);
+    const updateData = {
+      ...formData,
+      ghnProvinceId: formData.ghnProvinceId ? Number(formData.ghnProvinceId) : null,
+      ghnDistrictId: formData.ghnDistrictId.trim() ? Number(formData.ghnDistrictId) : null,
+      ghnWardCode: formData.ghnWardCode.trim() || null,
+    };
 
     try {
       const token = localStorage.getItem("token");
@@ -104,13 +175,13 @@ function SuperAdminDashboard() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(updateData),
       });
 
       if (res.ok) {
         setRestaurants(
           restaurants.map((rest) =>
-            rest._id === editingRestaurant ? { ...rest, ...formData } : rest
+            rest._id === editingRestaurant ? { ...rest, ...updateData } : rest
           )
         );
         setEditingRestaurant(null);
@@ -452,6 +523,31 @@ function SuperAdminDashboard() {
             onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
             required
           />
+
+          <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", margin: "0.75rem 0 0.35rem" }}>
+            Tỉnh / Thành phố GHN điểm gửi
+            <select value={formData.ghnProvinceId} onChange={(e) => setFormData({ ...formData, ghnProvinceId: e.target.value, ghnDistrictId: "", ghnWardCode: "" })} style={{ width: "100%", padding: "0.7rem", marginTop: "0.35rem", border: "1px solid #cbd5e1", borderRadius: "6px" }}>
+              <option value="">Chọn tỉnh / thành phố</option>
+              {ghnProvinces.map((province) => <option key={province.ProvinceID} value={province.ProvinceID}>{province.ProvinceName}</option>)}
+            </select>
+          </label>
+
+          <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", margin: "0.75rem 0 0.35rem" }}>
+            Quận / Huyện GHN điểm gửi
+            <select value={formData.ghnDistrictId} disabled={!formData.ghnProvinceId} onChange={(e) => setFormData({ ...formData, ghnDistrictId: e.target.value, ghnWardCode: "" })} style={{ width: "100%", padding: "0.7rem", marginTop: "0.35rem", border: "1px solid #cbd5e1", borderRadius: "6px" }}>
+              <option value="">Chọn quận / huyện</option>
+              {ghnDistricts.map((district) => <option key={district.DistrictID} value={district.DistrictID}>{district.DistrictName}</option>)}
+            </select>
+          </label>
+
+          <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", margin: "0.75rem 0 0.35rem" }}>
+            Phường / Xã GHN điểm gửi
+            <select value={formData.ghnWardCode} disabled={!formData.ghnDistrictId} onChange={(e) => setFormData({ ...formData, ghnWardCode: e.target.value })} style={{ width: "100%", padding: "0.7rem", marginTop: "0.35rem", border: "1px solid #cbd5e1", borderRadius: "6px" }}>
+              <option value="">Chọn phường / xã</option>
+              {ghnWards.map((ward) => <option key={ward.WardCode} value={ward.WardCode}>{ward.WardName}</option>)}
+            </select>
+          </label>
+          {ghnLocationError && <p style={{ color: "#b91c1c", fontSize: "0.8rem", margin: "0.5rem 0 0" }}>{ghnLocationError}</p>}
 
           <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end", marginTop: "1.5rem" }}>
             <Button type="button" variant="outline" onClick={() => setEditingRestaurant(null)}>

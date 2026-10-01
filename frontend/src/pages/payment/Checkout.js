@@ -27,11 +27,13 @@ import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import Button from "../../components/common/Button";
 import PaymentMethodSelector from "../../components/payment/PaymentMethodSelector";
+import DeliveryLocationPicker from "../../components/DeliveryLocationPicker";
 import { formatCurrency } from "../../utils/currency";
 import { getValidToken, getAuthCustomer, clearCustomerAuth, getAuthHeaders } from "../../utils/authHelper";
 import "../../styles/checkout.css";
 
 const API_BASE_URL = API_URLS.PAYMENT;
+const PAYOS_RETURN_PENDING_KEY = "skydish_payos_return_pending";
 
 function couponDiscountLabel(coupon) {
   if (coupon.discountType === "percentage") return `Giảm ${coupon.discountValue}%`;
@@ -42,6 +44,15 @@ function couponDiscountLabel(coupon) {
 function couponExpiryLabel(endAt) {
   if (!endAt) return "Không giới hạn thời gian";
   return `HSD ${new Date(endAt).toLocaleDateString("vi-VN")}`;
+}
+
+function normalizeProvinceName(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/^(tinh|thanh pho|quan|huyen|thi xa|thi tran|phuong|xa)\s+/i, "")
+    .trim()
+    .toLowerCase();
 }
 
 const CheckoutForm = () => {
@@ -79,11 +90,50 @@ const CheckoutForm = () => {
   const [message, setMessage] = useState("");
   const [disablePayment, setDisablePayment] = useState(false);
 
+  useEffect(() => {
+    const showUnfinishedPayOSMessage = () => {
+      if (sessionStorage.getItem(PAYOS_RETURN_PENDING_KEY) !== "1") return;
+      sessionStorage.removeItem(PAYOS_RETURN_PENDING_KEY);
+      setError("Thanh toán chưa hoàn tất. Vui lòng quay lại trang đặt món để tiếp tục.");
+      setLoading(false);
+    };
+
+    window.addEventListener("pageshow", showUnfinishedPayOSMessage);
+    showUnfinishedPayOSMessage();
+    return () => window.removeEventListener("pageshow", showUnfinishedPayOSMessage);
+  }, []);
+
   // Structured delivery address
   const [addrCity, setAddrCity] = useState(localStorage.getItem("addr_city") || "");
   const [addrDistrict, setAddrDistrict] = useState(localStorage.getItem("addr_district") || "");
   const [addrWard, setAddrWard] = useState(localStorage.getItem("addr_ward") || "");
   const [addrDetail, setAddrDetail] = useState(localStorage.getItem("addr_detail") || "");
+  const [addrProvinceId, setAddrProvinceId] = useState(localStorage.getItem("addr_province_id") || "");
+  const [addrDistrictId, setAddrDistrictId] = useState(localStorage.getItem("addr_district_id") || "");
+  const [addrWardCode, setAddrWardCode] = useState(localStorage.getItem("addr_ward_code") || "");
+  const [deliveryPosition, setDeliveryPosition] = useState(() => {
+    const savedLatitude = localStorage.getItem("delivery_latitude");
+    const savedLongitude = localStorage.getItem("delivery_longitude");
+    const latitude = Number(savedLatitude);
+    const longitude = Number(savedLongitude);
+    return savedLatitude && savedLongitude && Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? { latitude, longitude }
+      : null;
+  });
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState("");
+  const [ghnEnabled, setGhnEnabled] = useState(false);
+  const [ghnConfigLoading, setGhnConfigLoading] = useState(true);
+  const [addressDirectoryEnabled, setAddressDirectoryEnabled] = useState(false);
+  const [addressDirectoryProvider, setAddressDirectoryProvider] = useState(localStorage.getItem("addr_directory_provider") || "");
+  const addressDirectoryProviderRef = useRef(addressDirectoryProvider);
+  const [ghnProvinces, setGhnProvinces] = useState([]);
+  const [ghnDistricts, setGhnDistricts] = useState([]);
+  const [ghnWards, setGhnWards] = useState([]);
+  const [ghnQuote, setGhnQuote] = useState(null);
+  const [ghnQuoteKey, setGhnQuoteKey] = useState("");
+  const [ghnQuoteLoading, setGhnQuoteLoading] = useState(false);
+  const [ghnQuoteError, setGhnQuoteError] = useState("");
 
   // Computed full address string
   const deliveryAddress = useMemo(() => {
@@ -96,6 +146,53 @@ const CheckoutForm = () => {
   useEffect(() => { localStorage.setItem("addr_district", addrDistrict); }, [addrDistrict]);
   useEffect(() => { localStorage.setItem("addr_ward", addrWard); }, [addrWard]);
   useEffect(() => { localStorage.setItem("addr_detail", addrDetail); }, [addrDetail]);
+  useEffect(() => { localStorage.setItem("addr_province_id", addrProvinceId); }, [addrProvinceId]);
+  useEffect(() => { localStorage.setItem("addr_district_id", addrDistrictId); }, [addrDistrictId]);
+  useEffect(() => { localStorage.setItem("addr_ward_code", addrWardCode); }, [addrWardCode]);
+  useEffect(() => {
+    if (addressDirectoryProvider) localStorage.setItem("addr_directory_provider", addressDirectoryProvider);
+    else localStorage.removeItem("addr_directory_provider");
+  }, [addressDirectoryProvider]);
+  useEffect(() => {
+    if (deliveryPosition) {
+      localStorage.setItem("delivery_latitude", String(deliveryPosition.latitude));
+      localStorage.setItem("delivery_longitude", String(deliveryPosition.longitude));
+    } else {
+      localStorage.removeItem("delivery_latitude");
+      localStorage.removeItem("delivery_longitude");
+    }
+  }, [deliveryPosition]);
+
+  useEffect(() => {
+    let isMounted = true;
+    axios.get(`${API_URLS.ORDER}/api/orders/shipping/locations/provinces`, {
+      headers: { Authorization: `Bearer ${getValidToken()}` },
+    }).then((res) => {
+      if (isMounted && Array.isArray(res.data?.data)) {
+        const nextProvider = res.data.provider || "VN_PUBLIC";
+        if (addressDirectoryProviderRef.current && addressDirectoryProviderRef.current !== nextProvider) {
+          setAddrProvinceId("");
+          setAddrDistrictId("");
+          setAddrWardCode("");
+          setAddrDistrict("");
+          setAddrWard("");
+        }
+        setGhnProvinces(res.data.data);
+        addressDirectoryProviderRef.current = nextProvider;
+        setAddressDirectoryProvider(nextProvider);
+        setAddressDirectoryEnabled(true);
+        setGhnEnabled(nextProvider === "GHN");
+      }
+    }).catch((err) => {
+      if (isMounted && err.response?.status !== 503) {
+        setGhnEnabled(true);
+        setGhnQuoteError(err.response?.data?.error || "Không thể tải địa chỉ GHN.");
+      }
+    }).finally(() => {
+      if (isMounted) setGhnConfigLoading(false);
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   // VNPay & MoMo specific states
   const [vnpBankCode, setVnpBankCode] = useState("");
@@ -137,6 +234,8 @@ const CheckoutForm = () => {
     location: "",
     loading: false,
     error: null,
+    ghnDistrictId: null,
+    ghnWardCode: "",
   });
 
   // Effect to authoritatively resolve restaurant details from cart item, restaurant-service, or food item
@@ -187,6 +286,8 @@ const CheckoutForm = () => {
               location: res.data.location || "",
               loading: false,
               error: null,
+              ghnDistrictId: res.data.ghnDistrictId || null,
+              ghnWardCode: res.data.ghnWardCode || "",
             });
             return;
           }
@@ -199,6 +300,8 @@ const CheckoutForm = () => {
               location: "",
               loading: false,
               error: null,
+              ghnDistrictId: null,
+              ghnWardCode: "",
             });
             return;
           }
@@ -220,6 +323,8 @@ const CheckoutForm = () => {
               location: typeof rest === "object" ? rest.location : "",
               loading: false,
               error: null,
+              ghnDistrictId: typeof rest === "object" ? rest.ghnDistrictId || null : null,
+              ghnWardCode: typeof rest === "object" ? rest.ghnWardCode || "" : "",
             });
             return;
           }
@@ -236,6 +341,8 @@ const CheckoutForm = () => {
           location: prev.location || "",
           loading: false,
           error: prev.name || extractedName ? null : "Không thể xác định thông tin nhà hàng",
+          ghnDistrictId: prev.ghnDistrictId || null,
+          ghnWardCode: prev.ghnWardCode || "",
         }));
       }
     };
@@ -247,11 +354,96 @@ const CheckoutForm = () => {
     };
   }, [cartItems]);
 
-  // Pure authoritative total calculation: Subtotal + Delivery Fee - Coupon Discount
-  const calculatedTotal = useMemo(() => {
-    const total = subtotal + deliveryFee;
-    return Math.max(0, total - couponDiscount);
-  }, [subtotal, deliveryFee, couponDiscount]);
+  const updateAddressFromPosition = async (position) => {
+    const response = await axios.post(`${API_URLS.ORDER}/api/orders/shipping/reverse-geocode`, position, {
+      headers: { Authorization: `Bearer ${getValidToken()}` },
+    });
+    const address = response.data?.address;
+    if (!address) throw new Error("Không đọc được địa chỉ từ vị trí hiện tại.");
+
+    const findMatch = (items, candidates, idKey, nameKey) => {
+      const normalizedCandidates = candidates.map(normalizeProvinceName);
+      return items.find((item) => normalizedCandidates.includes(normalizeProvinceName(item[nameKey])));
+    };
+
+    const province = findMatch(ghnProvinces, address.provinceCandidates || [], "ProvinceID", "ProvinceName");
+    const provinceName = province?.ProvinceName || address.provinceCandidates?.[0] || "";
+    setAddrCity(provinceName);
+    setAddrDetail(address.detail || "");
+
+    if (!addressDirectoryEnabled || !province) {
+      setAddrProvinceId("");
+      setAddrDistrictId("");
+      setAddrWardCode("");
+      setAddrDistrict(address.districtCandidates?.[0] || "");
+      setAddrWard(address.wardCandidates?.[0] || "");
+      if (addressDirectoryEnabled && !province) {
+        setLocationError("Đã lấy vị trí; hãy chọn lại tỉnh/quận/phường trong danh sách nếu tên không khớp.");
+      }
+      return;
+    }
+
+    setAddrProvinceId(String(province.ProvinceID));
+    const districtResponse = await axios.get(`${API_URLS.ORDER}/api/orders/shipping/locations/districts`, {
+      params: { parentId: province.ProvinceID },
+      headers: { Authorization: `Bearer ${getValidToken()}` },
+    });
+    const districts = Array.isArray(districtResponse.data?.data) ? districtResponse.data.data : [];
+    setGhnDistricts(districts);
+    const district = findMatch(districts, address.districtCandidates || [], "DistrictID", "DistrictName");
+    if (!district) {
+      setAddrDistrictId("");
+      setAddrWardCode("");
+      setAddrDistrict(address.districtCandidates?.[0] || "");
+      setAddrWard(address.wardCandidates?.[0] || "");
+      setLocationError("Đã lấy vị trí; vui lòng chọn quận/huyện và phường/xã trong danh sách.");
+      return;
+    }
+
+    setAddrDistrictId(String(district.DistrictID));
+    setAddrDistrict(district.DistrictName);
+    const wardResponse = await axios.get(`${API_URLS.ORDER}/api/orders/shipping/locations/wards`, {
+      params: { parentId: district.DistrictID },
+      headers: { Authorization: `Bearer ${getValidToken()}` },
+    });
+    const wards = Array.isArray(wardResponse.data?.data) ? wardResponse.data.data : [];
+    setGhnWards(wards);
+    const ward = findMatch(wards, address.wardCandidates || [], "WardCode", "WardName");
+    setAddrWardCode(ward?.WardCode || "");
+    setAddrWard(ward?.WardName || address.wardCandidates?.[0] || "");
+    if (!ward) setLocationError("Đã lấy vị trí; vui lòng xác nhận phường/xã trong danh sách.");
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Trình duyệt này không hỗ trợ định vị vị trí.");
+      return;
+    }
+
+    setLocationLoading(true);
+    setLocationError("");
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        const position = { latitude: coords.latitude, longitude: coords.longitude };
+        setDeliveryPosition(position);
+        try {
+          await updateAddressFromPosition(position);
+        } catch (error) {
+          setLocationError(error.response?.data?.error || error.message || "Đã ghim vị trí nhưng không thể tự điền địa chỉ.");
+        } finally {
+          setLocationLoading(false);
+        }
+      },
+      (geoError) => {
+        const message = geoError.code === geoError.PERMISSION_DENIED
+          ? "Bạn chưa cấp quyền vị trí cho trình duyệt."
+          : "Không lấy được vị trí hiện tại. Hãy thử ghim trực tiếp trên bản đồ.";
+        setLocationError(message);
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+    );
+  };
 
   const effectiveRestaurantId = useMemo(() => {
     return (
@@ -271,6 +463,99 @@ const CheckoutForm = () => {
     );
   }, [restaurantInfo.name, cartItems]);
 
+  useEffect(() => {
+    if (!addressDirectoryEnabled || addrProvinceId || !addrCity || !ghnProvinces.length) return;
+    const currentProvince = normalizeProvinceName(addrCity);
+    const match = ghnProvinces.find((province) => normalizeProvinceName(province.ProvinceName) === currentProvince);
+    if (match) setAddrProvinceId(String(match.ProvinceID));
+  }, [addressDirectoryEnabled, addrProvinceId, addrCity, ghnProvinces]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!addressDirectoryEnabled || !addrProvinceId) {
+      setGhnDistricts([]);
+      return undefined;
+    }
+    axios.get(`${API_URLS.ORDER}/api/orders/shipping/locations/districts`, {
+      params: { parentId: addrProvinceId },
+      headers: { Authorization: `Bearer ${getValidToken()}` },
+    }).then((res) => {
+      if (isMounted) setGhnDistricts(Array.isArray(res.data?.data) ? res.data.data : []);
+    }).catch((err) => {
+      if (isMounted) setGhnQuoteError(err.response?.data?.error || "Không thể tải danh sách quận/huyện GHN.");
+    });
+    return () => { isMounted = false; };
+  }, [addressDirectoryEnabled, addrProvinceId]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!addressDirectoryEnabled || !addrDistrictId) {
+      setGhnWards([]);
+      return undefined;
+    }
+    axios.get(`${API_URLS.ORDER}/api/orders/shipping/locations/wards`, {
+      params: { parentId: addrDistrictId },
+      headers: { Authorization: `Bearer ${getValidToken()}` },
+    }).then((res) => {
+      if (isMounted) setGhnWards(Array.isArray(res.data?.data) ? res.data.data : []);
+    }).catch((err) => {
+      if (isMounted) setGhnQuoteError(err.response?.data?.error || "Không thể tải danh sách phường/xã GHN.");
+    });
+    return () => { isMounted = false; };
+  }, [addressDirectoryEnabled, addrDistrictId]);
+
+  const currentGhnQuoteKey = `${effectiveRestaurantId}|${addressDirectoryProvider}|${addrDistrictId}|${addrWardCode}`;
+
+  useEffect(() => {
+    if (!ghnEnabled || addressDirectoryProvider !== "GHN" || !effectiveRestaurantId || !addrDistrictId || !addrWardCode) {
+      setGhnQuote(null);
+      setGhnQuoteKey("");
+      setGhnQuoteLoading(false);
+      return undefined;
+    }
+
+    let isMounted = true;
+    setGhnQuote(null);
+    setGhnQuoteKey("");
+    setGhnQuoteLoading(true);
+    setGhnQuoteError("");
+    const timer = setTimeout(() => {
+      axios.post(`${API_URLS.ORDER}/api/orders/shipping/quote`, {
+        restaurantId: effectiveRestaurantId,
+        deliveryAreaProvider: addressDirectoryProvider,
+        toDistrictId: Number(addrDistrictId),
+        toWardCode: addrWardCode,
+      }, { headers: { Authorization: `Bearer ${getValidToken()}` } }).then((res) => {
+        if (isMounted) {
+          setGhnQuote(Number(res.data?.deliveryFee) || 0);
+          setGhnQuoteKey(currentGhnQuoteKey);
+        }
+      }).catch((err) => {
+        if (isMounted) setGhnQuoteError(err.response?.data?.error || "Không thể báo giá GHN cho địa chỉ này.");
+      }).finally(() => {
+        if (isMounted) setGhnQuoteLoading(false);
+      });
+    }, 250);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [ghnEnabled, addressDirectoryProvider, effectiveRestaurantId, addrDistrictId, addrWardCode, currentGhnQuoteKey]);
+
+  const activeDeliveryFee = ghnEnabled
+    ? (ghnQuoteKey === currentGhnQuoteKey && ghnQuote !== null ? ghnQuote : deliveryFee)
+    : deliveryFee;
+  const activeCouponDiscount = appliedCoupon?.discountType === "shipping" && ghnEnabled
+    ? (ghnQuoteKey === currentGhnQuoteKey && ghnQuote !== null ? activeDeliveryFee : 0)
+    : couponDiscount;
+
+  // Pure authoritative total calculation: Subtotal + Delivery Fee - Coupon Discount
+  const calculatedTotal = useMemo(() => {
+    const total = subtotal + activeDeliveryFee;
+    return Math.max(0, total - activeCouponDiscount);
+  }, [subtotal, activeDeliveryFee, activeCouponDiscount]);
+
   const orderData = useMemo(() => ({
     orderId: currentOrderId,
     userId: authCustomer?.id || "",
@@ -289,9 +574,15 @@ const CheckoutForm = () => {
     })),
     restaurantId: effectiveRestaurantId,
     restaurantName: effectiveRestaurantName,
+    deliveryProvinceId: addrProvinceId ? Number(addrProvinceId) : null,
+    deliveryDistrictId: addrDistrictId ? Number(addrDistrictId) : null,
+    deliveryWardCode: addrWardCode || null,
+    deliveryAreaProvider: addressDirectoryProvider || "MANUAL",
+    deliveryLatitude: deliveryPosition?.latitude ?? null,
+    deliveryLongitude: deliveryPosition?.longitude ?? null,
     couponCode: appliedCoupon?.code || null,
-    discountAmount: couponDiscount,
-  }), [currentOrderId, calculatedTotal, firstName, lastName, customerEmail, customerPhone, deliveryAddress, cartItems, appliedCoupon, couponDiscount, effectiveRestaurantId, effectiveRestaurantName, authCustomer]);
+    discountAmount: activeCouponDiscount,
+  }), [currentOrderId, calculatedTotal, firstName, lastName, customerEmail, customerPhone, deliveryAddress, cartItems, appliedCoupon, activeCouponDiscount, effectiveRestaurantId, effectiveRestaurantName, authCustomer, addrProvinceId, addrDistrictId, addrWardCode, addressDirectoryProvider, deliveryPosition]);
 
   // Keep validation in one place so every payment method uses the same order rules.
   const validateCheckout = useCallback(() => {
@@ -312,8 +603,16 @@ const CheckoutForm = () => {
       setError("Không thể xác định nhà hàng của đơn. Vui lòng quay lại giỏ hàng và thử lại.");
       return false;
     }
+    if (ghnConfigLoading) {
+      setError("Đang kiểm tra cấu hình cước giao hàng. Vui lòng chờ.");
+      return false;
+    }
+    if (ghnEnabled && (addressDirectoryProvider !== "GHN" || !addrProvinceId || !addrDistrictId || !addrWardCode || ghnQuoteKey !== currentGhnQuoteKey || ghnQuote === null)) {
+      setError(ghnQuoteError || "Vui lòng chọn đầy đủ địa chỉ và chờ GHN báo giá trước khi thanh toán.");
+      return false;
+    }
     return true;
-  }, [checkAuthOrRedirect, cartItems.length, hasMixedRestaurants, addrCity, addrDistrict, addrDetail, effectiveRestaurantId]);
+  }, [checkAuthOrRedirect, cartItems.length, hasMixedRestaurants, addrCity, addrDistrict, addrDetail, effectiveRestaurantId, ghnEnabled, ghnConfigLoading, addressDirectoryProvider, addrProvinceId, addrDistrictId, addrWardCode, ghnQuoteKey, currentGhnQuoteKey, ghnQuote, ghnQuoteError]);
 
   const handleApplyCoupon = async (e, selectedCode = couponCode) => {
     if (e) e.preventDefault();
@@ -407,6 +706,12 @@ const CheckoutForm = () => {
           })),
           totalPrice: orderData.amount,
           deliveryAddress: orderData.deliveryAddress,
+          deliveryProvinceId: orderData.deliveryProvinceId,
+          deliveryDistrictId: orderData.deliveryDistrictId,
+          deliveryWardCode: orderData.deliveryWardCode,
+          deliveryAreaProvider: orderData.deliveryAreaProvider,
+          deliveryLatitude: orderData.deliveryLatitude,
+          deliveryLongitude: orderData.deliveryLongitude,
           paymentMethod: method,
           couponCode: orderData.couponCode,
           status: status === "Paid" ? "Confirmed" : "Pending",
@@ -551,8 +856,8 @@ const CheckoutForm = () => {
               orderId: orderData.orderId,
               items: [...cartItems],
               subtotal,
-              deliveryFee,
-              couponDiscount,
+              deliveryFee: activeDeliveryFee,
+              couponDiscount: activeCouponDiscount,
               totalAmount: orderData.amount,
               paymentMethod,
               restaurantId: orderData.restaurantId,
@@ -574,7 +879,7 @@ const CheckoutForm = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [pollingActive, disablePayment, orderData, paymentMethod, cartItems, subtotal, deliveryFee, couponDiscount, appliedCoupon, clearCart, createOrderInOrderService, effectiveRestaurantName]);
+  }, [pollingActive, disablePayment, orderData, paymentMethod, cartItems, subtotal, activeDeliveryFee, activeCouponDiscount, appliedCoupon, clearCart, createOrderInOrderService, effectiveRestaurantName]);
 
   // Status Polling for QR Modes
   const checkPaymentStatus = async () => {
@@ -587,8 +892,8 @@ const CheckoutForm = () => {
           orderId: orderData.orderId,
           items: [...cartItems],
           subtotal,
-          deliveryFee,
-          couponDiscount,
+          deliveryFee: activeDeliveryFee,
+          couponDiscount: activeCouponDiscount,
           totalAmount: orderData.amount,
           paymentMethod,
           restaurantId: orderData.restaurantId,
@@ -690,6 +995,7 @@ const CheckoutForm = () => {
         phone: orderData.phone,
       }, { headers: getAuthHeaders() });
       if (response.data.checkoutUrl) {
+        sessionStorage.setItem(PAYOS_RETURN_PENDING_KEY, "1");
         window.location.href = response.data.checkoutUrl;
       } else {
         setError("Không thể tạo liên kết thanh toán PayOS.");
@@ -726,8 +1032,8 @@ const CheckoutForm = () => {
           orderId: orderData.orderId,
           items: [...cartItems],
           subtotal,
-          deliveryFee,
-          couponDiscount,
+          deliveryFee: activeDeliveryFee,
+          couponDiscount: activeCouponDiscount,
           totalAmount: orderData.amount,
           paymentMethod: "COD",
           restaurantId: orderData.restaurantId,
@@ -762,8 +1068,8 @@ const CheckoutForm = () => {
 
   const displayedItems = placedOrder ? placedOrder.items : cartItems;
   const displayedSubtotal = placedOrder ? placedOrder.subtotal : subtotal;
-  const displayedDeliveryFee = placedOrder ? placedOrder.deliveryFee : deliveryFee;
-  const displayedDiscount = placedOrder ? placedOrder.couponDiscount : couponDiscount;
+  const displayedDeliveryFee = placedOrder ? placedOrder.deliveryFee : activeDeliveryFee;
+  const displayedDiscount = placedOrder ? placedOrder.couponDiscount : activeCouponDiscount;
   const displayedTotal = placedOrder ? placedOrder.totalAmount : calculatedTotal;
   const displayedRestaurantName = placedOrder
     ? (placedOrder.restaurantName || placedOrder.restaurantId)
@@ -1420,41 +1726,68 @@ const CheckoutForm = () => {
             </p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.55rem" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Tỉnh / Thành phố *</label>
-                  <input
-                    type="text"
-                    className="stripe-input-box"
-                    style={{ width: "100%", fontSize: "0.83rem" }}
-                    placeholder="VD: Hà Nội"
-                    value={addrCity}
-                    onChange={(e) => setAddrCity(e.target.value)}
-                  />
+              {addressDirectoryEnabled ? (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.55rem" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Tỉnh / Thành phố *</label>
+                      <select className="stripe-input-box" style={{ width: "100%", fontSize: "0.83rem" }} value={addrProvinceId} onChange={(e) => {
+                        const province = ghnProvinces.find((item) => String(item.ProvinceID) === e.target.value);
+                        setAddrProvinceId(e.target.value);
+                        setAddrCity(province?.ProvinceName || "");
+                        setAddrDistrictId("");
+                        setAddrWardCode("");
+                        setAddrDistrict("");
+                        setAddrWard("");
+                      }}>
+                        <option value="">Chọn tỉnh / thành phố</option>
+                        {ghnProvinces.map((province) => <option key={province.ProvinceID} value={province.ProvinceID}>{province.ProvinceName}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Quận / Huyện *</label>
+                      <select className="stripe-input-box" style={{ width: "100%", fontSize: "0.83rem" }} value={addrDistrictId} disabled={!addrProvinceId} onChange={(e) => {
+                        const district = ghnDistricts.find((item) => String(item.DistrictID) === e.target.value);
+                        setAddrDistrictId(e.target.value);
+                        setAddrDistrict(district?.DistrictName || "");
+                        setAddrWardCode("");
+                        setAddrWard("");
+                      }}>
+                        <option value="">Chọn quận / huyện</option>
+                        {ghnDistricts.map((district) => <option key={district.DistrictID} value={district.DistrictID}>{district.DistrictName}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Phường / Xã *</label>
+                    <select className="stripe-input-box" style={{ width: "100%", fontSize: "0.83rem" }} value={addrWardCode} disabled={!addrDistrictId} onChange={(e) => {
+                      const ward = ghnWards.find((item) => item.WardCode === e.target.value);
+                      setAddrWardCode(e.target.value);
+                      setAddrWard(ward?.WardName || "");
+                    }}>
+                      <option value="">Chọn phường / xã</option>
+                      {ghnWards.map((ward) => <option key={ward.WardCode} value={ward.WardCode}>{ward.WardName}</option>)}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.55rem" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Tỉnh / Thành phố *</label>
+                    <input type="text" className="stripe-input-box" style={{ width: "100%", fontSize: "0.83rem" }} placeholder="VD: Hà Nội" value={addrCity} onChange={(e) => setAddrCity(e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Quận / Huyện *</label>
+                    <input type="text" className="stripe-input-box" style={{ width: "100%", fontSize: "0.83rem" }} placeholder="VD: Hoàn Kiếm" value={addrDistrict} onChange={(e) => setAddrDistrict(e.target.value)} />
+                  </div>
                 </div>
+              )}
+              {!addressDirectoryEnabled && (
                 <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Quận / Huyện *</label>
-                  <input
-                    type="text"
-                    className="stripe-input-box"
-                    style={{ width: "100%", fontSize: "0.83rem" }}
-                    placeholder="VD: Hoàn Kiếm"
-                    value={addrDistrict}
-                    onChange={(e) => setAddrDistrict(e.target.value)}
-                  />
+                  <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Phường / Xã</label>
+                  <input type="text" className="stripe-input-box" style={{ width: "100%", fontSize: "0.83rem" }} placeholder="VD: Phường Tràng Tiền" value={addrWard} onChange={(e) => setAddrWard(e.target.value)} />
                 </div>
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Phường / Xã</label>
-                <input
-                  type="text"
-                  className="stripe-input-box"
-                  style={{ width: "100%", fontSize: "0.83rem" }}
-                  placeholder="VD: Phường Tràng Tiền"
-                  value={addrWard}
-                  onChange={(e) => setAddrWard(e.target.value)}
-                />
-              </div>
+              )}
               <div>
                 <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "600", color: "#64748b", marginBottom: "0.25rem" }}>Địa chỉ chi tiết (số nhà, tên đường) *</label>
                 <input
@@ -1466,9 +1799,38 @@ const CheckoutForm = () => {
                   onChange={(e) => setAddrDetail(e.target.value)}
                 />
               </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#334155" }}>Vị trí giao hàng trên bản đồ</span>
+                <button
+                  type="button"
+                  onClick={handleUseCurrentLocation}
+                  disabled={locationLoading}
+                  style={{ border: "1px solid #cbd5e1", borderRadius: "6px", background: "#fff", color: "#334155", padding: "0.45rem 0.65rem", fontSize: "0.78rem", fontWeight: "700", cursor: locationLoading ? "wait" : "pointer" }}
+                >
+                  <FaMapMarkerAlt style={{ marginRight: "0.35rem", color: "#e94b24" }} />
+                  {locationLoading ? "Đang lấy vị trí..." : "Lấy vị trí hiện tại"}
+                </button>
+              </div>
+              <DeliveryLocationPicker
+                position={deliveryPosition}
+                onChange={(position) => {
+                  setDeliveryPosition(position);
+                  setLocationError("");
+                }}
+              />
+              <p style={{ fontSize: "0.72rem", color: locationError ? "#b91c1c" : "#64748b", margin: 0 }}>
+                {locationError || (deliveryPosition
+                  ? `Đã ghim: ${deliveryPosition.latitude.toFixed(6)}, ${deliveryPosition.longitude.toFixed(6)}`
+                  : "Cho phép truy cập vị trí hoặc chạm lên bản đồ để ghim điểm giao." )}
+              </p>
               {deliveryAddress && (
                 <p style={{ fontSize: "0.75rem", color: "#64748b", margin: "0.1rem 0 0 0" }}>
                   ↳ <em>{deliveryAddress}</em>
+                </p>
+              )}
+              {ghnEnabled && (
+                <p style={{ fontSize: "0.75rem", color: ghnQuoteError ? "#b91c1c" : "#64748b", margin: 0 }}>
+                  {ghnQuoteLoading ? "Đang lấy báo giá GHN..." : ghnQuoteError || (ghnQuoteKey === currentGhnQuoteKey && ghnQuote !== null ? `Cước GHN: ${formatCurrency(ghnQuote)}` : "Chọn đầy đủ địa chỉ để xem cước GHN.")}
                 </p>
               )}
             </div>

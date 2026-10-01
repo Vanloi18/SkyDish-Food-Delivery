@@ -92,6 +92,14 @@ services:
       - PORT=5005
       - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
+      - GHN_TOKEN=${GHN_TOKEN:-}
+      - GHN_SHOP_ID=${GHN_SHOP_ID:-}
+      - GHN_API_URL=${GHN_API_URL:-https://online-gateway.ghn.vn/shiip/public-api}
+      - GHN_SERVICE_TYPE_ID=${GHN_SERVICE_TYPE_ID:-2}
+      - GHN_DEFAULT_WEIGHT_GRAMS=${GHN_DEFAULT_WEIGHT_GRAMS:-1000}
+      - GHN_DEFAULT_LENGTH_CM=${GHN_DEFAULT_LENGTH_CM:-20}
+      - GHN_DEFAULT_WIDTH_CM=${GHN_DEFAULT_WIDTH_CM:-15}
+      - GHN_DEFAULT_HEIGHT_CM=${GHN_DEFAULT_HEIGHT_CM:-10}
     depends_on:
       mongo:
         condition: service_healthy

@@ -16,6 +16,18 @@ const restaurantSchema = new mongoose.Schema(
       type: String,
       required: true, 
     },
+    ghnProvinceId: {
+      type: Number,
+      default: null,
+    },
+    ghnDistrictId: {
+      type: Number,
+      default: null,
+    },
+    ghnWardCode: {
+      type: String,
+      default: null,
+    },
     contactNumber: {
       type: String,
       required: true,
