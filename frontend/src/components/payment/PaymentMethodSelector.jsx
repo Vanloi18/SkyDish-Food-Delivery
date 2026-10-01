@@ -27,6 +27,15 @@ const PAYMENT_METHODS = [
     color: "#a21caf",
   },
   {
+    id: "PAYOS",
+    title: "Thanh toán qua PayOS",
+    description: "Quét VietQR hoặc thanh toán bằng ứng dụng ngân hàng trên PayOS",
+    icon: FaQrcode,
+    badge: "VietQR",
+    badgeColor: "#0284c7",
+    color: "#0068ff",
+  },
+  {
     id: "BANK_TRANSFER",
     title: "Chuyển khoản ngân hàng",
     description: "Quét mã QR để chuyển khoản trực tiếp (MB Bank / VietQR)",

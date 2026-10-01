@@ -4,16 +4,17 @@ import Review from '../models/Review.js';
 import Notification from '../models/Notification.js';
 import Restaurant from '../models/Restaurant.js';
 import authMiddleware from '../middleware/authMiddleware.js';
+import upload from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
 // 1. Submit a review for a completed order
-router.post('/', async (req, res) => {
+router.post('/', authMiddleware, upload.array('images', 5), async (req, res) => {
   try {
-    const { orderId, customerId, customerName, restaurantId, rating, comment } = req.body;
+    const { orderId, customerName, restaurantId, rating, comment } = req.body;
 
-    if (!orderId || !customerId || !restaurantId) {
-      return res.status(400).json({ message: 'Thiếu thông tin mã đơn hàng, khách hàng hoặc nhà hàng.' });
+    if (!orderId) {
+      return res.status(400).json({ message: 'Thiếu mã đơn hàng.' });
     }
 
     const numRating = Number(rating);
@@ -25,28 +26,46 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Vui lòng nhập nhận xét đánh giá của bạn.' });
     }
 
-    // Check for duplicate review on same order
-    const existing = await Review.findOne({ orderId, customerId });
+    if (req.user.role && req.user.role !== 'customer') {
+      return res.status(403).json({ message: 'Chỉ tài khoản khách hàng mới được đánh giá.' });
+    }
+
+    const order = await mongoose.connection.db.collection('orders').findOne({
+      $or: [{ orderId: String(orderId) }, ...(mongoose.Types.ObjectId.isValid(orderId) ? [{ _id: new mongoose.Types.ObjectId(orderId) }] : [])],
+    });
+    if (!order || String(order.customerId) !== String(req.user.id)) {
+      return res.status(403).json({ message: 'Bạn chỉ có thể đánh giá đơn hàng của chính mình.' });
+    }
+    if (order.status !== 'Delivered' || order.paymentStatus !== 'Paid') {
+      return res.status(403).json({ message: 'Chỉ đơn đã thanh toán và giao thành công mới được đánh giá.' });
+    }
+
+    const verifiedRestaurantId = String(order.restaurantId);
+    if (restaurantId && String(restaurantId) !== verifiedRestaurantId) {
+      return res.status(403).json({ message: 'Nhà hàng không khớp với đơn hàng.' });
+    }
+
+    // Check for duplicate review on the verified order and customer.
+    const verifiedOrderId = order.orderId || String(orderId);
+    const existing = await Review.findOne({ orderId: verifiedOrderId, customerId: String(req.user.id) });
     if (existing) {
       return res.status(400).json({ message: 'Đơn hàng này đã được bạn đánh giá trước đó.' });
     }
 
     // Verify restaurant exists
-    let restaurant = null;
-    if (mongoose.Types.ObjectId.isValid(restaurantId)) {
-      restaurant = await Restaurant.findById(restaurantId);
-    }
+    const restaurant = await Restaurant.findById(verifiedRestaurantId);
     if (!restaurant) {
       return res.status(404).json({ message: 'Nhà hàng không tồn tại.' });
     }
 
     const newReview = new Review({
-      orderId,
-      customerId,
-      customerName: customerName || 'Khách hàng',
-      restaurantId,
+      orderId: verifiedOrderId,
+      customerId: String(req.user.id),
+      customerName: customerName || order.customerName || 'Khách hàng',
+      restaurantId: verifiedRestaurantId,
       rating: Math.round(numRating),
       comment: comment.trim(),
+      images: (req.files || []).map((file) => `/uploads/${file.filename}`).slice(0, 5),
     });
 
     await newReview.save();
@@ -54,7 +73,7 @@ router.post('/', async (req, res) => {
     // Create Notification for Restaurant Partner
     try {
       await Notification.create({
-        userId: restaurantId.toString(),
+        userId: verifiedRestaurantId,
         role: 'restaurant',
         type: 'review',
         title: '⭐ Đánh giá mới từ thực khách!',
@@ -104,6 +123,43 @@ router.get('/restaurant/:restaurantId', async (req, res) => {
   } catch (err) {
     console.error('Error getting restaurant reviews:', err);
     res.status(500).json({ message: 'Lỗi lấy danh sách đánh giá.' });
+  }
+});
+
+// 2b. Get review summaries for each food appearing in reviewed orders
+router.get('/restaurant/:restaurantId/foods', async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const reviews = await Review.aggregate([
+      { $match: { restaurantId: new mongoose.Types.ObjectId(restaurantId), status: 'active' } },
+      { $lookup: { from: 'orders', localField: 'orderId', foreignField: 'orderId', as: 'order' } },
+      { $unwind: '$order' },
+      { $match: { 'order.status': 'Delivered' } },
+      { $unwind: '$order.items' },
+      { $group: {
+        _id: '$order.items.foodId',
+        totalReviews: { $sum: 1 },
+        averageRating: { $avg: '$rating' },
+        distribution: { $push: '$rating' },
+        comments: { $push: { rating: '$rating', customerName: '$customerName', comment: '$comment', images: '$images', createdAt: '$createdAt' } },
+      } },
+    ]);
+
+    const summaries = {};
+    reviews.forEach((item) => {
+      const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+      item.distribution.forEach((rating) => { distribution[rating] = (distribution[rating] || 0) + 1; });
+      summaries[item._id] = {
+        totalReviews: item.totalReviews,
+        averageRating: Number(item.averageRating.toFixed(1)),
+        distribution,
+        comments: item.comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
+      };
+    });
+    res.status(200).json(summaries);
+  } catch (err) {
+    console.error('Error getting food review summaries:', err);
+    res.status(500).json({ message: 'Lỗi lấy đánh giá theo món.' });
   }
 });
 

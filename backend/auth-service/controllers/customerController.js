@@ -1,10 +1,17 @@
-// backend/auth-service/controllers/customerController.js
-
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const { OAuth2Client } = require("google-auth-library");
 
 const Customer = require("../models/Customer");
 const { sendOTPEmail } = require("../services/emailService");
+
+// ============================================================
+// GOOGLE OAUTH CLIENT
+// ============================================================
+
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID
+);
 
 // ============================================================
 // HELPER: SIGN JWT
@@ -16,7 +23,9 @@ const signToken = (customer) => {
       id: customer._id.toString(),
       role: "customer",
       email: customer.email,
-      name: `${customer.firstName} ${customer.lastName}`,
+      name: `${customer.firstName || ""} ${
+        customer.lastName || ""
+      }`.trim(),
     },
     process.env.JWT_SECRET ||
       "supersecretjwtkeyforfooddeliverymicroservices2025",
@@ -35,7 +44,7 @@ const generateOTP = () => {
 };
 
 // ============================================================
-// REGISTER
+// REGISTER CUSTOMER
 // POST /api/auth/register/customer
 // ============================================================
 
@@ -64,28 +73,29 @@ exports.register = async (req, res, next) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const existing = await Customer.findOne({
+    const existingCustomer = await Customer.findOne({
       email: normalizedEmail,
     });
 
-    if (existing) {
+    if (existingCustomer) {
       return res.status(409).json({
         message: "Email already registered.",
       });
     }
 
     const customer = await Customer.create({
-      firstName,
-      lastName,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
       email: normalizedEmail,
-      phone,
+      phone: phone.trim(),
       password,
       location,
+      authProvider: "local",
     });
 
     const token = signToken(customer);
 
-    res.status(201).json({
+    return res.status(201).json({
       status: "success",
       token,
       data: {
@@ -100,6 +110,7 @@ exports.register = async (req, res, next) => {
       },
     });
   } catch (err) {
+    console.error("Register error:", err);
     next(err);
   }
 };
@@ -131,9 +142,17 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    const valid = await customer.comparePassword(password);
+    // Google-only account may not have a password
+    if (!customer.password) {
+      return res.status(401).json({
+        message:
+          "This account uses Google login. Please continue with Google.",
+      });
+    }
 
-    if (!valid) {
+    const validPassword = await customer.comparePassword(password);
+
+    if (!validPassword) {
       return res.status(401).json({
         message: "Invalid credentials.",
       });
@@ -141,7 +160,7 @@ exports.login = async (req, res, next) => {
 
     const token = signToken(customer);
 
-    res.json({
+    return res.json({
       status: "success",
       token,
       data: {
@@ -156,12 +175,199 @@ exports.login = async (req, res, next) => {
       },
     });
   } catch (err) {
+    console.error("Login error:", err);
     next(err);
   }
 };
 
 // ============================================================
-// GET PROFILE
+// GOOGLE LOGIN
+// POST /api/auth/google
+// ============================================================
+
+exports.googleLogin = async (req, res, next) => {
+  try {
+    const { credential } = req.body;
+
+    // --------------------------------------------------------
+    // Validate credential
+    // --------------------------------------------------------
+
+    if (!credential) {
+      return res.status(400).json({
+        message: "Google credential is required.",
+      });
+    }
+
+    // --------------------------------------------------------
+    // Validate Google Client ID
+    // --------------------------------------------------------
+
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      console.error(
+        "GOOGLE_CLIENT_ID is not configured in auth-service."
+      );
+
+      return res.status(500).json({
+        message:
+          "Google login is not configured on the server.",
+      });
+    }
+
+    // --------------------------------------------------------
+    // Verify Google ID Token
+    // --------------------------------------------------------
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      return res.status(401).json({
+        message: "Invalid Google credential.",
+      });
+    }
+
+    const {
+      sub: googleId,
+      email,
+      email_verified: emailVerified,
+      given_name: givenName,
+      family_name: familyName,
+      name,
+    } = payload;
+
+    // --------------------------------------------------------
+    // Validate Google account
+    // --------------------------------------------------------
+
+    if (!googleId || !email) {
+      return res.status(401).json({
+        message: "Invalid Google account information.",
+      });
+    }
+
+    if (!emailVerified) {
+      return res.status(401).json({
+        message: "Google email is not verified.",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // --------------------------------------------------------
+    // Find existing customer
+    //
+    // Priority:
+    // 1. googleId
+    // 2. email
+    // --------------------------------------------------------
+
+    let customer = await Customer.findOne({
+      $or: [
+        {
+          googleId: googleId,
+        },
+        {
+          email: normalizedEmail,
+        },
+      ],
+    });
+
+    // --------------------------------------------------------
+    // Create new customer
+    // --------------------------------------------------------
+
+    if (!customer) {
+      const fullName = name || "Google User";
+
+      const nameParts = fullName.trim().split(/\s+/);
+
+      const firstName =
+        givenName ||
+        nameParts[0] ||
+        "Google";
+
+      const lastName =
+        familyName ||
+        nameParts.slice(1).join(" ") ||
+        "User";
+
+      customer = await Customer.create({
+        firstName,
+        lastName,
+        email: normalizedEmail,
+
+        // Google accounts do not require phone/password
+        phone: "",
+
+        // Do not create a local password
+        password: undefined,
+
+        googleId,
+        authProvider: "google",
+      });
+    } else {
+      // ------------------------------------------------------
+      // Existing account
+      // Link Google account if necessary
+      // ------------------------------------------------------
+
+      let changed = false;
+
+      if (!customer.googleId) {
+        customer.googleId = googleId;
+        changed = true;
+      }
+
+      if (!customer.authProvider) {
+        customer.authProvider = "google";
+        changed = true;
+      }
+
+      if (changed) {
+        await customer.save();
+      }
+    }
+
+    // --------------------------------------------------------
+    // Generate JWT
+    // --------------------------------------------------------
+
+    const token = signToken(customer);
+
+    // --------------------------------------------------------
+    // Return customer
+    // --------------------------------------------------------
+
+    return res.status(200).json({
+      status: "success",
+      token,
+      data: {
+        customer: {
+          id: customer._id,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          email: customer.email,
+          phone: customer.phone,
+          location: customer.location,
+        },
+      },
+    });
+  } catch (err) {
+    console.error("Google login error:", err);
+
+    return res.status(401).json({
+      message: "Google authentication failed.",
+    });
+  }
+};
+
+// ============================================================
+// GET CUSTOMER PROFILE
 // GET /api/auth/customer/profile
 // ============================================================
 
@@ -175,7 +381,7 @@ exports.getProfile = async (req, res, next) => {
       });
     }
 
-    res.json({
+    return res.json({
       status: "success",
       data: {
         customer: {
@@ -189,12 +395,13 @@ exports.getProfile = async (req, res, next) => {
       },
     });
   } catch (err) {
+    console.error("Get profile error:", err);
     next(err);
   }
 };
 
 // ============================================================
-// UPDATE PROFILE
+// UPDATE CUSTOMER PROFILE
 // PATCH /api/auth/customer/profile
 // ============================================================
 
@@ -227,7 +434,7 @@ exports.updateProfile = async (req, res, next) => {
       });
     }
 
-    res.json({
+    return res.json({
       status: "success",
       data: {
         customer: {
@@ -241,6 +448,7 @@ exports.updateProfile = async (req, res, next) => {
       },
     });
   } catch (err) {
+    console.error("Update profile error:", err);
     next(err);
   }
 };
@@ -266,6 +474,7 @@ exports.forgotPassword = async (req, res, next) => {
       email: normalizedEmail,
     });
 
+    // Do not reveal whether email exists
     if (!customer) {
       return res.json({
         status: "success",
@@ -274,8 +483,13 @@ exports.forgotPassword = async (req, res, next) => {
       });
     }
 
+    // --------------------------------------------------------
+    // Generate OTP
+    // --------------------------------------------------------
+
     const otp = generateOTP();
 
+    // Hash OTP before saving
     const hashedOTP = await bcrypt.hash(otp, 10);
 
     customer.resetPasswordOTP = hashedOTP;
@@ -286,9 +500,13 @@ exports.forgotPassword = async (req, res, next) => {
 
     await customer.save();
 
+    // --------------------------------------------------------
+    // Send OTP email
+    // --------------------------------------------------------
+
     await sendOTPEmail(customer.email, otp);
 
-    res.json({
+    return res.json({
       status: "success",
       message:
         "If this email is registered, an OTP has been sent.",
@@ -337,6 +555,10 @@ exports.verifyOTP = async (req, res, next) => {
       });
     }
 
+    // --------------------------------------------------------
+    // Check expiration
+    // --------------------------------------------------------
+
     if (
       customer.resetPasswordOTPExpires.getTime() <
       Date.now()
@@ -352,6 +574,10 @@ exports.verifyOTP = async (req, res, next) => {
       });
     }
 
+    // --------------------------------------------------------
+    // Compare OTP
+    // --------------------------------------------------------
+
     const validOTP = await bcrypt.compare(
       otp.toString(),
       customer.resetPasswordOTP
@@ -363,7 +589,7 @@ exports.verifyOTP = async (req, res, next) => {
       });
     }
 
-    res.json({
+    return res.json({
       status: "success",
       message: "OTP verified successfully.",
     });
@@ -423,6 +649,10 @@ exports.resetPassword = async (req, res, next) => {
       });
     }
 
+    // --------------------------------------------------------
+    // Check OTP expiration
+    // --------------------------------------------------------
+
     if (
       customer.resetPasswordOTPExpires.getTime() <
       Date.now()
@@ -438,6 +668,10 @@ exports.resetPassword = async (req, res, next) => {
       });
     }
 
+    // --------------------------------------------------------
+    // Verify OTP
+    // --------------------------------------------------------
+
     const validOTP = await bcrypt.compare(
       otp.toString(),
       customer.resetPasswordOTP
@@ -449,13 +683,18 @@ exports.resetPassword = async (req, res, next) => {
       });
     }
 
+    // --------------------------------------------------------
+    // Update password
+    // Customer model should hash password in pre-save hook
+    // --------------------------------------------------------
+
     customer.password = newPassword;
     customer.resetPasswordOTP = null;
     customer.resetPasswordOTPExpires = null;
 
     await customer.save();
 
-    res.json({
+    return res.json({
       status: "success",
       message:
         "Password reset successfully. You can now log in.",

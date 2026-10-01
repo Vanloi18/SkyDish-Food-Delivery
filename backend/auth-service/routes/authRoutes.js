@@ -34,6 +34,12 @@ router.post(
   authController.login
 );
 
+// Google Login
+router.post(
+  "/google",
+  authController.googleLogin
+);
+
 // ============================================================
 // FORGOT PASSWORD / OTP
 // ============================================================

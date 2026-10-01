@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { 
-  FaUtensils, 
+  FaUtensils,
   FaFacebookF, 
   FaTwitter, 
   FaInstagram, 

@@ -61,7 +61,7 @@ const AdminTopbar = ({
 
   const notifications = [
     { id: 1, title: "Hệ thống 5 vi dịch vụ hoạt động ổn định", time: "Vừa xong", type: "success" },
-    { id: 2, title: "Đã kích hoạt hỗ trợ 4 cổng thanh toán (Stripe, VNPay, MoMo, COD)", time: "5 phút trước", type: "info" },
+    { id: 2, title: "Đã kích hoạt hỗ trợ PayOS, Stripe, VNPay, MoMo và COD", time: "5 phút trước", type: "info" },
     { id: 3, title: "Chuẩn hóa tiền tệ Việt Nam Đồng (VND / ₫)", time: "Hôm nay", type: "success" },
     { id: 4, title: "16 nhà hàng đối tác thực tế tại Hà Nội đã đồng bộ", time: "Hôm nay", type: "success" },
   ];

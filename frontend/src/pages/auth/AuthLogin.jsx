@@ -3,6 +3,10 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { API_URLS } from "../../config/api";
+import {
+  GoogleOAuthProvider,
+  GoogleLogin,
+} from "@react-oauth/google";
 
 import {
   FaEnvelope,
@@ -43,6 +47,82 @@ export default function AuthLogin() {
       setError("");
     }
   };
+   const handleGoogleLogin = async (credentialResponse) => {
+  setError("");
+  setLoading(true);
+
+  try {
+    const res = await axios.post(
+      `${API_URLS.AUTH}/api/auth/google`,
+      {
+        credential: credentialResponse.credential,
+      }
+    );
+
+    if (res.data?.token) {
+      // Lưu JWT
+      localStorage.setItem("token", res.data.token);
+
+      const customer =
+        res.data?.data?.customer ||
+        res.data?.customer;
+
+      // Lưu tên
+      if (customer?.firstName) {
+        localStorage.setItem(
+          "customerName",
+          `${customer.firstName} ${
+            customer.lastName || ""
+          }`.trim()
+        );
+      }
+
+      // Lưu phone
+      if (customer?.phone) {
+        localStorage.setItem(
+          "customerPhone",
+          customer.phone
+        );
+      }
+
+      // Lưu customer ID
+      if (customer?.id || customer?._id) {
+        localStorage.setItem(
+          "customerId",
+          customer.id || customer._id
+        );
+      }
+
+      // Lưu email
+      if (customer?.email) {
+        localStorage.setItem(
+          "customerEmail",
+          customer.email.trim().toLowerCase()
+        );
+      }
+
+      // Redirect giống login thường
+      const redirectTarget =
+        searchParams.get("redirect") ||
+        "/customer/home";
+
+      navigate(redirectTarget);
+    } else {
+      setError(
+        "Phản hồi không hợp lệ từ máy chủ xác thực."
+      );
+    }
+  } catch (err) {
+    console.error("Google login error:", err);
+
+    setError(
+      err.response?.data?.message ||
+        "Đăng nhập bằng Google thất bại. Vui lòng thử lại."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -127,7 +207,7 @@ export default function AuthLogin() {
   };
 
   return (
-    <>
+    <GoogleOAuthProvider clientId="782759222925-f28343j2js4tc6hm0hicsfvn21362ulm.apps.googleusercontent.com">
       <style>{`
         /* =====================================================
            AUTH LOGIN
@@ -284,6 +364,33 @@ export default function AuthLogin() {
             font-size: 13px;
           }
         }
+        .google-login-section {
+        margin-top: 24px;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  color: #999999;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #eeeeee;
+}
+
+.google-login-button {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
       `}</style>
 
       <div className="login-page">
@@ -423,6 +530,30 @@ export default function AuthLogin() {
                 </Button>
               </div>
             </form>
+            
+            {/* GOOGLE LOGIN */}
+<div className="google-login-section">
+  <div className="login-divider">
+    <span>HOẶC</span>
+  </div>
+
+  <div className="google-login-button">
+    <GoogleLogin
+      onSuccess={handleGoogleLogin}
+      onError={() => {
+        setError(
+          "Đăng nhập bằng Google thất bại. Vui lòng thử lại."
+        );
+      }}
+      useOneTap={false}
+      theme="outline"
+      size="large"
+      text="signin_with"
+      shape="rectangular"
+      width="380"
+    />
+  </div>
+</div>
 
             {/* REGISTER */}
             <div className="login-register">
@@ -437,6 +568,6 @@ export default function AuthLogin() {
 
         <Footer />
       </div>
-    </>
+    </GoogleOAuthProvider>
   );
 }

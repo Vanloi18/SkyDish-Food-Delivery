@@ -1,14 +1,14 @@
 # Payment Service
 
-The Payment Service is a microservice for handling payment processing, notifications, and webhook integration for the Food Delivery Microservices project. It integrates with Stripe for payment processing, Twilio for SMS notifications, and Resend for email notifications.
+The Payment Service handles payment processing and gateway callbacks for the Food Delivery Microservices project. It supports Stripe, VNPay, MoMo, PayOS, bank transfer, and cash on delivery, plus Twilio SMS and Resend email notifications.
 
 ---
 
 ## Features
 
 1. **Payment Processing**:
-  - Handles payment creation and status updates using Stripe.
-  - Supports multiple currencies (default: USD).
+  - Creates payment links and verifies provider callbacks before updating order status.
+  - Supports VND payments through VNPay, MoMo, PayOS, bank transfer, and cash on delivery, as well as Stripe.
 
 2. **Notifications**:
   - Sends SMS notifications using Twilio.
@@ -44,11 +44,18 @@ The Payment Service is a microservice for handling payment processing, notificat
   MONGO_URI=<your_mongo_connection_string>
   STRIPE_SECRET_KEY=<your_stripe_secret_key>
   STRIPE_WEBHOOK_SECRET=<your_stripe_webhook_secret>
+  PAYOS_CLIENT_ID=<your_payos_client_id>
+  PAYOS_API_KEY=<your_payos_api_key>
+  PAYOS_CHECKSUM_KEY=<your_payos_checksum_key>
+  PAYOS_RETURN_URL=<your_frontend_return_url>
+  PAYOS_CANCEL_URL=<your_frontend_cancel_url>
+  PAYOS_WEBHOOK_URL=<public_payment_service_webhook_url>
   TWILIO_ACCOUNT_SID=<your_twilio_account_sid>
   TWILIO_AUTH_TOKEN=<your_twilio_auth_token>
   TWILIO_PHONE_NUMBER=<your_twilio_phone_number>
   RESEND_API_KEY=<your_resend_api_key>
   ```
+  Register `PAYOS_WEBHOOK_URL` in your PayOS channel settings. The webhook must be publicly reachable for PayOS to deliver payment updates.
 
 ---
 

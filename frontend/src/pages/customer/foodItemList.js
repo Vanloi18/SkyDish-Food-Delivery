@@ -1,6 +1,6 @@
 import { API_URLS } from '../../config/api';
 import React, { useEffect, useState, useContext } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { 
@@ -12,7 +12,9 @@ import {
   FaPlus, 
   FaShoppingCart, 
   FaUtensils, 
-  FaCheck
+  FaCheck,
+  FaExclamationCircle,
+  FaCommentAlt
 } from "react-icons/fa";
 import { CartContext } from "../contexts/CartContext";
 import Header from "../../components/Header";
@@ -26,16 +28,31 @@ import { resolveImageUrl, handleImageError } from "../../utils/imageHelper";
 
 function FoodItemList() {
   const { restaurantId } = useParams();
+  const [searchParams] = useSearchParams();
+  const featuredFoodName = searchParams.get("food") || "";
   const navigate = useNavigate();
   const { addToCart, totalItemCount, totalAmount } = useContext(CartContext);
 
   const [foods, setFoods] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
+  const [foodQuery, setFoodQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [favorites, setFavorites] = useState({});
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("skydish_favorite_foods")) || {};
+    } catch {
+      return {};
+    }
+  });
   const [addedItemToast, setAddedItemToast] = useState(null);
+  const [foodReviews, setFoodReviews] = useState({});
+  const [expandedReviews, setExpandedReviews] = useState({});
+
+  useEffect(() => {
+    localStorage.setItem("skydish_favorite_foods", JSON.stringify(favorites));
+  }, [favorites]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,6 +69,7 @@ function FoodItemList() {
         );
         const foodList = Array.isArray(foodRes.data) ? foodRes.data : [];
         setFoods(foodList);
+        if (featuredFoodName) setFoodQuery(featuredFoodName);
 
         // 2. Fetch Restaurant Info
         try {
@@ -62,6 +80,15 @@ function FoodItemList() {
         } catch {
           setRestaurant({ name: "Nhà hàng SkyDish", location: "Trung tâm ẩm thực" });
         }
+
+        try {
+          const reviewRes = await axios.get(
+            `${API_URLS.RESTAURANT}/api/reviews/restaurant/${restaurantId}/foods`
+          );
+          setFoodReviews(reviewRes.data && typeof reviewRes.data === "object" ? reviewRes.data : {});
+        } catch {
+          setFoodReviews({});
+        }
       } catch (err) {
         console.error("Food items load error:", err);
         setError("Không thể tải danh sách món ăn của nhà hàng này. Vui lòng kiểm tra lại kết nối.");
@@ -71,7 +98,7 @@ function FoodItemList() {
     };
 
     if (restaurantId) fetchData();
-  }, [restaurantId]);
+  }, [restaurantId, featuredFoodName]);
 
   const toggleFavorite = (foodId) => {
     setFavorites((prev) => ({
@@ -81,6 +108,16 @@ function FoodItemList() {
   };
 
   const handleAddToCart = (food) => {
+    const isRestaurantAvailable = restaurant?.availability !== false;
+    if (food.availability === false || !isRestaurantAvailable) {
+      setAddedItemToast({
+        type: "warning",
+        text: food.availability === false ? "Món này hiện đã hết. Vui lòng chọn món khác." : "Nhà hàng hiện đang tạm đóng cửa.",
+      });
+      setTimeout(() => setAddedItemToast(null), 3000);
+      return;
+    }
+
     // Explicitly attach restaurantId and restaurantName so Cart & Checkout can resolve them instantly.
     const targetRestId =
       restaurantId ||
@@ -93,8 +130,17 @@ function FoodItemList() {
       food.restaurantName ||
       "";
 
-    addToCart({ ...food, restaurantId: targetRestId, restaurantName: targetRestName }, 1);
-    setAddedItemToast(food.name);
+    const result = addToCart({ ...food, restaurantId: targetRestId, restaurantName: targetRestName }, 1);
+    if (!result?.added) {
+      setAddedItemToast({
+        type: "warning",
+        text: `Giỏ hàng đang có món từ ${result?.restaurantName || "một nhà hàng khác"}. Hãy hoàn tất hoặc xóa giỏ hiện tại trước.`,
+      });
+      setTimeout(() => setAddedItemToast(null), 3500);
+      return;
+    }
+
+    setAddedItemToast({ type: "success", text: `Đã thêm ${food.name} vào giỏ hàng!` });
     setTimeout(() => setAddedItemToast(null), 2500);
   };
 
@@ -102,12 +148,23 @@ function FoodItemList() {
   const rawCategories = Array.from(new Set(foods.map((f) => f.category).filter(Boolean)));
   const availableCategories = ["Tất cả", ...rawCategories];
 
-  const filteredFoods = selectedCategory === "Tất cả"
+  const filteredFoods = (selectedCategory === "Tất cả"
     ? foods
-    : foods.filter((f) => f.category?.toLowerCase() === selectedCategory.toLowerCase());
+    : foods.filter((f) => f.category?.toLowerCase() === selectedCategory.toLowerCase()))
+    .filter((food) => {
+      const query = foodQuery.trim().toLowerCase();
+      return !query || [food.name, food.description, food.category].some((value) =>
+        String(value || "").toLowerCase().includes(query)
+      );
+    });
+  const restaurantVisual = restaurant?.coverImage || restaurant?.bannerImage || restaurant?.imageURL || restaurant?.image || restaurant?.profilePicture;
+
+  const toggleFoodReviews = (foodId) => {
+    setExpandedReviews((current) => ({ ...current, [foodId]: !current[foodId] }));
+  };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
+    <div className="customer-experience customer-menu-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "var(--sd-bg-main)" }}>
       <Header />
 
       {/* Added to cart Toast */}
@@ -121,7 +178,7 @@ function FoodItemList() {
               position: "fixed",
               top: "90px",
               left: "50%",
-              backgroundColor: "var(--sd-secondary)",
+              backgroundColor: addedItemToast.type === "success" ? "var(--sd-secondary)" : "#b45309",
               color: "#ffffff",
               padding: "0.75rem 1.5rem",
               borderRadius: "var(--sd-radius-full)",
@@ -134,17 +191,18 @@ function FoodItemList() {
               fontWeight: "600",
             }}
           >
-            <FaCheck style={{ color: "var(--sd-success)" }} />
-            <span>Đã thêm <strong>{addedItemToast}</strong> vào giỏ hàng!</span>
+            {addedItemToast.type === "success" ? <FaCheck style={{ color: "var(--sd-success)" }} /> : <FaExclamationCircle />}
+            <span>{addedItemToast.text}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <main style={{ flex: 1, padding: "2rem 0 5rem 0" }}>
+      <main className="menu-page-main" style={{ flex: 1, padding: "2rem 0 5rem 0" }}>
         <div className="sd-container">
           {/* Back to restaurants button */}
           <button
             type="button"
+            className="menu-back-link"
             onClick={() => navigate("/customer/home")}
             style={{
               display: "inline-flex",
@@ -168,6 +226,7 @@ function FoodItemList() {
 
           {/* Restaurant Header Banner */}
           <motion.div
+            className="restaurant-menu-hero"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             style={{
@@ -184,8 +243,16 @@ function FoodItemList() {
               gap: "1.5rem",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+            {restaurantVisual && (
               <div
+                className="restaurant-menu-cover"
+                aria-hidden="true"
+                style={{ backgroundImage: `url("${resolveImageUrl(restaurantVisual, "restaurant")}")` }}
+              />
+            )}
+            <div className="restaurant-menu-identity" style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+              <div
+                className="restaurant-menu-avatar"
                 style={{
                   width: "72px",
                   height: "72px",
@@ -217,7 +284,9 @@ function FoodItemList() {
                   <h1 className="sd-heading-2" style={{ margin: 0 }}>
                     {restaurant?.name || "Thực đơn nhà hàng"}
                   </h1>
-                  <Badge variant="success" size="sm">Đang mở cửa</Badge>
+                  <Badge variant={restaurant?.availability === false ? "danger" : "success"} size="sm">
+                    {restaurant?.availability === false ? "Tạm đóng cửa" : "Đang mở cửa"}
+                  </Badge>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
@@ -231,14 +300,16 @@ function FoodItemList() {
                       <FaPhoneAlt style={{ color: "var(--sd-success)" }} /> {restaurant.contactNumber}
                     </span>
                   )}
-                  <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "var(--sd-font-size-xs)", fontWeight: "600", color: "#f59e0b" }}>
-                    <FaStar /> 4.8 (120+ Đánh giá)
-                  </span>
+                  {restaurant?.rating && (
+                    <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "var(--sd-font-size-xs)", fontWeight: "600", color: "#f59e0b" }}>
+                      <FaStar /> {restaurant.rating}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
-            <Link to="/customer/cart">
+            <Link className="restaurant-menu-cart-link" to="/customer/cart">
               <Button variant="primary" icon={FaShoppingCart}>
                 Xem giỏ hàng ({totalItemCount})
               </Button>
@@ -248,6 +319,7 @@ function FoodItemList() {
           {/* Category Tabs */}
           {availableCategories.length > 1 && (
             <div
+              className="menu-category-tabs"
               style={{
                 display: "flex",
                 gap: "0.5rem",
@@ -281,6 +353,22 @@ function FoodItemList() {
             </div>
           )}
 
+          {!loading && foods.length > 0 && (
+            <div className="menu-search-box" style={{ marginBottom: "1.5rem", maxWidth: "460px" }}>
+              <label htmlFor="food-search" style={{ display: "block", marginBottom: "0.4rem", fontSize: "var(--sd-font-size-xs)", fontWeight: "700", color: "var(--sd-text-secondary)" }}>
+                Tìm trong thực đơn
+              </label>
+              <input
+                id="food-search"
+                type="search"
+                value={foodQuery}
+                onChange={(event) => setFoodQuery(event.target.value)}
+                placeholder="Tên món, danh mục hoặc mô tả..."
+                style={{ width: "100%", padding: "0.7rem 0.85rem", border: "1px solid var(--sd-border)", borderRadius: "var(--sd-radius-md)", backgroundColor: "#ffffff", fontSize: "var(--sd-font-size-sm)" }}
+              />
+            </div>
+          )}
+
           {/* Error Banner */}
           {error && (
             <div
@@ -306,11 +394,15 @@ function FoodItemList() {
               icon={FaUtensils}
               title="Không có món trong danh mục này"
               description="Nhà hàng hiện chưa có món ăn nào trong danh mục đã chọn."
-              actionLabel="Xem tất cả món"
-              onAction={() => setSelectedCategory("Tất cả")}
+              actionLabel={foodQuery ? "Xóa tìm kiếm" : "Xem tất cả món"}
+              onAction={() => {
+                setSelectedCategory("Tất cả");
+                setFoodQuery("");
+              }}
             />
           ) : (
             <div
+              className="food-menu-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
@@ -319,9 +411,11 @@ function FoodItemList() {
             >
               {filteredFoods.map((food) => {
                 const isFav = !!favorites[food._id];
+                const isAvailable = food.availability !== false && restaurant?.availability !== false;
                 return (
                   <motion.div
                     key={food._id}
+                    className="food-menu-card"
                     whileHover={{ y: -6 }}
                     transition={{ duration: 0.2 }}
                     style={{
@@ -336,7 +430,7 @@ function FoodItemList() {
                     }}
                   >
                     {/* Food Image */}
-                    <div style={{ position: "relative", height: "180px", backgroundColor: "#f1f5f9" }}>
+                    <div className="food-menu-card-media" style={{ position: "relative", height: "180px", backgroundColor: "#f1f5f9" }}>
                       <img
                         src={resolveImageUrl(food.image, "food")}
                         alt={food.name}
@@ -392,10 +486,18 @@ function FoodItemList() {
                           {food.category}
                         </span>
                       )}
+
+                      {!isAvailable && (
+                        <span
+                          style={{ position: "absolute", bottom: "12px", right: "12px", padding: "0.25rem 0.6rem", borderRadius: "var(--sd-radius-full)", backgroundColor: "rgba(127, 29, 29, 0.88)", color: "#ffffff", fontSize: "0.7rem", fontWeight: "700" }}
+                        >
+                          {restaurant?.availability === false ? "Tạm đóng cửa" : "Tạm hết món"}
+                        </span>
+                      )}
                     </div>
 
                     {/* Food Info */}
-                    <div style={{ padding: "1.25rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <div className="food-menu-card-content" style={{ padding: "1.25rem", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                       <div>
                         <h4
                           style={{
@@ -407,6 +509,43 @@ function FoodItemList() {
                         >
                           {food.name}
                         </h4>
+                        {food.rating && (
+                          <span className="food-menu-rating">
+                            <FaStar /> {food.rating}
+                          </span>
+                        )}
+                        {foodReviews[food._id] ? (
+                          <div className="food-review-summary">
+                            <div className="food-review-summary-line">
+                              <span className="food-review-stars" aria-label={`${foodReviews[food._id].averageRating} trên 5 sao`}>
+                                {"★".repeat(Math.round(foodReviews[food._id].averageRating))}{"☆".repeat(5 - Math.round(foodReviews[food._id].averageRating))}
+                              </span>
+                              <strong>{foodReviews[food._id].averageRating}</strong>
+                              <span>({foodReviews[food._id].totalReviews} đánh giá)</span>
+                              <button type="button" onClick={() => toggleFoodReviews(food._id)} aria-label={`Xem đánh giá món ${food.name}`}>
+                                <FaCommentAlt /> {expandedReviews[food._id] ? "Ẩn đánh giá món" : "Xem đánh giá món"}
+                              </button>
+                            </div>
+                            {expandedReviews[food._id] && (
+                              <div className="food-review-details">
+                                <div className="food-review-distribution">
+                                  {[5, 4, 3, 2, 1].map((star) => (
+                                    <span key={star}>{star}★ {foodReviews[food._id].distribution?.[star] || 0}</span>
+                                  ))}
+                                </div>
+                                {foodReviews[food._id].comments?.map((review, index) => (
+                                  <blockquote key={`${food._id}-review-${index}`}>
+                                    <strong>{review.customerName || "Khách hàng"} · {review.rating}★</strong>
+                                    <span>{review.comment}</span>
+                                    {review.images?.length > 0 && <div className="food-review-images">{review.images.map((image) => <img key={image} src={resolveImageUrl(image, "food")} alt="Ảnh món từ khách hàng" />)}</div>}
+                                  </blockquote>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="food-review-empty"><FaCommentAlt /> Chưa có đánh giá từ đơn đã giao</div>
+                        )}
                         <p
                           style={{
                             margin: "0 0 1rem 0",
@@ -419,7 +558,7 @@ function FoodItemList() {
                             overflow: "hidden",
                           }}
                         >
-                          {food.description || "Được chế biến tươi mới từ nguyên liệu hảo hạng."}
+                          {food.description || "Chưa có mô tả cho món ăn này."}
                         </p>
                       </div>
 
@@ -443,12 +582,13 @@ function FoodItemList() {
                         </span>
 
                         <Button
-                          variant="primary"
+                          variant="cart"
                           size="sm"
                           icon={FaPlus}
                           onClick={() => handleAddToCart(food)}
+                          disabled={!isAvailable}
                         >
-                          Thêm
+                          {isAvailable ? "Thêm" : "Hết món"}
                         </Button>
                       </div>
                     </div>
@@ -463,6 +603,7 @@ function FoodItemList() {
       {/* Floating Bottom Cart Bar if items exist */}
       {totalItemCount > 0 && (
         <motion.div
+          className="menu-cart-dock"
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           style={{
