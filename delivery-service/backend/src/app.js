@@ -5,8 +5,6 @@ import connectDB from "./config/db.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import deliveryRoutes from "./routes/deliveryRoutes.js";
-import driverRoutes from "./routes/driverRoutes.js";
-import statisticsRoutes from "./routes/statisticsRoutes.js";
 
 dotenv.config();
 
@@ -18,25 +16,17 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkeyforfooddeli
 
 connectDB();
 
-const app = express();
+const app = express();  // Define app before using it
 app.use(cors());
 app.use(express.json());
+
 
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok", service: "delivery-service", timestamp: new Date().toISOString() });
 });
 
-// Authentication routes (tương thích cả 2 tiền tố)
 app.use("/api/auth", authRoutes);
 app.use("/api/delivery/auth", authRoutes);
-
-// Driver management routes
-app.use("/api/delivery/drivers", driverRoutes);
-
-// Statistics and Reports routes
-app.use("/api/delivery/statistics", statisticsRoutes);
-
-// Core Delivery routes
 app.use("/api/delivery", deliveryRoutes);
 
 export default app;
