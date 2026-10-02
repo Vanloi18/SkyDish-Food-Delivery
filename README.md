@@ -27,7 +27,7 @@ Trong thư mục dự án đã tích hợp sẵn script tự động hóa hoàn 
      - Tự động tạo file `.env` từ `.env.example` nếu chưa có.
      - Tự động build và kích hoạt toàn bộ 7 container microservices.
      - Tự động kiểm tra trạng thái sẵn sàng (Health check).
-     - Tự động mở trình duyệt web đến trang chủ SkyDish (`http://localhost:3300`).
+       - Tự động mở trình duyệt web đến trang chủ SkyDish (`http://localhost:3000`).
 
 3. **Dừng hệ thống**:
    - Khi không sử dụng nữa, chỉ cần nhấp đúp file **`STOP-SKYDISH.bat`** (dữ liệu database vẫn được bảo lưu an toàn).
@@ -61,7 +61,7 @@ docker compose up -d --build
 > *Lưu ý: Quá trình build lần đầu tiên sẽ mất khoảng 2 - 4 phút để tải base image và cài đặt thư viện cho các container.*
 
 #### Bước 4: Mở trình duyệt và trải nghiệm
-Truy cập ngay: **[http://localhost:3300](http://localhost:3300)**
+Truy cập ngay: **[http://localhost:3000](http://localhost:3000)**
 
 ---
 
@@ -71,10 +71,10 @@ Hệ thống đã tự động tạo sẵn dữ liệu mẫu (Seeded Data) bao g
 
 | Vai trò (Role) | Email đăng nhập | Mật khẩu mặc định | Đường dẫn trực tiếp | Mô tả chức năng |
 | :--- | :--- | :--- | :--- | :--- |
-| **Khách hàng** *(Customer)* | `customer@skydish.com` | `password123` | [http://localhost:3300/auth/login](http://localhost:3300/auth/login) | Xem thực đơn, thêm giỏ hàng, áp mã giảm giá, đặt món, chọn phương thức thanh toán, theo dõi đơn hàng thời gian thực. |
-| **Đối tác Nhà hàng** *(Restaurant)* | `trangtien@pizza4ps.com` | `password123` | [http://localhost:3300/restaurant/login](http://localhost:3300/restaurant/login) | Quản lý thông tin quán, đăng/sửa món ăn, cập nhật giá, tạo mã giảm giá voucher, quản lý đơn hàng của quán. |
-| **Tài xế Shipper** *(Driver)* | `driver@skydish.com` | `password123` | [http://localhost:3300/delivery/login](http://localhost:3300/delivery/login) | Nhận đơn hàng cần giao, cập nhật tiến trình đơn (Đã lấy món, Đang giao, Đã giao), cập nhật vị trí GPS. |
-| **Quản trị viên** *(Super Admin)* | `admin@skydish.com` | `password123` | [http://localhost:3300/superadmin/login](http://localhost:3300/superadmin/login) | Bảng điều khiển tổng thể toàn sàn: quản lý tất cả nhà hàng, người dùng, tài xế, doanh thu, nhật ký hệ thống. |
+| **Khách hàng** *(Customer)* | `customer@skydish.com` | `password123` | [http://localhost:3000/auth/login](http://localhost:3000/auth/login) | Xem thực đơn, thêm giỏ hàng, áp mã giảm giá, đặt món, chọn phương thức thanh toán, theo dõi đơn hàng thời gian thực. |
+| **Đối tác Nhà hàng** *(Restaurant)* | `trangtien@pizza4ps.com` | `password123` | [http://localhost:3000/restaurant/login](http://localhost:3000/restaurant/login) | Quản lý thông tin quán, đăng/sửa món ăn, cập nhật giá, tạo mã giảm giá voucher, quản lý đơn hàng của quán. |
+| **Tài xế Shipper** *(Driver)* | `driver@skydish.com` | `password123` | [http://localhost:3000/delivery/login](http://localhost:3000/delivery/login) | Nhận đơn hàng cần giao, cập nhật tiến trình đơn (Đã lấy món, Đang giao, Đã giao), cập nhật vị trí GPS. |
+| **Quản trị viên** *(Super Admin)* | `admin@skydish.com` | `password123` | [http://localhost:3000/superadmin/login](http://localhost:3000/superadmin/login) | Bảng điều khiển tổng thể toàn sàn: quản lý tất cả nhà hàng, người dùng, tài xế, doanh thu, nhật ký hệ thống. |
 
 ### Đối tác nhà hàng được seed thêm
 
@@ -101,7 +101,7 @@ Toàn bộ hệ thống chạy độc lập qua 7 container Docker:
 
 | Tên Container | Dịch vụ (Service) | Cổng Host (Port) | Kiểm tra hoạt động (Health Check) | Chức năng chính |
 | :--- | :--- | :--- | :--- | :--- |
-| `skydish-frontend` | **Frontend React** (Nginx) | `3300` | [http://localhost:3300](http://localhost:3300) | Giao diện Single-Page App, kiêm Reverse Proxy Gateway điều hướng API và Socket.IO |
+| `skydish-frontend` | **Frontend React** (Nginx) | `3000` | [http://localhost:3000](http://localhost:3000) | Giao diện Single-Page App, kiêm Reverse Proxy Gateway điều hướng API và Socket.IO |
 | `skydish-auth-service` | **Auth Service** | `4000` | [http://localhost:4000/health](http://localhost:4000/health) | Đăng ký, đăng nhập, mã hóa bcrypt, cấp phát và xác thực JWT token |
 | `skydish-restaurant-service` | **Restaurant Service** | `5002` | [http://localhost:5002/health](http://localhost:5002/health) | Quản lý danh mục nhà hàng, món ăn, tìm kiếm fuzzy search, upload ảnh, khuyến mãi, đánh giá |
 | `skydish-delivery-service` | **Delivery Service** | `5003` | [http://localhost:5003/health](http://localhost:5003/health) | Điều phối giao hàng, quản lý shipper, theo dõi trạng thái giao vận thời gian thực |
@@ -146,7 +146,7 @@ docker compose down -v
 ## ❓ XỬ LÝ SỰ CỐ THƯỜNG GẶP (TROUBLESHOOTING)
 
 ### 1. Bị trùng cổng (Port already in use / `EADDRINUSE`)
-- **Nguyên nhân**: Cổng `3300`, `4000`, `5002`, `5003`, `5004`, `5005` hoặc `27017` đang bị chiếm bởi một ứng dụng khác trên máy bạn.
+- **Nguyên nhân**: Cổng `3000`, `4000`, `5002`, `5003`, `5004`, `5005` hoặc `27017` đang bị chiếm bởi một ứng dụng khác trên máy bạn.
 - **Cách khắc phục**:
   - Mở file `.env` và đổi sang cổng khác. Ví dụ: `FRONTEND_PORT=3301`
   - Hoặc trên Windows nếu do dịch vụ mạng WinNAT chiếm dải port, mở CMD quyền Admin chạy:
@@ -172,7 +172,7 @@ docker compose down -v
                                             ▼
                                   ┌───────────────────┐
                                   │   React Frontend  │
-                                  │    (Port 3300)    │
+                                  │    (Port 3000)    │
                                   └─────────┬─────────┘
                                             │  Nginx Reverse Proxy Gateway
                                             ▼
@@ -266,6 +266,7 @@ Nếu bạn muốn chạy từng dịch vụ trực tiếp trên máy chủ bằ
    ```cmd
    start-all.bat
    ```
+   Chế độ chạy trực tiếp mở frontend tại `http://localhost:3001`; Docker/Nginx dùng cổng `3000`.
 
 ---
 

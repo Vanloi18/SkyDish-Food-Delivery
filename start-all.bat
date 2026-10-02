@@ -22,12 +22,12 @@ start "SkyDish - Payment Service (Port 5004)" cmd /k "cd /d %~dp0backend\payment
 echo [6/7] Starting Order Service (Port 5005)...
 start "SkyDish - Order Service (Port 5005)" cmd /k "cd /d %~dp0backend\order-service && node index.js"
 
-echo [7/7] Starting Frontend (Port 3000)...
-start "SkyDish - Frontend (Port 3000)" cmd /k "cd /d %~dp0frontend && npm start"
+echo [7/7] Starting Frontend (Port 3001)...
+start "SkyDish - Frontend (Port 3001)" cmd /k "cd /d %~dp0frontend && set PORT=3001 && npm start"
 
 echo.
 echo ===================================================
 echo   All services have been launched!
-echo   Frontend URL: http://localhost:3000
+echo   Frontend URL: http://localhost:3001
 echo ===================================================
 pause
