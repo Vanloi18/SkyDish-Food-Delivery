@@ -44,8 +44,8 @@ router.get("/:id", authMiddleware, getDelivery);
 router.put("/:id/status", authMiddleware, updateDeliveryStatus);
 
 // Gán / Điều phối tài xế cho đơn giao hàng (Admin hoặc Auto-assign)
-router.put("/:id/assign", authMiddleware, authorizeRoles("admin", "superadmin"), assignDriverToDelivery);
-router.post("/:id/assign", authMiddleware, authorizeRoles("admin", "superadmin"), assignDriverToDelivery);
+router.put("/:id/assign", authMiddleware, assignDriverToDelivery);
+router.post("/:id/assign", authMiddleware, assignDriverToDelivery);
 
 // Xóa đơn giao hàng (khi đã Delivered hoặc Admin)
 router.delete("/:id", authMiddleware, deleteDelivery);
