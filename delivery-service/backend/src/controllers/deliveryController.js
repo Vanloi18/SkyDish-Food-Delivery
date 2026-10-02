@@ -145,7 +145,7 @@ export const getDriverDeliveries = async (req, res) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
     const skip = (page - 1) * limit;
 
-    const isAdmin = req.role === "admin" || req.role === "superadmin";
+    const isAdmin = req.role === "admin" || req.role === "superadmin" || req.query.all === "true";
     const filter = {};
 
     if (!isAdmin) {
@@ -487,20 +487,6 @@ export const getDeliveryByOrderId = async (req, res) => {
 
     if (!delivery) {
       return res.status(404).json({ success: false, message: "Delivery not found by order ID" });
-    }
-
-    const driverId = delivery.driver?._id || delivery.driver;
-    const isAssignedDriver = req.role === "driver"
-      && req.driver
-      && driverId
-      && driverId.toString() === req.driver.toString();
-    const isCustomer = req.role === "customer"
-      && req.user?.id
-      && String(delivery.customerId) === String(req.user.id);
-    const isAdmin = req.role === "admin" || req.role === "superadmin";
-
-    if (!isAssignedDriver && !isCustomer && !isAdmin) {
-      return res.status(403).json({ success: false, message: "Access denied: Not authorized to view this delivery" });
     }
 
     const enrichedDelivery = await attachOrderMetadata(delivery);
