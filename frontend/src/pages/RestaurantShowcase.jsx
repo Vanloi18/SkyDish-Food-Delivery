@@ -45,7 +45,7 @@ const campaigns = [
     tag: "Được yêu thích",
     title: "Pizza nướng củi, phô mai Burrata tươi mỗi ngày",
     description: "Phô mai Burrata mềm béo tự làm tại Đà Lạt kết hợp cùng trái cây tươi và pizza nướng lò củi thủ công chuẩn Nhật - Ý.",
-    videoUrl: "/videos/pizza.webm",
+    videoUrl: null,
     poster: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=1200&auto=format&fit=crop&q=85",
     author: "Pizza 4P's Tràng Tiền",
   },
@@ -63,7 +63,7 @@ const campaigns = [
     tag: "Đặc sản Hà Nội",
     title: "Nước dùng trong, phở tái lăn ngập tràn hành hoa",
     description: "Thịt bò xào lăn lửa lớn xèo xèo thơm nức mũi, chan nước dùng hầm xương gia truyền sánh ngọt ngập tràn vị giác.",
-    videoUrl: "/videos/soup.webm",
+    videoUrl: null,
     poster: "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=1200&auto=format&fit=crop&q=85",
     author: "Phở Thìn 13 Lò Đúc",
   },
@@ -81,7 +81,7 @@ const campaigns = [
     tag: "Obama & Bourdain",
     title: "Bún chả nướng than hoa thơm lừng phố cổ",
     description: "Chả miếng, chả viên nướng xém cạnh trên than hoa đượm khói, ăn kèm nem cua bể giòn rụm và nước mắm chua ngọt trứ danh.",
-    videoUrl: "/videos/bbq.webm",
+    videoUrl: null,
     poster: "https://images.unsplash.com/photo-1559847844-5315695dadae?w=1200&auto=format&fit=crop&q=85",
     author: "Bún Chả Hương Liên",
   },
@@ -99,7 +99,7 @@ const campaigns = [
     tag: "Best Seller",
     title: "Burger bò Bulgogi nóng hổi, sốt Hàn đậm vị",
     description: "Bánh mềm thơm bơ, miếng bò nướng xốt Bulgogi ngọt đậm đà kết hợp rau xà lách tươi giòn cho ngày bận rộn đầy năng lượng.",
-    videoUrl: "/videos/burger.webm",
+    videoUrl: null,
     poster: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1200&auto=format&fit=crop&q=85",
     author: "Lotteria Cầu Giấy",
   },
@@ -117,7 +117,7 @@ const campaigns = [
     tag: "Ăn là mê",
     title: "Nồi lẩu Tomyum nghi ngút cho buổi tối vui hơn",
     description: "Nước lẩu Tomyum chua thanh cay nồng thơm lừng mùi sả ớt, nhúng cùng bò Mỹ hảo hạng và hải sản tươi sống trên băng chuyền.",
-    videoUrl: "/videos/soup.webm",
+    videoUrl: null,
     poster: "https://images.unsplash.com/photo-1547592180-85f173990554?w=1200&auto=format&fit=crop&q=85",
     author: "Kichi-Kichi Cầu Giấy",
   },
@@ -135,7 +135,7 @@ const campaigns = [
     tag: "Phô mai kéo sợi",
     title: "Pizza pepperoni, ngập tràn phô mai béo ngậy",
     description: "Đế bánh nướng vàng ruộm, xúc xích pepperoni đậm vị và lớp phô mai Mozzarella nóng chảy kéo sợi kéo dài bất tận.",
-    videoUrl: "/videos/pizza.webm",
+    videoUrl: null,
     poster: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=1200&auto=format&fit=crop&q=85",
     author: "The Pizza Company",
   },
@@ -153,7 +153,7 @@ const campaigns = [
     tag: "Sườn nướng than hoa",
     title: "Cơm tấm sườn cọng nướng than hoa mỡ hành",
     description: "Miếng sườn ướp đậm vị nướng xém cạnh thơm nức mũi, hạt cơm tấm dẻo bùi chan nước mắm chua ngọt cay tê đầu lưỡi.",
-    videoUrl: "/videos/bbq.webm",
+    videoUrl: null,
     poster: "https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=1200&auto=format&fit=crop&q=85",
     author: "Cơm Tấm Phúc Lộc Thọ",
   },
@@ -171,7 +171,7 @@ const campaigns = [
     tag: "Vua bánh mì Sài Gòn",
     title: "Bánh mì ổ giòn rụm ngập tràn pate béo ngậy",
     description: "Ổ bánh mì nóng giòn nhân đầy ắp giò thủ, chả lụa, thịt nguội, quét lớp bơ vàng óng và pate gia truyền béo ngậy gây thương nhớ.",
-    videoUrl: "/videos/burger.webm",
+    videoUrl: null,
     poster: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=1200&auto=format&fit=crop&q=85",
     author: "Bánh Mì Huỳnh Hoa",
   },
@@ -210,6 +210,7 @@ export default function RestaurantShowcase() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const shortsVideoRef = useRef(null);
+  const [failedVideos, setFailedVideos] = useState({});
 
   // Social States
   const [likedMap, setLikedMap] = useState({});
@@ -286,7 +287,7 @@ export default function RestaurantShowcase() {
   };
 
   const togglePlayPause = () => {
-    if (!shortsVideoRef.current) return;
+    if (!shortsVideoRef.current || shortsVideoRef.current.error) return;
     if (shortsVideoRef.current.paused) {
       shortsVideoRef.current.play();
       setIsPlaying(true);
@@ -340,6 +341,9 @@ export default function RestaurantShowcase() {
   }, [activeVideoItem, viewMode, displayedItems]);
 
   const currentShortsItem = displayedItems[shortsIndex] || displayedItems[0];
+  const currentShortsVideoUnavailable =
+    !currentShortsItem?.campaign.videoUrl ||
+    failedVideos[currentShortsItem?.campaign.id];
 
   return (
     <div className="restaurant-showcase-page">
@@ -574,7 +578,11 @@ export default function RestaurantShowcase() {
                ======================================================== */
             <div className="showcase-shorts-stage">
               <div className="shorts-header-tips">
-                <span>💡 Bấm vào video để Tạm dừng/Phát • Dùng nút <strong>▲ / ▼</strong> để lướt món</span>
+                <span>
+                  {currentShortsVideoUnavailable
+                    ? "Video chưa có sẵn; đang hiển thị ảnh món ăn."
+                    : "💡 Bấm vào video để Tạm dừng/Phát • Dùng nút ▲ / ▼ để lướt món"}
+                </span>
                 <span className="shorts-counter-badge">
                   {shortsIndex + 1} / {displayedItems.length} Video
                 </span>
@@ -584,21 +592,36 @@ export default function RestaurantShowcase() {
                 <div className="shorts-phone-frame">
                   {/* Native Video Screen */}
                   <div className="shorts-screen">
-                    <video
-                      key={currentShortsItem.campaign.videoUrl}
-                      ref={shortsVideoRef}
-                      className="shorts-native-video-elem"
-                      src={currentShortsItem.campaign.videoUrl}
-                      poster={currentShortsItem.campaign.poster}
-                      autoPlay
-                      loop
-                      playsInline
-                      muted={isMuted}
-                      onClick={togglePlayPause}
-                    />
+                    {currentShortsVideoUnavailable ? (
+                      <img
+                        className="shorts-native-video-elem"
+                        src={currentShortsItem.campaign.poster}
+                        alt={currentShortsItem.campaign.foodName}
+                      />
+                    ) : (
+                      <video
+                        key={currentShortsItem.campaign.videoUrl}
+                        ref={shortsVideoRef}
+                        className="shorts-native-video-elem"
+                        src={currentShortsItem.campaign.videoUrl}
+                        poster={currentShortsItem.campaign.poster}
+                        autoPlay
+                        loop
+                        playsInline
+                        muted={isMuted}
+                        onClick={togglePlayPause}
+                        onError={() => {
+                          setFailedVideos((prev) => ({
+                            ...prev,
+                            [currentShortsItem.campaign.id]: true,
+                          }));
+                          setIsPlaying(false);
+                        }}
+                      />
+                    )}
 
                     {/* Play/Pause Center Indicator */}
-                    {!isPlaying && (
+                    {!isPlaying && !currentShortsVideoUnavailable && (
                       <div className="shorts-play-pause-overlay" onClick={togglePlayPause}>
                         <div className="play-pause-icon-circle">
                           <FaPlay />
@@ -651,17 +674,19 @@ export default function RestaurantShowcase() {
                     {/* Right Floating Actions (Reels style) */}
                     <div className="shorts-side-actions">
                       {/* Sound Toggle */}
-                      <button
-                        type="button"
-                        className="side-action-btn"
-                        onClick={toggleMute}
-                        title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
-                      >
-                        <div className="side-action-icon sound-icon">
-                          {isMuted ? <FaVolumeMute /> : <FaVolumeUp />}
-                        </div>
-                        <span className="side-action-label">{isMuted ? "Tắt tiếng" : "Bật tiếng"}</span>
-                      </button>
+                      {!currentShortsVideoUnavailable && (
+                        <button
+                          type="button"
+                          className="side-action-btn"
+                          onClick={toggleMute}
+                          title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
+                        >
+                          <div className="side-action-icon sound-icon">
+                            {isMuted ? <FaVolumeMute /> : <FaVolumeUp />}
+                          </div>
+                          <span className="side-action-label">{isMuted ? "Tắt tiếng" : "Bật tiếng"}</span>
+                        </button>
+                      )}
 
                       {/* Like */}
                       <button
@@ -787,16 +812,30 @@ export default function RestaurantShowcase() {
                 {/* Left: Native Video Player */}
                 <div className="cinema-modal-player-col">
                   <div className="cinema-video-wrapper">
-                    <video
-                      key={activeVideoItem.campaign.videoUrl}
-                      className="cinema-native-video-elem"
-                      src={activeVideoItem.campaign.videoUrl}
-                      poster={activeVideoItem.campaign.poster}
-                      controls
-                      autoPlay
-                      loop
-                      playsInline
-                    />
+                    {!activeVideoItem.campaign.videoUrl || failedVideos[activeVideoItem.campaign.id] ? (
+                      <img
+                        className="cinema-native-video-elem"
+                        src={activeVideoItem.campaign.poster}
+                        alt={activeVideoItem.campaign.foodName}
+                      />
+                    ) : (
+                      <video
+                        key={activeVideoItem.campaign.videoUrl}
+                        className="cinema-native-video-elem"
+                        src={activeVideoItem.campaign.videoUrl}
+                        poster={activeVideoItem.campaign.poster}
+                        controls
+                        autoPlay
+                        loop
+                        playsInline
+                        onError={() =>
+                          setFailedVideos((prev) => ({
+                            ...prev,
+                            [activeVideoItem.campaign.id]: true,
+                          }))
+                        }
+                      />
+                    )}
                   </div>
 
                   {/* Modal Footer Controls */}
