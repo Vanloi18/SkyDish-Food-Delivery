@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 import axios from "axios";
 import "./DriverDashboard.css";
 
-const socket = io("http://localhost:5003", { autoConnect: false });
+const socket = io("http://localhost:5003");
 
 export default function DriverDashboard() {
   const navigate = useNavigate();
@@ -43,6 +43,8 @@ export default function DriverDashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("driverToken");
+    const driverId = localStorage.getItem("driverId");
+
     if (!token) {
       alert("❌ Please login first!");
       navigate("/login");
@@ -51,8 +53,9 @@ export default function DriverDashboard() {
 
     fetchDeliveries();
 
-    socket.auth = { token: token.replace(/^Bearer\s+/i, "").trim() };
-    socket.connect();
+    if (driverId) {
+      socket.emit("join-driver-room", driverId);
+    }
 
     const handleNewDelivery = (deliveryData) => {
       setDeliveries(prev => [deliveryData, ...prev]);
@@ -67,7 +70,6 @@ export default function DriverDashboard() {
 
     return () => {
       socket.off("new-delivery", handleNewDelivery);
-      socket.disconnect();
     };
   }, [navigate, location.state]);
 

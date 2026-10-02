@@ -4,8 +4,6 @@
 **Cổng dịch vụ:** Port `5003` (Proxy qua Nginx Frontend: `http://localhost:3300/api/delivery`)  
 **WebSocket:** Socket.IO path `/delivery-socket.io`  
 
-WebSocket clients must send a valid driver or customer JWT in the Socket.IO `auth.token` field. The server joins the private recipient room using the verified token subject; clients cannot choose another user's room ID.
-
 ---
 
 ## 📌 1. TỔNG QUAN KIẾN TRÚC & PHÂN QUYỀN
