@@ -24,7 +24,7 @@ services:
       - "${AUTH_PORT:-4000}:4000"
     environment:
       - PORT=4000
-      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
@@ -60,7 +60,7 @@ services:
       - "${REST_PORT:-5002}:5002"
     environment:
       - PORT=5002
-      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
     volumes:
       - restaurant-uploads:/app/uploads
@@ -90,7 +90,7 @@ services:
       - "${ORDER_PORT:-5005}:5005"
     environment:
       - PORT=5005
-      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
       - GHN_TOKEN=${GHN_TOKEN:-}
       - GHN_SHOP_ID=${GHN_SHOP_ID:-}
@@ -126,7 +126,7 @@ services:
       - "${DELIVERY_PORT:-5003}:5003"
     environment:
       - PORT=5003
-      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
     depends_on:
       mongo:
@@ -154,7 +154,7 @@ services:
       - "${PAY_PORT:-5004}:5004"
     environment:
       - PORT=5004
-      - MONGO_URI=${DOCKER_MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/food_delivery_db}
       - JWT_SECRET=${JWT_SECRET:-supersecretjwtkeyforfooddeliverymicroservices2025}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-sk_test_placeholder_key_skydish_dev}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-whsec_placeholder_key_skydish_dev}

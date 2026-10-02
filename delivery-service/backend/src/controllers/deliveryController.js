@@ -3,11 +3,6 @@ import Delivery from "../models/Delivery.js";
 import Driver from "../models/Driver.js";
 import { geocodeAddress } from "../utils/geocode.js";
 import { assignNearestDriver } from "../services/assignDriverService.js";
-import {
-  notifyDeliveryCreated,
-  notifyDriverAssigned,
-  notifyDeliveryStatusChanged,
-} from "../services/notificationService.js";
 import { getIO } from "../utils/socket.js";
 
 const getOrderSnapshot = async (orderId) => {
@@ -234,12 +229,6 @@ export const createDelivery = async (req, res) => {
 
       status: "assigned",
     });
-
-    // Gửi thông báo khởi tạo chuyến giao
-    notifyDeliveryCreated(
-      delivery,
-      assignedDriver
-    ).catch(() => {});
 
     // Gửi realtime socket tới tài xế nếu đã phân công
     try {
@@ -641,11 +630,6 @@ export const updateDeliveryStatus = async (
       );
     }
 
-    notifyDeliveryStatusChanged(
-      delivery,
-      status
-    ).catch(() => {});
-
     // Đồng bộ trạng thái sang orders
     try {
       if (delivery.orderId) {
@@ -839,11 +823,6 @@ export const assignDriverToDelivery = async (
     }
 
     await delivery.save();
-
-    notifyDriverAssigned(
-      delivery,
-      targetDriver
-    ).catch(() => {});
 
     // Realtime tới tài xế
     try {
