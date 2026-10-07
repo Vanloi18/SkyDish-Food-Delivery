@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
@@ -13,6 +13,14 @@ import Button from "../../../components/common/Button";
 
 function IndexPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = "Restaurant";
+
+    return () => {
+      document.title = "SkyDish";
+    };
+  }, []);
 
   const portals = [
     {

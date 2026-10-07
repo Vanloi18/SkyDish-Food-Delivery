@@ -17,6 +17,7 @@ import Footer from "../../../components/Footer";
 import Input from "../../../components/common/Input";
 import Button from "../../../components/common/Button";
 import ImageUploadPreview from "../../../components/common/ImageUploadPreview";
+import DeliveryLocationPicker from "../../../components/DeliveryLocationPicker";
 import "../../../styles/auth.css";
 
 function RestaurantRegister() {
@@ -26,6 +27,8 @@ function RestaurantRegister() {
     name: "",
     ownerName: "",
     location: "",
+    latitude: "",
+    longitude: "",
     contactNumber: "",
     email: "",
     password: "",
@@ -47,6 +50,10 @@ function RestaurantRegister() {
       setError("Vui lòng điền đầy đủ các thông tin nhà hàng bắt buộc.");
       return;
     }
+    if (form.latitude === "" || form.longitude === "" || !Number.isFinite(Number(form.latitude)) || !Number.isFinite(Number(form.longitude))) {
+      setError("Vui lòng ghim vị trí chính xác của nhà hàng trên bản đồ.");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -56,6 +63,8 @@ function RestaurantRegister() {
       formData.append("name", form.name);
       formData.append("ownerName", form.ownerName);
       formData.append("location", form.location);
+      if (form.latitude !== "" && form.latitude !== null) formData.append("latitude", form.latitude);
+      if (form.longitude !== "" && form.longitude !== null) formData.append("longitude", form.longitude);
       formData.append("contactNumber", form.contactNumber);
       formData.append("email", form.email);
       formData.append("password", form.password);
@@ -170,6 +179,27 @@ function RestaurantRegister() {
                 required
               />
               <Input
+                label="Vĩ độ (lat)"
+                name="latitude"
+                placeholder="21.0278"
+                icon={FaMapMarkerAlt}
+                value={form.latitude}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="auth-form-grid">
+              <Input
+                label="Kinh độ (lng)"
+                name="longitude"
+                placeholder="105.8342"
+                icon={FaMapMarkerAlt}
+                value={form.longitude}
+                onChange={handleChange}
+                required
+              />
+              <Input
                 label="Số điện thoại liên hệ"
                 name="contactNumber"
                 placeholder="0901234567"
@@ -177,6 +207,22 @@ function RestaurantRegister() {
                 value={form.contactNumber}
                 onChange={handleChange}
                 required
+              />
+            </div>
+
+            <div style={{ margin: "0.75rem 0" }}>
+              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.35rem" }}>
+                Vị trí nhà hàng trên bản đồ
+              </label>
+              <DeliveryLocationPicker
+                position={form.latitude !== "" && form.longitude !== "" && Number.isFinite(Number(form.latitude)) && Number.isFinite(Number(form.longitude))
+                  ? { latitude: Number(form.latitude), longitude: Number(form.longitude) }
+                  : null}
+                onChange={(position) => setForm((current) => ({
+                  ...current,
+                  latitude: position.latitude.toFixed(6),
+                  longitude: position.longitude.toFixed(6),
+                }))}
               />
             </div>
 

@@ -215,19 +215,43 @@ export default function RestaurantDashboard() {
   }, []);
 
   // 6. Fetch Real Notifications
-  const fetchNotifications = useCallback(async (rId) => {
+  const fetchNotifications = useCallback(async () => {
     try {
-      const url = rId
-        ? `${API_URLS.RESTAURANT}/api/notifications?userId=${rId}&role=restaurant`
-        : `${API_URLS.RESTAURANT}/api/notifications?role=restaurant`;
-      const res = await axios.get(url);
+      if (!token) return;
+      const res = await axios.get(`${API_URLS.RESTAURANT}/api/notifications`, {
+        headers: { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, "")}` },
+      });
       if (res.data?.notifications) {
         setNotifications(res.data.notifications);
       }
     } catch (err) {
       console.warn("Fetch notifications notice:", err.message);
     }
-  }, []);
+  }, [token]);
+
+  const markAllNotificationsRead = async () => {
+    try {
+      await axios.put(`${API_URLS.RESTAURANT}/api/notifications/read-all`, {}, {
+        headers: { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, "")}` },
+      });
+      setNotifications((prev) => prev.map((notification) => ({ ...notification, isRead: true })));
+    } catch (err) {
+      console.warn("Could not mark notifications as read:", err.message);
+    }
+  };
+
+  const markNotificationRead = async (notificationId) => {
+    try {
+      await axios.put(`${API_URLS.RESTAURANT}/api/notifications/${notificationId}/read`, {}, {
+        headers: { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, "")}` },
+      });
+      setNotifications((prev) => prev.map((notification) => (
+        notification._id === notificationId ? { ...notification, isRead: true } : notification
+      )));
+    } catch (err) {
+      console.warn("Could not mark notification as read:", err.message);
+    }
+  };
 
   // Initial Load
   useEffect(() => {
@@ -244,7 +268,7 @@ export default function RestaurantDashboard() {
         fetchOrders(),
         fetchReviews(restaurant._id),
         fetchCoupons(restaurant._id),
-        fetchNotifications(restaurant._id),
+        fetchNotifications(),
       ]);
       setLoading(false);
     };
@@ -261,17 +285,7 @@ export default function RestaurantDashboard() {
 
       socket.on("new-order", (newOrder) => {
         setOrders((prev) => [newOrder, ...prev]);
-        setNotifications((prev) => [
-          {
-            id: Date.now(),
-            title: "Có đơn hàng mới!",
-            message: `Mã đơn #${newOrder._id?.slice(-6) || "Mới"} vừa được đặt.`,
-            time: "Vừa xong",
-            isRead: false,
-            type: "order",
-          },
-          ...prev,
-        ]);
+        fetchNotifications();
         showAlert("success", "🔔 Quán vừa nhận được đơn hàng mới từ khách!");
       });
     } catch (e) {
@@ -282,6 +296,12 @@ export default function RestaurantDashboard() {
       if (socket) socket.disconnect();
     };
   }, [token, navigate, fetchRestaurantProfile, fetchFoodItems, fetchOrders, fetchReviews, fetchCoupons, fetchNotifications, restaurant._id]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    const intervalId = setInterval(fetchNotifications, 15000);
+    return () => clearInterval(intervalId);
+  }, [token, fetchNotifications]);
 
   // Toggle Store Availability
   const handleToggleStoreAvailability = async () => {
@@ -1500,7 +1520,7 @@ export default function RestaurantDashboard() {
                       <button
                         type="button"
                         style={{ background: "none", border: "none", color: "#64748b", fontSize: "0.8rem", fontWeight: "600", cursor: "pointer" }}
-                        onClick={() => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))}
+                        onClick={markAllNotificationsRead}
                       >
                         Đánh dấu đã đọc
                       </button>
@@ -1508,10 +1528,11 @@ export default function RestaurantDashboard() {
 
                     {notifications.map((n) => (
                       <div
-                        key={n.id}
+                        key={n._id}
+                        onClick={() => !n.isRead && markNotificationRead(n._id)}
                         style={{
-                          backgroundColor: n.read ? "#ffffff" : "#fff7ed",
-                          border: `1px solid ${n.read ? "#e2e8f0" : "#fed7aa"}`,
+                          backgroundColor: n.isRead ? "#ffffff" : "#fff7ed",
+                          border: `1px solid ${n.isRead ? "#e2e8f0" : "#fed7aa"}`,
                           borderRadius: "10px",
                           padding: "1rem",
                           marginBottom: "0.75rem",
@@ -1525,7 +1546,7 @@ export default function RestaurantDashboard() {
                         <div style={{ flex: 1 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <h4 style={{ margin: 0, fontSize: "0.85rem", fontWeight: "700" }}>{n.title}</h4>
-                            <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>{n.time}</span>
+                            <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>{new Date(n.createdAt).toLocaleString("vi-VN")}</span>
                           </div>
                           <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.78rem", color: "#475569" }}>{n.message}</p>
                         </div>

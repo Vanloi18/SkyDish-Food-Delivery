@@ -104,7 +104,7 @@ export default function AuthLogin() {
       // Redirect giống login thường
       const redirectTarget =
         searchParams.get("redirect") ||
-        "/customer/home";
+        "/";
 
       navigate(redirectTarget);
     } else {
@@ -187,7 +187,7 @@ export default function AuthLogin() {
         // Redirect
         const redirectTarget =
           searchParams.get("redirect") ||
-          "/customer/home";
+          "/";
 
         navigate(redirectTarget);
       } else {

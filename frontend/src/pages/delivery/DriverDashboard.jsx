@@ -58,16 +58,7 @@ export default function DriverDashboard() {
   const [alertMsg, setAlertMsg] = useState({ type: "", text: "" });
 
   // Notifications State
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "Chào mừng đối tác Shipper!",
-      message: "Chúc bạn một ngày làm việc an toàn và thuận lợi cùng SkyDish.",
-      time: "Vừa xong",
-      read: false,
-      type: "system"
-    }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
@@ -123,6 +114,51 @@ export default function DriverDashboard() {
     }
   }, [token]);
 
+  const fetchNotifications = useCallback(async () => {
+    if (!token) return;
+    try {
+      const authorization = `Bearer ${String(token).replace(/^Bearer\s+/i, "")}`;
+      const res = await axios.get(`${API_URLS.RESTAURANT}/api/notifications`, {
+        headers: { Authorization: authorization },
+      });
+      setNotifications((res.data?.notifications || []).map((notification) => ({
+        ...notification,
+        read: notification.isRead,
+        time: new Date(notification.createdAt).toLocaleString("vi-VN"),
+      })));
+    } catch (err) {
+      console.warn("Fetch notifications note:", err.message);
+    }
+  }, [token]);
+
+  const markAllNotificationsRead = async () => {
+    try {
+      const authorization = `Bearer ${String(token).replace(/^Bearer\s+/i, "")}`;
+      await axios.put(`${API_URLS.RESTAURANT}/api/notifications/read-all`, {}, {
+        headers: { Authorization: authorization },
+      });
+      setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true, isRead: true })));
+    } catch (err) {
+      console.warn("Could not mark notifications as read:", err.message);
+    }
+  };
+
+  const markNotificationRead = async (notificationId) => {
+    try {
+      const authorization = `Bearer ${String(token).replace(/^Bearer\s+/i, "")}`;
+      await axios.put(`${API_URLS.RESTAURANT}/api/notifications/${notificationId}/read`, {}, {
+        headers: { Authorization: authorization },
+      });
+      setNotifications((prev) => prev.map((notification) => (
+        notification._id === notificationId
+          ? { ...notification, read: true, isRead: true }
+          : notification
+      )));
+    } catch (err) {
+      console.warn("Could not mark notification as read:", err.message);
+    }
+  };
+
   // Fetch available orders from Order Service
   const fetchAvailableOrders = useCallback(async () => {
     try {
@@ -173,10 +209,11 @@ export default function DriverDashboard() {
 
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchDeliveries(), fetchAvailableOrders(), fetchDriverProfile()]);
+      await Promise.all([fetchDeliveries(), fetchAvailableOrders(), fetchDriverProfile(), fetchNotifications()]);
       setLoading(false);
     };
     loadData();
+    const notificationInterval = setInterval(fetchNotifications, 15000);
 
     // Socket.IO Realtime Connection
     try {
@@ -190,26 +227,17 @@ export default function DriverDashboard() {
 
       socket.on("new-delivery", (deliveryData) => {
         setMyDeliveries((prev) => [deliveryData, ...prev]);
-        setNotifications((prev) => [
-          {
-            id: Date.now(),
-            title: "Có đơn hàng giao mới!",
-            message: `Mã đơn #${deliveryData.orderId || "Mới"} đã được gán cho bạn.`,
-            time: "Vừa xong",
-            read: false,
-            type: "order"
-          },
-          ...prev
-        ]);
+        fetchNotifications();
       });
     } catch (e) {
       console.warn("Socket initialization note:", e);
     }
 
     return () => {
+      clearInterval(notificationInterval);
       if (socket) socket.disconnect();
     };
-  }, [token, navigate, fetchDeliveries, fetchAvailableOrders, fetchDriverProfile]);
+  }, [token, navigate, fetchDeliveries, fetchAvailableOrders, fetchDriverProfile, fetchNotifications]);
 
   // Alert dismiss helper
   const showAlert = (type, text) => {
@@ -946,7 +974,7 @@ export default function DriverDashboard() {
                 <button
                   type="button"
                   style={{ background: "none", border: "none", color: "#64748b", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer" }}
-                  onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+                  onClick={markAllNotificationsRead}
                 >
                   Đánh dấu đã đọc
                 </button>
@@ -954,7 +982,8 @@ export default function DriverDashboard() {
 
               {notifications.map((n) => (
                 <div
-                  key={n.id}
+                  key={n._id || n.id}
+                  onClick={() => n._id && !n.read && markNotificationRead(n._id)}
                   style={{
                     backgroundColor: n.read ? "#ffffff" : "#fff7ed",
                     border: `1px solid ${n.read ? "var(--shipper-border)" : "#fed7aa"}`,

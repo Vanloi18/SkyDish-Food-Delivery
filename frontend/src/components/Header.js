@@ -20,7 +20,7 @@ import { CartContext } from "../pages/contexts/CartContext";
 import Sidebar from "./Sidebar";
 import Button from "./common/Button";
 import { validateRestaurantToken } from "../layouts/RestaurantPartnerLayout/RestaurantPartnerGuard";
-import { getValidToken, getAuthCustomer, clearCustomerAuth } from "../utils/authHelper";
+import { getValidToken, getAuthCustomer, clearCustomerAuth, getAuthHeaders } from "../utils/authHelper";
 import SkyDishAssistant from "./assistant/SkyDishAssistant";
 import "../styles/header.css";
 
@@ -45,8 +45,10 @@ function Header() {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const custId = localStorage.getItem("customerId") || localStorage.getItem("customerEmail") || "customer";
-      const res = await fetch(`${API_URLS.RESTAURANT}/api/notifications?userId=${custId}&role=customer`);
+      if (!getValidToken()) return;
+      const res = await fetch(`${API_URLS.RESTAURANT}/api/notifications`, {
+        headers: getAuthHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -59,11 +61,9 @@ function Header() {
 
   const handleMarkAllRead = async () => {
     try {
-      const custId = localStorage.getItem("customerId") || localStorage.getItem("customerEmail") || "customer";
       await fetch(`${API_URLS.RESTAURANT}/api/notifications/read-all`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: custId, role: "customer" }),
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadNotifCount(0);
@@ -74,7 +74,10 @@ function Header() {
 
   const handleMarkSingleRead = async (notifId) => {
     try {
-      await fetch(`${API_URLS.RESTAURANT}/api/notifications/${notifId}/read`, { method: "PUT" });
+      await fetch(`${API_URLS.RESTAURANT}/api/notifications/${notifId}/read`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+      });
       setNotifications((prev) => prev.map((n) => (n._id === notifId ? { ...n, isRead: true } : n)));
       setUnreadNotifCount((prev) => Math.max(0, prev - 1));
     } catch (e) {
@@ -99,6 +102,12 @@ function Header() {
       setUnreadNotifCount(0);
     }
   }, [location.pathname, fetchNotifications]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return undefined;
+    const intervalId = setInterval(fetchNotifications, 15000);
+    return () => clearInterval(intervalId);
+  }, [isLoggedIn, fetchNotifications]);
 
   // Click outside and Escape key listener for dropdowns
   useEffect(() => {

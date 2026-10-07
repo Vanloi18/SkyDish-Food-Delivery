@@ -336,6 +336,11 @@ function App() {
               ===================================================== */}
 
               <Route
+                path="/restaurant"
+                element={<IndexPage />}
+              />
+
+              <Route
                 path="/restaurant/home"
                 element={<IndexPage />}
               />

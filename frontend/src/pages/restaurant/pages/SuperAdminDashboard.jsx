@@ -22,6 +22,7 @@ import Modal from "../../../components/common/Modal";
 import StatCard from "../../../components/common/StatCard";
 import LoadingSkeleton from "../../../components/common/LoadingSkeleton";
 import EmptyState from "../../../components/common/EmptyState";
+import DeliveryLocationPicker from "../../../components/DeliveryLocationPicker";
 
 function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -37,6 +38,8 @@ function SuperAdminDashboard() {
     name: "",
     ownerName: "",
     location: "",
+    latitude: "",
+    longitude: "",
     contactNumber: "",
     ghnProvinceId: "",
     ghnDistrictId: "",
@@ -149,6 +152,8 @@ function SuperAdminDashboard() {
       name: rest.name || "",
       ownerName: rest.ownerName || "",
       location: rest.location || "",
+      latitude: rest.latitude ?? "",
+      longitude: rest.longitude ?? "",
       contactNumber: rest.contactNumber || "",
       ghnProvinceId: rest.ghnProvinceId ? String(rest.ghnProvinceId) : "",
       ghnDistrictId: rest.ghnDistrictId ? String(rest.ghnDistrictId) : "",
@@ -162,6 +167,8 @@ function SuperAdminDashboard() {
     setSaveLoading(true);
     const updateData = {
       ...formData,
+      latitude: formData.latitude === "" || formData.latitude === null ? null : Number(formData.latitude),
+      longitude: formData.longitude === "" || formData.longitude === null ? null : Number(formData.longitude),
       ghnProvinceId: formData.ghnProvinceId ? Number(formData.ghnProvinceId) : null,
       ghnDistrictId: formData.ghnDistrictId.trim() ? Number(formData.ghnDistrictId) : null,
       ghnWardCode: formData.ghnWardCode.trim() || null,
@@ -515,6 +522,39 @@ function SuperAdminDashboard() {
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             required
           />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <Input
+              label="Vĩ độ (lat)"
+              name="latitude"
+              value={formData.latitude}
+              onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+              required
+            />
+            <Input
+              label="Kinh độ (lng)"
+              name="longitude"
+              value={formData.longitude}
+              onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+              required
+            />
+          </div>
+
+          <div style={{ margin: "0.75rem 0" }}>
+            <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.35rem" }}>
+              Vị trí nhà hàng trên bản đồ
+            </label>
+            <DeliveryLocationPicker
+              position={formData.latitude !== "" && formData.longitude !== "" && Number.isFinite(Number(formData.latitude)) && Number.isFinite(Number(formData.longitude))
+                ? { latitude: Number(formData.latitude), longitude: Number(formData.longitude) }
+                : null}
+              onChange={(position) => setFormData((current) => ({
+                ...current,
+                latitude: position.latitude.toFixed(6),
+                longitude: position.longitude.toFixed(6),
+              }))}
+            />
+          </div>
 
           <Input
             label="Số điện thoại liên hệ"

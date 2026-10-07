@@ -55,6 +55,48 @@ function normalizeProvinceName(value) {
     .toLowerCase();
 }
 
+function hasCoordinate(value) {
+  return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+}
+
+function calculateDistanceKm(fromLatitude, fromLongitude, toLatitude, toLongitude) {
+  if (![fromLatitude, fromLongitude, toLatitude, toLongitude].every(hasCoordinate)) return 0;
+  const lat1 = Number(fromLatitude);
+  const lon1 = Number(fromLongitude);
+  const lat2 = Number(toLatitude);
+  const lon2 = Number(toLongitude);
+
+  if (!Number.isFinite(lat1) || !Number.isFinite(lon1) || !Number.isFinite(lat2) || !Number.isFinite(lon2)) {
+    return 0;
+  }
+
+  const toRadians = (degrees) => (degrees * Math.PI) / 180;
+  const earthRadiusKm = 6371;
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function calculateDistanceShippingFee({ restaurantLatitude, restaurantLongitude, deliveryLatitude, deliveryLongitude, baseFee = 15000, perKm = 3500 }) {
+  if (![restaurantLatitude, restaurantLongitude, deliveryLatitude, deliveryLongitude].every(hasCoordinate)) return baseFee;
+  const lat1 = Number(restaurantLatitude);
+  const lon1 = Number(restaurantLongitude);
+  const lat2 = Number(deliveryLatitude);
+  const lon2 = Number(deliveryLongitude);
+
+  if (!Number.isFinite(lat1) || !Number.isFinite(lon1) || !Number.isFinite(lat2) || !Number.isFinite(lon2)) {
+    return baseFee;
+  }
+
+  const distanceKm = calculateDistanceKm(lat1, lon1, lat2, lon2);
+  return Math.round(baseFee + Math.max(0, distanceKm) * perKm);
+}
+
 const CheckoutForm = () => {
   const navigate = useNavigate();
   const { cartItems, subtotal, deliveryFee, clearCart, hasMixedRestaurants } = useContext(CartContext);
@@ -232,6 +274,8 @@ const CheckoutForm = () => {
     id: "",
     name: "",
     location: "",
+    latitude: null,
+    longitude: null,
     loading: false,
     error: null,
     ghnDistrictId: null,
@@ -245,7 +289,7 @@ const CheckoutForm = () => {
     const resolveRestaurant = async () => {
       if (!cartItems || cartItems.length === 0) {
         if (isMounted) {
-          setRestaurantInfo({ id: "", name: "", location: "", loading: false, error: null });
+          setRestaurantInfo({ id: "", name: "", location: "", latitude: null, longitude: null, loading: false, error: null });
         }
         return;
       }
@@ -284,6 +328,8 @@ const CheckoutForm = () => {
               id: res.data._id || extractedId,
               name: res.data.name || extractedName || "Nhà hàng đối tác SkyDish",
               location: res.data.location || "",
+              latitude: hasCoordinate(res.data.latitude) ? Number(res.data.latitude) : null,
+              longitude: hasCoordinate(res.data.longitude) ? Number(res.data.longitude) : null,
               loading: false,
               error: null,
               ghnDistrictId: res.data.ghnDistrictId || null,
@@ -294,16 +340,13 @@ const CheckoutForm = () => {
         } catch (err) {
           console.warn("Could not fetch restaurant by ID:", extractedId, err.message);
           if (extractedName && isMounted) {
-            setRestaurantInfo({
+            setRestaurantInfo((prev) => ({
+              ...prev,
               id: extractedId,
               name: extractedName,
-              location: "",
-              loading: false,
+              loading: Boolean(foodId),
               error: null,
-              ghnDistrictId: null,
-              ghnWardCode: "",
-            });
-            return;
+            }));
           }
         }
       }
@@ -321,6 +364,8 @@ const CheckoutForm = () => {
               id: typeof rest === "object" ? rest._id : rest,
               name: typeof rest === "object" ? rest.name : extractedName || "Nhà hàng đối tác SkyDish",
               location: typeof rest === "object" ? rest.location : "",
+              latitude: typeof rest === "object" && hasCoordinate(rest.latitude) ? Number(rest.latitude) : null,
+              longitude: typeof rest === "object" && hasCoordinate(rest.longitude) ? Number(rest.longitude) : null,
               loading: false,
               error: null,
               ghnDistrictId: typeof rest === "object" ? rest.ghnDistrictId || null : null,
@@ -339,8 +384,10 @@ const CheckoutForm = () => {
           id: extractedId || prev.id || "",
           name: prev.name || extractedName || (cartItems.length > 0 ? "Nhà hàng đối tác SkyDish" : ""),
           location: prev.location || "",
+          latitude: prev.latitude ?? null,
+          longitude: prev.longitude ?? null,
           loading: false,
-          error: prev.name || extractedName ? null : "Không thể xác định thông tin nhà hàng",
+          error: "Không thể xác minh món ăn/nhà hàng trong giỏ. Vui lòng xóa món cũ và thêm lại từ thực đơn.",
           ghnDistrictId: prev.ghnDistrictId || null,
           ghnWardCode: prev.ghnWardCode || "",
         }));
@@ -390,10 +437,36 @@ const CheckoutForm = () => {
     });
     const districts = Array.isArray(districtResponse.data?.data) ? districtResponse.data.data : [];
     setGhnDistricts(districts);
-    const district = findMatch(districts, address.districtCandidates || [], "DistrictID", "DistrictName");
+    let district = findMatch(districts, address.districtCandidates || [], "DistrictID", "DistrictName");
+    let wards = [];
+    let ward = null;
+
+    if (district) {
+      const wardResponse = await axios.get(`${API_URLS.ORDER}/api/orders/shipping/locations/wards`, {
+        params: { parentId: district.DistrictID },
+        headers: { Authorization: `Bearer ${getValidToken()}` },
+      });
+      wards = Array.isArray(wardResponse.data?.data) ? wardResponse.data.data : [];
+      ward = findMatch(wards, address.wardCandidates || [], "WardCode", "WardName");
+    }
+
+    if ((!district || !ward) && (address.wardCandidates || []).length) {
+      const resolveResponse = await axios.get(`${API_URLS.ORDER}/api/orders/shipping/locations/resolve-area`, {
+        params: { parentId: province.ProvinceID, wardCandidates: address.wardCandidates.join("|") },
+        headers: { Authorization: `Bearer ${getValidToken()}` },
+      });
+      const resolvedArea = resolveResponse.data?.data;
+      if (resolvedArea?.district && resolvedArea?.ward) {
+        district = resolvedArea.district;
+        wards = Array.isArray(resolvedArea.wards) ? resolvedArea.wards : [];
+        ward = resolvedArea.ward;
+      }
+    }
+
     if (!district) {
       setAddrDistrictId("");
       setAddrWardCode("");
+      setGhnWards([]);
       setAddrDistrict(address.districtCandidates?.[0] || "");
       setAddrWard(address.wardCandidates?.[0] || "");
       setLocationError("Đã lấy vị trí; vui lòng chọn quận/huyện và phường/xã trong danh sách.");
@@ -402,13 +475,7 @@ const CheckoutForm = () => {
 
     setAddrDistrictId(String(district.DistrictID));
     setAddrDistrict(district.DistrictName);
-    const wardResponse = await axios.get(`${API_URLS.ORDER}/api/orders/shipping/locations/wards`, {
-      params: { parentId: district.DistrictID },
-      headers: { Authorization: `Bearer ${getValidToken()}` },
-    });
-    const wards = Array.isArray(wardResponse.data?.data) ? wardResponse.data.data : [];
     setGhnWards(wards);
-    const ward = findMatch(wards, address.wardCandidates || [], "WardCode", "WardName");
     setAddrWardCode(ward?.WardCode || "");
     setAddrWard(ward?.WardName || address.wardCandidates?.[0] || "");
     if (!ward) setLocationError("Đã lấy vị trí; vui lòng xác nhận phường/xã trong danh sách.");
@@ -429,7 +496,7 @@ const CheckoutForm = () => {
         try {
           await updateAddressFromPosition(position);
         } catch (error) {
-          setLocationError(error.response?.data?.error || error.message || "Đã ghim vị trí nhưng không thể tự điền địa chỉ.");
+          setLocationError("Đã lấy tọa độ GPS, nhưng không tra được địa chỉ tự động. Bạn vẫn có thể ghim vị trí và nhập địa chỉ thủ công.");
         } finally {
           setLocationLoading(false);
         }
@@ -462,6 +529,34 @@ const CheckoutForm = () => {
       ""
     );
   }, [restaurantInfo.name, cartItems]);
+
+  const hasDistanceBasedShipping = useMemo(() => {
+    return Boolean(
+      deliveryPosition &&
+      hasCoordinate(restaurantInfo.latitude) &&
+      hasCoordinate(restaurantInfo.longitude)
+    );
+  }, [deliveryPosition, restaurantInfo.latitude, restaurantInfo.longitude]);
+
+  const deliveryDistanceKm = useMemo(() => {
+    if (!hasDistanceBasedShipping) return null;
+    return calculateDistanceKm(
+      restaurantInfo.latitude,
+      restaurantInfo.longitude,
+      deliveryPosition.latitude,
+      deliveryPosition.longitude
+    );
+  }, [hasDistanceBasedShipping, restaurantInfo.latitude, restaurantInfo.longitude, deliveryPosition]);
+
+  const distanceBasedFee = useMemo(() => {
+    if (!hasDistanceBasedShipping) return deliveryFee;
+    return calculateDistanceShippingFee({
+      restaurantLatitude: restaurantInfo.latitude,
+      restaurantLongitude: restaurantInfo.longitude,
+      deliveryLatitude: deliveryPosition.latitude,
+      deliveryLongitude: deliveryPosition.longitude,
+    });
+  }, [hasDistanceBasedShipping, deliveryFee, deliveryPosition, restaurantInfo.latitude, restaurantInfo.longitude]);
 
   useEffect(() => {
     if (!addressDirectoryEnabled || addrProvinceId || !addrCity || !ghnProvinces.length) return;
@@ -543,11 +638,13 @@ const CheckoutForm = () => {
     };
   }, [ghnEnabled, addressDirectoryProvider, effectiveRestaurantId, addrDistrictId, addrWardCode, currentGhnQuoteKey]);
 
-  const activeDeliveryFee = ghnEnabled
-    ? (ghnQuoteKey === currentGhnQuoteKey && ghnQuote !== null ? ghnQuote : deliveryFee)
-    : deliveryFee;
-  const activeCouponDiscount = appliedCoupon?.discountType === "shipping" && ghnEnabled
-    ? (ghnQuoteKey === currentGhnQuoteKey && ghnQuote !== null ? activeDeliveryFee : 0)
+  const activeDeliveryFee = hasDistanceBasedShipping
+    ? distanceBasedFee
+    : (ghnEnabled
+      ? (ghnQuoteKey === currentGhnQuoteKey && ghnQuote !== null ? ghnQuote : deliveryFee)
+      : deliveryFee);
+  const activeCouponDiscount = appliedCoupon?.discountType === "shipping" && (hasDistanceBasedShipping || ghnEnabled)
+    ? (hasDistanceBasedShipping ? activeDeliveryFee : ((ghnQuoteKey === currentGhnQuoteKey && ghnQuote !== null ? activeDeliveryFee : 0)))
     : couponDiscount;
 
   // Pure authoritative total calculation: Subtotal + Delivery Fee - Coupon Discount
@@ -595,6 +692,10 @@ const CheckoutForm = () => {
       setError("Mỗi đơn chỉ áp dụng cho một nhà hàng. Vui lòng quay lại giỏ hàng để điều chỉnh.");
       return false;
     }
+    if (restaurantInfo.error) {
+      setError(restaurantInfo.error);
+      return false;
+    }
     if (!addrCity.trim() || !addrDistrict.trim() || !addrDetail.trim()) {
       setError("Vui lòng nhập Tỉnh/Thành phố, Quận/Huyện và địa chỉ chi tiết trước khi thanh toán.");
       return false;
@@ -607,12 +708,12 @@ const CheckoutForm = () => {
       setError("Đang kiểm tra cấu hình cước giao hàng. Vui lòng chờ.");
       return false;
     }
-    if (ghnEnabled && (addressDirectoryProvider !== "GHN" || !addrProvinceId || !addrDistrictId || !addrWardCode || ghnQuoteKey !== currentGhnQuoteKey || ghnQuote === null)) {
+    if (!hasDistanceBasedShipping && ghnEnabled && (addressDirectoryProvider !== "GHN" || !addrProvinceId || !addrDistrictId || !addrWardCode || ghnQuoteKey !== currentGhnQuoteKey || ghnQuote === null)) {
       setError(ghnQuoteError || "Vui lòng chọn đầy đủ địa chỉ và chờ GHN báo giá trước khi thanh toán.");
       return false;
     }
     return true;
-  }, [checkAuthOrRedirect, cartItems.length, hasMixedRestaurants, addrCity, addrDistrict, addrDetail, effectiveRestaurantId, ghnEnabled, ghnConfigLoading, addressDirectoryProvider, addrProvinceId, addrDistrictId, addrWardCode, ghnQuoteKey, currentGhnQuoteKey, ghnQuote, ghnQuoteError]);
+  }, [checkAuthOrRedirect, cartItems.length, hasMixedRestaurants, restaurantInfo.error, addrCity, addrDistrict, addrDetail, effectiveRestaurantId, ghnEnabled, ghnConfigLoading, addressDirectoryProvider, addrProvinceId, addrDistrictId, addrWardCode, ghnQuoteKey, currentGhnQuoteKey, ghnQuote, ghnQuoteError, hasDistanceBasedShipping]);
 
   const handleApplyCoupon = async (e, selectedCode = couponCode) => {
     if (e) e.preventDefault();
@@ -1435,7 +1536,7 @@ const CheckoutForm = () => {
                       <img
                         src={
                           bankDetails?.qrUrl ||
-                          `https://img.vietqr.io/image/970422-0932366523-compact2.png?amount=${orderData.amount}&addInfo=SKYDISH-${orderData.orderId}&accountName=LE%20VAN%20LOI`
+                          `https://img.vietqr.io/image/970422-0327242691-compact2.png?amount=${orderData.amount}&addInfo=SKYDISH-${orderData.orderId}&accountName=NGUYEN%20HUU%20SON%20NHAT`
                         }
                         alt="Mã VietQR Thanh toán"
                         style={{
@@ -1474,14 +1575,14 @@ const CheckoutForm = () => {
                     <span className="bank-info-label">Số tài khoản:</span>
                     <div className="bank-info-value-wrap">
                       <span className="bank-info-value">
-                        {bankDetails?.accountNumber || "0932366523"}
+                        {bankDetails?.accountNumber || "0327242691"}
                       </span>
                       <button
                         type="button"
                         className="bank-copy-btn"
                         onClick={() =>
                           copyToClipboard(
-                            bankDetails?.accountNumber || "0932366523",
+                            bankDetails?.accountNumber || "0327242691",
                             "số tài khoản"
                           )
                         }
@@ -1494,7 +1595,7 @@ const CheckoutForm = () => {
                   <div className="bank-info-row">
                     <span className="bank-info-label">Chủ tài khoản:</span>
                     <span className="bank-info-value">
-                      {bankDetails?.accountHolder || "LE VAN LOI"}
+                      {bankDetails?.accountHolder || "NGUYEN HUU SON NHAT"}
                     </span>
                   </div>
 
@@ -1714,6 +1815,11 @@ const CheckoutForm = () => {
             <span style={{ color: "var(--sd-text-muted)" }}>Chưa có món trong giỏ</span>
           )}
         </div>
+        {restaurantInfo.error && !placedOrder && (
+          <p role="alert" style={{ margin: "-0.65rem 0 1rem", color: "var(--sd-danger)", fontSize: "0.8rem" }}>
+            {restaurantInfo.error}
+          </p>
+        )}
 
         {/* Structured Delivery Address Form */}
         <div className="checkout-address-section" style={{ marginBottom: "1.25rem" }}>
@@ -1813,16 +1919,42 @@ const CheckoutForm = () => {
               </div>
               <DeliveryLocationPicker
                 position={deliveryPosition}
+                restaurantPosition={
+                  hasCoordinate(restaurantInfo.latitude) && hasCoordinate(restaurantInfo.longitude)
+                    ? { latitude: Number(restaurantInfo.latitude), longitude: Number(restaurantInfo.longitude) }
+                    : null
+                }
                 onChange={(position) => {
                   setDeliveryPosition(position);
                   setLocationError("");
                 }}
               />
-              <p style={{ fontSize: "0.72rem", color: locationError ? "#b91c1c" : "#64748b", margin: 0 }}>
-                {locationError || (deliveryPosition
-                  ? `Đã ghim: ${deliveryPosition.latitude.toFixed(6)}, ${deliveryPosition.longitude.toFixed(6)}`
-                  : "Cho phép truy cập vị trí hoặc chạm lên bản đồ để ghim điểm giao." )}
-              </p>
+              {hasDistanceBasedShipping ? (
+                <p style={{ fontSize: "0.78rem", color: "#334155", margin: 0 }}>
+                  Khoảng cách đường chim bay đến <strong>{effectiveRestaurantName || "nhà hàng"}</strong>:{" "}
+                  <strong style={{ color: "#e94b24" }}>{deliveryDistanceKm.toFixed(1)} km</strong>. Chạm vào bản đồ để đổi vị trí giao hàng và cập nhật khoảng cách.
+                </p>
+              ) : (
+                <p style={{ fontSize: "0.75rem", color: "#64748b", margin: 0 }}>
+                  {!deliveryPosition
+                    ? "Chọn vị trí hiện tại hoặc chạm vào bản đồ để xem khoảng cách đến nhà hàng."
+                    : "Nhà hàng chưa có tọa độ bản đồ nên chưa thể tính khoảng cách."}
+                </p>
+              )}
+              {locationError && (
+                <p role="alert" style={{ fontSize: "0.72rem", color: "#b91c1c", margin: 0 }}>
+                  {locationError}
+                </p>
+              )}
+              {deliveryPosition ? (
+                <p style={{ fontSize: "0.72rem", color: "#047857", margin: 0 }}>
+                  Đã ghim: {deliveryPosition.latitude.toFixed(6)}, {deliveryPosition.longitude.toFixed(6)}
+                </p>
+              ) : !locationError && (
+                <p style={{ fontSize: "0.72rem", color: "#64748b", margin: 0 }}>
+                  Cho phép truy cập vị trí hoặc chạm lên bản đồ để ghim điểm giao.
+                </p>
+              )}
               {deliveryAddress && (
                 <p style={{ fontSize: "0.75rem", color: "#64748b", margin: "0.1rem 0 0 0" }}>
                   ↳ <em>{deliveryAddress}</em>
@@ -1941,6 +2073,15 @@ const CheckoutForm = () => {
             <span>Phí giao hàng</span>
             <span>{formatCurrency(displayedDeliveryFee)}</span>
           </div>
+          {!placedOrder && deliveryPosition && (hasDistanceBasedShipping ? (
+            <small style={{ color: "var(--sd-text-muted)" }}>
+              Ước tính {deliveryDistanceKm.toFixed(1)} km từ {effectiveRestaurantName || "nhà hàng"}.
+            </small>
+          ) : (
+            <small style={{ color: "#b45309" }}>
+              Chưa tính được theo km vì nhà hàng chưa có tọa độ; đang dùng phí mặc định.
+            </small>
+          ))}
           {displayedDiscount > 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", color: "#047857", fontWeight: "700" }}>
               <span>Giảm giá mã ({appliedCoupon?.code || placedOrder?.appliedCoupon?.code || "Ưu đãi"}):</span>

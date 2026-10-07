@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { API_URLS } from "../../config/api";
 import { 
   FaBars, 
   FaSearch, 
@@ -42,8 +43,53 @@ const AdminTopbar = ({
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
+
+  const getNotificationHeaders = () => {
+    const token = localStorage.getItem("token") || "";
+    return token ? { Authorization: `Bearer ${token.replace(/^Bearer\s+/i, "")}` } : {};
+  };
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const headers = getNotificationHeaders();
+      if (!headers.Authorization) return;
+      const response = await fetch(`${API_URLS.RESTAURANT}/api/notifications`, { headers });
+      if (!response.ok) return;
+      const data = await response.json();
+      setNotifications(data.notifications || []);
+    } catch (error) {
+      console.warn("Could not load admin notifications:", error.message);
+    }
+  }, []);
+
+  const markAllNotificationsRead = async () => {
+    try {
+      await fetch(`${API_URLS.RESTAURANT}/api/notifications/read-all`, {
+        method: "PUT",
+        headers: { ...getNotificationHeaders(), "Content-Type": "application/json" },
+      });
+      setNotifications((prev) => prev.map((notification) => ({ ...notification, isRead: true })));
+    } catch (error) {
+      console.warn("Could not mark admin notifications as read:", error.message);
+    }
+  };
+
+  const markNotificationRead = async (notificationId) => {
+    try {
+      await fetch(`${API_URLS.RESTAURANT}/api/notifications/${notificationId}/read`, {
+        method: "PUT",
+        headers: getNotificationHeaders(),
+      });
+      setNotifications((prev) => prev.map((notification) => (
+        notification._id === notificationId ? { ...notification, isRead: true } : notification
+      )));
+    } catch (error) {
+      console.warn("Could not mark admin notification as read:", error.message);
+    }
+  };
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -59,12 +105,13 @@ const AdminTopbar = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const notifications = [
-    { id: 1, title: "Hệ thống 5 vi dịch vụ hoạt động ổn định", time: "Vừa xong", type: "success" },
-    { id: 2, title: "Đã kích hoạt hỗ trợ PayOS, Stripe, VNPay, MoMo và COD", time: "5 phút trước", type: "info" },
-    { id: 3, title: "Chuẩn hóa tiền tệ Việt Nam Đồng (VND / ₫)", time: "Hôm nay", type: "success" },
-    { id: 4, title: "16 nhà hàng đối tác thực tế tại Hà Nội đã đồng bộ", time: "Hôm nay", type: "success" },
-  ];
+  useEffect(() => {
+    fetchNotifications();
+    const intervalId = setInterval(fetchNotifications, 15000);
+    return () => clearInterval(intervalId);
+  }, [fetchNotifications]);
+
+  const unreadCount = notifications.filter((notification) => !notification.isRead).length;
 
   const currentLabel = moduleLabels[activeTab] || "Tổng quan";
 
@@ -115,9 +162,10 @@ const AdminTopbar = ({
             className="admin-icon-btn"
             onClick={() => setNotifOpen(!notifOpen)}
             title="Thông báo hệ thống"
+            aria-label={`Thông báo hệ thống${unreadCount ? `, ${unreadCount} chưa đọc` : ""}`}
           >
             <FaBell />
-            <span className="admin-icon-badge-dot" />
+            {unreadCount > 0 && <span className="admin-icon-badge-dot" />}
           </button>
 
           {notifOpen && (
@@ -137,12 +185,19 @@ const AdminTopbar = ({
             >
               <div style={{ padding: "0.5rem 1rem", borderBottom: "1px solid var(--admin-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "0.85rem", fontWeight: "700" }}>Thông báo hệ thống</span>
-                <span style={{ fontSize: "0.72rem", color: "var(--admin-primary)", fontWeight: "600" }}>{notifications.length} mới</span>
+                <button
+                  type="button"
+                  onClick={markAllNotificationsRead}
+                  style={{ border: 0, background: "transparent", color: "var(--admin-primary)", fontSize: "0.72rem", fontWeight: "600", cursor: "pointer" }}
+                >
+                  {unreadCount} chưa đọc
+                </button>
               </div>
               <div>
                 {notifications.map((n) => (
                   <div
-                    key={n.id}
+                    key={n._id}
+                    onClick={() => !n.isRead && markNotificationRead(n._id)}
                     style={{
                       padding: "0.75rem 1rem",
                       borderBottom: "1px solid var(--admin-border-subtle)",
@@ -160,7 +215,7 @@ const AdminTopbar = ({
                       <p style={{ margin: 0, fontSize: "0.8rem", fontWeight: "600", color: "var(--admin-text-main)" }}>
                         {n.title}
                       </p>
-                      <span style={{ fontSize: "0.7rem", color: "var(--admin-text-muted)" }}>{n.time}</span>
+                        <span style={{ fontSize: "0.7rem", color: "var(--admin-text-muted)" }}>{new Date(n.createdAt).toLocaleString("vi-VN")}</span>
                     </div>
                   </div>
                 ))}

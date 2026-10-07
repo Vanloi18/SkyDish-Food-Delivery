@@ -196,7 +196,7 @@ function OrderDetails() {
 
     currentY += 6;
     const pmDisplay = order.paymentMethod === "BANK_TRANSFER"
-      ? "Bank Transfer (MB Bank - 0932366523)"
+      ? "Bank Transfer (MB Bank - 0327242691)"
       : (order.paymentMethod || "COD");
     doc.text(`Payment Method: ${pmDisplay}`, 20, currentY);
     doc.text(`Payment Status: ${order.paymentStatus || "Pending"}`, pageWidth - 60, currentY);
