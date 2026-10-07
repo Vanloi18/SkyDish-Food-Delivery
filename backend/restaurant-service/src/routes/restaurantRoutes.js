@@ -13,6 +13,8 @@ import upload from '../middleware/uploadMiddleware.js';
 // Register a new restaurant (with admin email and password)
 router.post('/register', upload.single('profilePicture'), async (req, res) => {
   const { name, ownerName, location, contactNumber, email, password } = req.body;
+  const latitude = req.body.latitude !== undefined && req.body.latitude !== '' && req.body.latitude !== null ? Number(req.body.latitude) : null;
+  const longitude = req.body.longitude !== undefined && req.body.longitude !== '' && req.body.longitude !== null ? Number(req.body.longitude) : null;
   let profilePicture = req.file ? `/uploads/${req.file.filename}` : (req.body.profilePicture || '');
   if (typeof profilePicture === 'string' && /^[a-zA-Z]:[\\\/]/.test(profilePicture.trim().replace(/^["']|["']$/g, ''))) {
     profilePicture = '';
@@ -30,6 +32,8 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
       name,
       ownerName,
       location,
+      latitude: Number.isFinite(latitude) ? latitude : null,
+      longitude: Number.isFinite(longitude) ? longitude : null,
       contactNumber,
       profilePicture,
       admin: { email, password },
@@ -86,6 +90,8 @@ router.get('/profile', authMiddleware, async (req, res) => {
 // Update restaurant details
 router.put('/update', authMiddleware, upload.single('profilePicture'), async (req, res) => {
   const { name, ownerName, location, contactNumber } = req.body;
+  const latitude = req.body.latitude !== undefined && req.body.latitude !== '' && req.body.latitude !== null ? Number(req.body.latitude) : null;
+  const longitude = req.body.longitude !== undefined && req.body.longitude !== '' && req.body.longitude !== null ? Number(req.body.longitude) : null;
 
   try {
     const restaurant = await Restaurant.findById(req.user.id);
@@ -97,6 +103,8 @@ router.put('/update', authMiddleware, upload.single('profilePicture'), async (re
     if (name) restaurant.name = name;
     if (ownerName) restaurant.ownerName = ownerName;
     if (location) restaurant.location = location;
+    if (req.body.latitude !== undefined) restaurant.latitude = Number.isFinite(latitude) ? latitude : null;
+    if (req.body.longitude !== undefined) restaurant.longitude = Number.isFinite(longitude) ? longitude : null;
     if (contactNumber) restaurant.contactNumber = contactNumber;
 
     // Update profile picture if a file is uploaded or url provided

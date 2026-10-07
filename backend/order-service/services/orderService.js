@@ -17,21 +17,186 @@ import {
 } from "./vietnamLocationService.js";
 
 const GHN_FALLBACK_DELIVERY_FEE = 15000;
+const DISTANCE_SHIPPING_BASE_FEE = 15000;
+const DISTANCE_SHIPPING_PER_KM = 3500;
 
-const quoteGhnDeliveryForOrder = async ({ restaurantId, toDistrictId, toWardCode, deliveryAreaProvider }) => {
+const hasCoordinate = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+
+export const calculateDistanceKm = (fromLatitude, fromLongitude, toLatitude, toLongitude) => {
+    if (![fromLatitude, fromLongitude, toLatitude, toLongitude].every(hasCoordinate)) return 0;
+    const lat1 = Number(fromLatitude);
+    const lon1 = Number(fromLongitude);
+    const lat2 = Number(toLatitude);
+    const lon2 = Number(toLongitude);
+
+    if (!Number.isFinite(lat1) || !Number.isFinite(lon1) || !Number.isFinite(lat2) || !Number.isFinite(lon2)) {
+        return 0;
+    }
+
+    const toRadians = (degrees) => (degrees * Math.PI) / 180;
+    const earthRadiusKm = 6371;
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+export const calculateDistanceBasedDeliveryFee = ({
+    restaurantLatitude,
+    restaurantLongitude,
+    deliveryLatitude,
+    deliveryLongitude,
+    baseFee = DISTANCE_SHIPPING_BASE_FEE,
+    perKm = DISTANCE_SHIPPING_PER_KM,
+}) => {
+    if (![restaurantLatitude, restaurantLongitude, deliveryLatitude, deliveryLongitude].every(hasCoordinate)) {
+        return baseFee;
+    }
+    const lat1 = Number(restaurantLatitude);
+    const lon1 = Number(restaurantLongitude);
+    const lat2 = Number(deliveryLatitude);
+    const lon2 = Number(deliveryLongitude);
+
+    if (!Number.isFinite(lat1) || !Number.isFinite(lon1) || !Number.isFinite(lat2) || !Number.isFinite(lon2)) {
+        return baseFee;
+    }
+
+    const distanceKm = calculateDistanceKm(lat1, lon1, lat2, lon2);
+    const finalFee = baseFee + Math.max(0, distanceKm) * perKm;
+    return Math.round(finalFee);
+};
+
+const getRestaurantCoordinates = async (restaurantId) => {
+    if (!restaurantId || !mongoose.Types.ObjectId.isValid(String(restaurantId))) {
+        return null;
+    }
+
+    const db = mongoose.connection.db;
+    if (!db) return null;
+
+    const restaurant = await db.collection("restaurants").findOne(
+        { _id: new mongoose.Types.ObjectId(String(restaurantId)) },
+        { projection: { latitude: 1, longitude: 1, name: 1, location: 1 } }
+    );
+
+    if (!restaurant) return null;
+
+    if (!hasCoordinate(restaurant.latitude) || !hasCoordinate(restaurant.longitude)) return null;
+    const latitude = Number(restaurant.latitude);
+    const longitude = Number(restaurant.longitude);
+
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        return null;
+    }
+
+    return {
+        latitude,
+        longitude,
+        name: restaurant.name || restaurant.location || "Nhà hàng",
+    };
+};
+
+const quoteDistanceDeliveryForOrder = async ({ restaurantId, deliveryLatitude, deliveryLongitude }) => {
+    const safeLatitude = Number(deliveryLatitude);
+    const safeLongitude = Number(deliveryLongitude);
+
+    if (!hasCoordinate(deliveryLatitude) || !hasCoordinate(deliveryLongitude) || !Number.isFinite(safeLatitude) || !Number.isFinite(safeLongitude) || safeLatitude < -90 || safeLatitude > 90 || safeLongitude < -180 || safeLongitude > 180) {
+        return { enabled: false, source: "local", deliveryFee: GHN_FALLBACK_DELIVERY_FEE, distanceKm: 0 };
+    }
+
+    const restaurantCoordinates = await getRestaurantCoordinates(restaurantId);
+    if (!restaurantCoordinates) {
+        return { enabled: false, source: "local", deliveryFee: GHN_FALLBACK_DELIVERY_FEE, distanceKm: 0 };
+    }
+
+    const distanceKm = calculateDistanceKm(
+        restaurantCoordinates.latitude,
+        restaurantCoordinates.longitude,
+        safeLatitude,
+        safeLongitude
+    );
+
+    const deliveryFee = calculateDistanceBasedDeliveryFee({
+        restaurantLatitude: restaurantCoordinates.latitude,
+        restaurantLongitude: restaurantCoordinates.longitude,
+        deliveryLatitude: safeLatitude,
+        deliveryLongitude: safeLongitude,
+    });
+
+    return {
+        enabled: true,
+        source: "distance",
+        deliveryFee,
+        distanceKm: Number(distanceKm.toFixed(2)),
+    };
+};
+
+const persistNotification = async ({ userId = 'all', role, type = 'order', title, message, entityId }) => {
+    try {
+        const db = mongoose.connection.db;
+        if (!db) return;
+        const now = new Date();
+        await db.collection('notifications').insertOne({
+            userId: String(userId),
+            role,
+            type,
+            title,
+            message,
+            entityType: 'order',
+            entityId: String(entityId || ''),
+            isRead: false,
+            readBy: [],
+            createdAt: now,
+            updatedAt: now,
+        });
+    } catch (error) {
+        console.warn('Could not persist order notification:', error.message);
+    }
+};
+
+const notifyOrderCreated = async (order) => {
+    const orderCode = order._id.toString().slice(-6).toUpperCase();
+    await Promise.all([
+        persistNotification({
+            userId: order.customerId,
+            role: 'customer',
+            title: 'Đã nhận đơn hàng',
+            message: `SkyDish đã nhận đơn #${orderCode} và đang chờ nhà hàng xác nhận.`,
+            entityId: order._id,
+        }),
+        persistNotification({
+            userId: order.restaurantId,
+            role: 'restaurant',
+            title: 'Có đơn hàng mới',
+            message: `Đơn #${orderCode} vừa được khách hàng đặt.`,
+            entityId: order._id,
+        }),
+        persistNotification({
+            role: 'admin',
+            title: 'Đơn hàng mới trên SkyDish',
+            message: `Đơn #${orderCode} vừa được tạo.`,
+            entityId: order._id,
+        }),
+    ]);
+};
+
+const quoteGhnDeliveryForOrder = async ({ restaurantId, toDistrictId, toWardCode, deliveryAreaProvider, deliveryLatitude, deliveryLongitude }) => {
     if (!isGhnConfigured()) {
-        return { enabled: false, deliveryFee: GHN_FALLBACK_DELIVERY_FEE };
+        const distanceQuote = await quoteDistanceDeliveryForOrder({ restaurantId, deliveryLatitude, deliveryLongitude });
+        return distanceQuote;
     }
 
     if (!toDistrictId || !toWardCode) {
-        const error = new Error("Vui lòng chọn quận/huyện và phường/xã hợp lệ để báo giá GHN.");
-        error.statusCode = 400;
-        throw error;
+        const distanceQuote = await quoteDistanceDeliveryForOrder({ restaurantId, deliveryLatitude, deliveryLongitude });
+        return distanceQuote;
     }
     if (deliveryAreaProvider !== "GHN") {
-        const error = new Error("Vui lòng chọn lại địa chỉ theo danh mục GHN trước khi báo giá.");
-        error.statusCode = 400;
-        throw error;
+        const distanceQuote = await quoteDistanceDeliveryForOrder({ restaurantId, deliveryLatitude, deliveryLongitude });
+        return distanceQuote;
     }
 
     if (!mongoose.Types.ObjectId.isValid(String(restaurantId))) {
@@ -45,28 +210,70 @@ const quoteGhnDeliveryForOrder = async ({ restaurantId, toDistrictId, toWardCode
         _id: new mongoose.Types.ObjectId(String(restaurantId)),
     });
     if (!restaurant?.ghnDistrictId || !restaurant?.ghnWardCode) {
-        const error = new Error("Nhà hàng chưa được cấu hình mã quận/phường gửi hàng GHN.");
-        error.statusCode = 400;
-        throw error;
+        const distanceQuote = await quoteDistanceDeliveryForOrder({ restaurantId, deliveryLatitude, deliveryLongitude });
+        return distanceQuote;
     }
 
-    const deliveryFee = await quoteGhnFee({
-        fromDistrictId: restaurant.ghnDistrictId,
-        fromWardCode: restaurant.ghnWardCode,
-        toDistrictId,
-        toWardCode,
-    });
-    return { enabled: true, deliveryFee };
+    try {
+        const deliveryFee = await quoteGhnFee({
+            fromDistrictId: restaurant.ghnDistrictId,
+            fromWardCode: restaurant.ghnWardCode,
+            toDistrictId,
+            toWardCode,
+        });
+        return { enabled: true, source: "GHN", deliveryFee };
+    } catch (error) {
+        const distanceQuote = await quoteDistanceDeliveryForOrder({ restaurantId, deliveryLatitude, deliveryLongitude });
+        return distanceQuote;
+    }
 };
 
-export const getShippingQuoteService = async ({ restaurantId, toDistrictId, toWardCode, deliveryAreaProvider }) => {
+export const getShippingQuoteService = async ({ restaurantId, toDistrictId, toWardCode, deliveryAreaProvider, deliveryLatitude, deliveryLongitude }) => {
+    const hasCoordinates = hasCoordinate(deliveryLatitude) && hasCoordinate(deliveryLongitude);
+    if (hasCoordinates) {
+        return quoteDistanceDeliveryForOrder({ restaurantId, deliveryLatitude, deliveryLongitude });
+    }
+
     if (!isGhnConfigured()) {
-        return { enabled: false, deliveryFee: GHN_FALLBACK_DELIVERY_FEE };
+        return { enabled: false, source: "local", deliveryFee: GHN_FALLBACK_DELIVERY_FEE, distanceKm: 0 };
     }
-    return quoteGhnDeliveryForOrder({ restaurantId, toDistrictId, toWardCode, deliveryAreaProvider });
+
+    return quoteGhnDeliveryForOrder({ restaurantId, toDistrictId, toWardCode, deliveryAreaProvider, deliveryLatitude, deliveryLongitude });
 };
 
-export const getShippingLocationsService = async ({ type, parentId, provider }) => {
+const normalizeLocationName = (value) => String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/^(phuong|xa|quan|huyen|thi xa|thanh pho|tinh)\s+/i, "")
+    .trim()
+    .toLowerCase();
+
+const resolveGhnAreaByWard = async ({ provinceId, wardCandidates }) => {
+    const candidates = new Set(wardCandidates.map(normalizeLocationName).filter(Boolean));
+    if (!candidates.size) return null;
+
+    const districts = await getGhnDistricts(provinceId);
+    let nextDistrictIndex = 0;
+    let resolvedArea = null;
+    const workerCount = Math.min(6, districts.length);
+
+    await Promise.all(Array.from({ length: workerCount }, async () => {
+        while (nextDistrictIndex < districts.length && !resolvedArea) {
+            const district = districts[nextDistrictIndex];
+            nextDistrictIndex += 1;
+            const wards = await getGhnWards(district.DistrictID);
+            const ward = wards.find((item) => {
+                const names = [item.WardName, ...(Array.isArray(item.NameExtension) ? item.NameExtension : [])];
+                return names.some((name) => candidates.has(normalizeLocationName(name)));
+            });
+            if (ward && !resolvedArea) resolvedArea = { district, ward, wards };
+        }
+    }));
+
+    return resolvedArea;
+};
+
+export const getShippingLocationsService = async ({ type, parentId, provider, wardCandidates = [] }) => {
     const useGhnDirectory = isGhnConfigured();
     if (provider === "GHN" && !useGhnDirectory) {
         const error = new Error("Dịch vụ báo giá GHN hiện chưa được cấu hình.");
@@ -78,6 +285,9 @@ export const getShippingLocationsService = async ({ type, parentId, provider }) 
         if (type === "provinces") return { provider: "GHN", data: await getGhnProvinces() };
         if (type === "districts" && parentId) return { provider: "GHN", data: await getGhnDistricts(parentId) };
         if (type === "wards" && parentId) return { provider: "GHN", data: await getGhnWards(parentId) };
+        if (type === "resolve-area" && parentId) {
+            return { provider: "GHN", data: await resolveGhnAreaByWard({ provinceId: parentId, wardCandidates }) };
+        }
     } else {
         if (type === "provinces") return { provider: "VN_PUBLIC", data: await getVietnamProvinces() };
         if (type === "districts" && parentId) return { provider: "VN_PUBLIC", data: await getVietnamDistricts(parentId) };
@@ -237,11 +447,13 @@ export const createOrderService = async (orderData, authenticatedUser) => {
     }
 
     // 4. Quote shipping from GHN when enabled; retain existing local fee otherwise.
-    const shippingQuote = await quoteGhnDeliveryForOrder({
+    const shippingQuote = await getShippingQuoteService({
         restaurantId: detectedRestaurantId,
         toDistrictId: orderData.deliveryDistrictId,
         toWardCode: orderData.deliveryWardCode,
         deliveryAreaProvider: orderData.deliveryAreaProvider,
+        deliveryLatitude: deliveryLatitude,
+        deliveryLongitude: deliveryLongitude,
     });
     const deliveryFee = shippingQuote.enabled
         ? shippingQuote.deliveryFee
@@ -309,7 +521,7 @@ export const createOrderService = async (orderData, authenticatedUser) => {
             deliveryAreaProvider: orderData.deliveryAreaProvider || "MANUAL",
             deliveryLatitude: orderData.deliveryLatitude ?? null,
             deliveryLongitude: orderData.deliveryLongitude ?? null,
-            deliveryFeeSource: shippingQuote.enabled ? "GHN" : "local"
+            deliveryFeeSource: shippingQuote.source === "GHN" ? "GHN" : "local"
         });
 
         if (useTransaction && session) {
@@ -349,6 +561,8 @@ export const createOrderService = async (orderData, authenticatedUser) => {
         if (useTransaction && session) {
             await session.commitTransaction();
         }
+
+        await notifyOrderCreated(order);
 
         // Send order confirmation email asynchronously (failure never rolls back order)
         sendOrderConfirmationEmail(order).catch((mailErr) => {
@@ -636,6 +850,8 @@ export const updateOrderStatusService = async (orderId, newStatus, user, updateD
         throw error;
     }
 
+    const previousStatus = order.status;
+
     // 3. Apply state transition
     order.status = newStatus;
     if (newStatus === "Canceled") {
@@ -648,6 +864,45 @@ export const updateOrderStatusService = async (orderId, newStatus, user, updateD
     }
 
     await order.save();
+
+    if (previousStatus !== newStatus) {
+        const orderCode = order._id.toString().slice(-6).toUpperCase();
+        const statusMessage = `Đơn #${orderCode} chuyển sang trạng thái: ${newStatus}.`;
+        const notifications = [
+            persistNotification({
+                userId: order.customerId,
+                role: 'customer',
+                title: 'Cập nhật đơn hàng',
+                message: statusMessage,
+                entityId: order._id,
+            }),
+            persistNotification({
+                userId: order.restaurantId,
+                role: 'restaurant',
+                title: 'Cập nhật đơn hàng',
+                message: statusMessage,
+                entityId: order._id,
+            }),
+            persistNotification({
+                role: 'admin',
+                title: 'Trạng thái đơn hàng thay đổi',
+                message: statusMessage,
+                entityId: order._id,
+            }),
+        ];
+
+        if (newStatus === 'Confirmed' && previousStatus !== 'Confirmed') {
+            notifications.push(persistNotification({
+                role: 'delivery',
+                title: 'Có đơn mới cần tài xế',
+                message: `Đơn #${orderCode} đã được nhà hàng xác nhận và sẵn sàng nhận giao.`,
+                entityId: order._id,
+            }));
+        }
+
+        await Promise.all(notifications);
+    }
+
     return order;
 };
 

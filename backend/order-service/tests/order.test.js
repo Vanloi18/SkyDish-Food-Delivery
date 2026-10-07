@@ -9,7 +9,8 @@ import {
   getOrderByIdService,
   cancelOrderService,
   createOrderReportService,
-  updateOrderReportService
+  updateOrderReportService,
+  calculateDistanceBasedDeliveryFee,
 } from '../services/orderService.js';
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27000/food_delivery_db';
@@ -69,6 +70,30 @@ describe('Order Service Architecture, Security & Business Rules', () => {
     assert.strictEqual(order.deliveryFee, 15000);
     assert.strictEqual(order.totalPrice, 145000);
     assert.strictEqual(order.customerId, userA.id);
+  });
+
+  it('DISTANCE SHIPPING: calculates shipping by restaurant-to-customer kilometers when coordinates are present', () => {
+    const fee = calculateDistanceBasedDeliveryFee({
+      restaurantLatitude: 21.0278,
+      restaurantLongitude: 105.8342,
+      deliveryLatitude: 21.035,
+      deliveryLongitude: 105.846,
+    });
+
+    assert.ok(Number.isFinite(fee));
+    assert.ok(fee > 15000);
+    assert.ok(fee < 40000);
+  });
+
+  it('DISTANCE SHIPPING: uses the fallback fee when coordinates are missing', () => {
+    const fee = calculateDistanceBasedDeliveryFee({
+      restaurantLatitude: null,
+      restaurantLongitude: null,
+      deliveryLatitude: 21.035,
+      deliveryLongitude: 105.846,
+    });
+
+    assert.strictEqual(fee, 15000);
   });
 
   it('VALIDATION: rejects order with invalid quantity <= 0 with 400 Bad Request', async () => {

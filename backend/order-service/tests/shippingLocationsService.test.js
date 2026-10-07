@@ -42,4 +42,44 @@ describe("Shipping location source selection", () => {
             (error) => error.statusCode === 503
         );
     });
+
+    it("resolves a GHN district from a reverse-geocoded ward name", async () => {
+        process.env.GHN_TOKEN = "test-token";
+        process.env.GHN_SHOP_ID = "123";
+        global.fetch = async (url) => {
+            const requestUrl = new URL(url);
+            if (requestUrl.pathname.endsWith("/district")) {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        code: 200,
+                        data: [
+                            { DistrictID: 3440, DistrictName: "Quận Nam Từ Liêm" },
+                            { DistrictID: 1482, DistrictName: "Quận Bắc Từ Liêm" },
+                        ],
+                    }),
+                };
+            }
+
+            const districtId = requestUrl.searchParams.get("district_id");
+            return {
+                ok: true,
+                json: async () => ({
+                    code: 200,
+                    data: districtId === "1482"
+                        ? [{ WardCode: "11007", WardName: "Phường Phú Diễn", NameExtension: ["Phú Diễn"] }]
+                        : [{ WardCode: "13001", WardName: "Phường Cầu Diễn" }],
+                }),
+            };
+        };
+
+        const result = await getShippingLocationsService({
+            type: "resolve-area",
+            parentId: 201,
+            wardCandidates: ["Phú Diễn"],
+        });
+
+        assert.equal(result.data.district.DistrictID, 1482);
+        assert.equal(result.data.ward.WardCode, "11007");
+    });
 });

@@ -32,6 +32,43 @@ const getOrderSnapshot = async (orderId) => {
   }
 };
 
+const notifyDeliveryParticipants = async (
+  delivery,
+  { customerTitle, message, driverTitle = customerTitle }
+) => {
+  try {
+    const order = await getOrderSnapshot(delivery.orderId);
+    const db = mongoose.connection.db;
+    if (!db) return;
+
+    const recipients = [
+      { userId: delivery.customerId || order?.customerId, role: "customer", title: customerTitle },
+      { userId: order?.restaurantId, role: "restaurant", title: customerTitle },
+      { userId: delivery.driver, role: "delivery", title: driverTitle },
+      { userId: "all", role: "admin", title: customerTitle },
+    ].filter((recipient) => recipient.userId);
+
+    const now = new Date();
+    await db.collection("notifications").insertMany(
+      recipients.map((recipient) => ({
+        userId: String(recipient.userId),
+        role: recipient.role,
+        type: "delivery",
+        title: recipient.title,
+        message,
+        entityType: "order",
+        entityId: String(delivery.orderId),
+        isRead: false,
+        readBy: [],
+        createdAt: now,
+        updatedAt: now,
+      }))
+    );
+  } catch (error) {
+    console.warn("Could not persist delivery notification:", error.message);
+  }
+};
+
 const attachOrderMetadata = async (deliveryDoc) => {
   if (!deliveryDoc) return deliveryDoc;
 
@@ -228,6 +265,12 @@ export const createDelivery = async (req, res) => {
       },
 
       status: "assigned",
+    });
+
+    await notifyDeliveryParticipants(delivery, {
+      customerTitle: "Tài xế đã nhận đơn",
+      driverTitle: "Bạn có chuyến giao mới",
+      message: `Đơn #${String(orderId).slice(-6).toUpperCase()} đã được tiếp nhận để giao.`,
     });
 
     // Gửi realtime socket tới tài xế nếu đã phân công
@@ -616,6 +659,17 @@ export const updateDeliveryStatus = async (
     delivery.status = status;
 
     await delivery.save();
+
+    const deliveryStatusMessages = {
+      "To be delivered": "Tài xế đang chuẩn bị giao đơn.",
+      "Picked-up": "Tài xế đã lấy món và đang trên đường giao đến bạn.",
+      Delivered: "Đơn hàng đã được giao thành công.",
+    };
+    await notifyDeliveryParticipants(delivery, {
+      customerTitle: "Cập nhật tiến trình giao hàng",
+      driverTitle: "Trạng thái chuyến giao đã cập nhật",
+      message: `Đơn #${String(delivery.orderId).slice(-6).toUpperCase()}: ${deliveryStatusMessages[status]}`,
+    });
 
     // Khi giao thành công, giải phóng tài xế
     if (

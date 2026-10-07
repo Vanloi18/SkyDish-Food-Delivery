@@ -42,6 +42,10 @@ const notificationSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    readBy: [{
+      type: String,
+      index: true,
+    }],
   },
   { timestamps: true }
 );

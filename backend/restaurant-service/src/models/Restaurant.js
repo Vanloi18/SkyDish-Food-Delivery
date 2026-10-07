@@ -16,6 +16,18 @@ const restaurantSchema = new mongoose.Schema(
       type: String,
       required: true, 
     },
+    latitude: {
+      type: Number,
+      default: null,
+      min: -90,
+      max: 90,
+    },
+    longitude: {
+      type: Number,
+      default: null,
+      min: -180,
+      max: 180,
+    },
     ghnProvinceId: {
       type: Number,
       default: null,

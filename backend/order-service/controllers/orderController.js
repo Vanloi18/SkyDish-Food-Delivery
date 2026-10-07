@@ -27,6 +27,7 @@ export const getShippingLocations = async (req, res) => {
             type: req.params.type,
             parentId: req.query.parentId,
             provider: req.query.provider,
+            wardCandidates: String(req.query.wardCandidates || "").split("|").filter(Boolean),
         });
         res.status(200).json({ success: true, ...result });
     } catch (error) {

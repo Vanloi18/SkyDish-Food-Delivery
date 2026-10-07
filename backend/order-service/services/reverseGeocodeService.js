@@ -1,4 +1,4 @@
-const NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse";
+const ARCGIS_REVERSE_URL = "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode";
 const CACHE_TTL_MS = 15 * 60 * 1000;
 const CACHE_LIMIT = 512;
 const reverseCache = new Map();
@@ -24,13 +24,12 @@ export const reverseGeocodeCoordinates = async ({ latitude, longitude }) => {
     lastRequestAt = Date.now();
 
     const query = new URLSearchParams({
-        format: "jsonv2",
-        lat: String(lat),
-        lon: String(lon),
-        zoom: "18",
-        addressdetails: "1",
+        location: `${lon},${lat}`,
+        outSR: "4326",
+        langCode: "VIE",
+        f: "json",
     });
-    const response = await fetch(`${NOMINATIM_URL}?${query}`, {
+    const response = await fetch(`${ARCGIS_REVERSE_URL}?${query}`, {
         headers: {
             "Accept-Language": "vi",
             "User-Agent": "SkyDish-Food-Delivery/1.0",
@@ -45,15 +44,29 @@ export const reverseGeocodeCoordinates = async ({ latitude, longitude }) => {
     }
 
     const result = await response.json();
-    const address = result.address || {};
-    const detail = [address.house_number, address.road || address.residential || address.pedestrian]
+    if (result.error || !result.address?.Match_addr) {
+        const error = new Error("Không tìm thấy địa chỉ tại tọa độ GPS. Bạn vẫn có thể nhập địa chỉ thủ công.");
+        error.statusCode = 502;
+        throw error;
+    }
+
+    const address = result.address;
+    const houseNumber = String(address.AddNum || "").trim();
+    const addressLine = String(address.Address || "").trim();
+    const detail = houseNumber && addressLine.toLowerCase().startsWith(houseNumber.toLowerCase())
+        ? addressLine
+        : [houseNumber, addressLine]
         .filter(Boolean)
         .join(" ");
+    const wardCandidates = getAddressNames(address, ["Neighborhood"]);
+    if (address.City && address.City !== address.Region && !wardCandidates.includes(address.City)) {
+        wardCandidates.push(address.City);
+    }
     const resolvedAddress = {
-        provinceCandidates: getAddressNames(address, ["state", "province", "region", "city"]),
-        districtCandidates: getAddressNames(address, ["city_district", "district", "county", "state_district", "municipality", "suburb"]),
-        wardCandidates: getAddressNames(address, ["suburb", "quarter", "neighbourhood", "village", "town", "hamlet"]),
-        detail: detail || result.name || "",
+        provinceCandidates: getAddressNames(address, ["City", "Region"]),
+        districtCandidates: getAddressNames(address, ["Subregion", "District"]),
+        wardCandidates,
+        detail: detail || address.PlaceName || address.Match_addr,
     };
 
     if (reverseCache.size >= CACHE_LIMIT) reverseCache.delete(reverseCache.keys().next().value);

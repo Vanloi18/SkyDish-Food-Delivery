@@ -11,17 +11,21 @@ afterEach(() => {
 describe("Reverse geocoding", () => {
     it("returns address components needed to update checkout fields", async () => {
         global.fetch = async (url, options) => {
-            assert.match(url, /format=jsonv2/);
+            const requestUrl = new URL(url);
+            assert.equal(requestUrl.searchParams.get("location"), "105.848,21.257");
+            assert.equal(requestUrl.searchParams.get("f"), "json");
             assert.equal(options.headers["Accept-Language"], "vi");
             return {
                 ok: true,
                 json: async () => ({
                     address: {
-                        city: "Hà Nội",
-                        county: "Huyện Sóc Sơn",
-                        suburb: "Thị trấn Sóc Sơn",
-                        house_number: "12A",
-                        road: "Phố Núi",
+                        Match_addr: "12A Phố Núi, Thị trấn Sóc Sơn, Hà Nội",
+                        Region: "Hà Nội",
+                        City: "Hà Nội",
+                        District: "Huyện Sóc Sơn",
+                        Neighborhood: "Thị trấn Sóc Sơn",
+                        AddNum: "12A",
+                        Address: "Phố Núi",
                     },
                 }),
             };
@@ -29,7 +33,7 @@ describe("Reverse geocoding", () => {
 
         const address = await reverseGeocodeCoordinates({ latitude: 21.257, longitude: 105.848 });
         assert.deepEqual(address.provinceCandidates, ["Hà Nội"]);
-        assert.deepEqual(address.districtCandidates, ["Huyện Sóc Sơn", "Thị trấn Sóc Sơn"]);
+        assert.deepEqual(address.districtCandidates, ["Huyện Sóc Sơn"]);
         assert.deepEqual(address.wardCandidates, ["Thị trấn Sóc Sơn"]);
         assert.equal(address.detail, "12A Phố Núi");
     });

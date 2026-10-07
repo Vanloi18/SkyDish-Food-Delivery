@@ -193,10 +193,10 @@ router.get('/item/:id', async (req, res) => {
 
     let item = null;
     if (mongoose.Types.ObjectId.isValid(id)) {
-      item = await FoodItem.findById(id).populate('restaurant', 'name location profilePicture contactNumber');
+      item = await FoodItem.findById(id).populate('restaurant', 'name location profilePicture contactNumber latitude longitude ghnDistrictId ghnWardCode');
     }
     if (!item) {
-      item = await FoodItem.findOne({ name: id.trim() }).populate('restaurant', 'name location profilePicture contactNumber');
+      item = await FoodItem.findOne({ name: id.trim() }).populate('restaurant', 'name location profilePicture contactNumber latitude longitude ghnDistrictId ghnWardCode');
     }
     if (!item) {
       return res.status(404).json({ message: 'Food item not found' });
