@@ -61,6 +61,20 @@ describe('Restaurant Service Tests (CRUD, Search, Pagination, Ownership)', () =>
     assert.strictEqual(sampleFood.price, 75000);
   });
 
+  it('FOOD VALIDATION: rejects negative food prices before persistence', () => {
+    const invalidFood = new FoodItem({
+      restaurant: restA._id,
+      name: 'Món giá âm',
+      description: 'Dữ liệu kiểm thử',
+      price: -1,
+      category: 'Kiểm thử',
+    });
+
+    const validationError = invalidFood.validateSync();
+    assert.ok(validationError?.errors?.price);
+    assert.strictEqual(validationError.errors.price.kind, 'min');
+  });
+
   it('OWNERSHIP ENFORCEMENT: restaurant B cannot modify restaurant A food item', async () => {
     const isOwner = sampleFood.restaurant.toString() === restB._id.toString();
     assert.strictEqual(isOwner, false, 'Restaurant B must not be recognized as owner of Restaurant A food');
