@@ -48,8 +48,20 @@ export default function RestaurantDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [foodAvailabilityFilter, setFoodAvailabilityFilter] = useState("ALL");
+  const [foodSortBy, setFoodSortBy] = useState("newest");
   const [orderStatusFilter, setOrderStatusFilter] = useState("ALL");
   const [alertMsg, setAlertMsg] = useState({ type: "", text: "" });
+
+  // Restaurant profile editing
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    ownerName: "",
+    location: "",
+    contactNumber: "",
+  });
 
   // Food Item Modal States
   const [isFoodModalOpen, setFoodModalOpen] = useState(false);
@@ -148,6 +160,12 @@ export default function RestaurantDashboard() {
       if (res.data) {
         setRestaurant(res.data);
         setAvailability(!!res.data.availability);
+        setProfileForm({
+          name: res.data.name || "",
+          ownerName: res.data.ownerName || "",
+          location: res.data.location || "",
+          contactNumber: res.data.contactNumber || "",
+        });
       }
       return res.data;
     } catch (err) {
@@ -342,6 +360,54 @@ export default function RestaurantDashboard() {
     } catch (err) {
       showAlert("danger", "Không thể cập nhật trạng thái món ăn.");
     }
+  };
+
+  // Save restaurant profile details
+  const handleSaveRestaurantProfile = async (e) => {
+    e.preventDefault();
+    const normalizedProfile = Object.fromEntries(
+      Object.entries(profileForm).map(([key, value]) => [key, typeof value === "string" ? value.trim() : value])
+    );
+
+    if (!normalizedProfile.name || !normalizedProfile.ownerName || !normalizedProfile.location || !normalizedProfile.contactNumber) {
+      showAlert("danger", "Vui lòng nhập đầy đủ thông tin hồ sơ nhà hàng.");
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const res = await axios.put(
+        `${API_URLS.RESTAURANT}/api/restaurant/update`,
+        normalizedProfile,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const updatedRestaurant = res.data?.restaurant;
+      if (updatedRestaurant) {
+        setRestaurant((prev) => ({ ...prev, ...updatedRestaurant }));
+        setProfileForm({
+          name: updatedRestaurant.name || "",
+          ownerName: updatedRestaurant.ownerName || "",
+          location: updatedRestaurant.location || "",
+          contactNumber: updatedRestaurant.contactNumber || "",
+        });
+      }
+      setIsEditingProfile(false);
+      showAlert("success", "Đã cập nhật thông tin nhà hàng.");
+    } catch (err) {
+      showAlert("danger", err.response?.data?.message || "Không thể cập nhật thông tin nhà hàng.");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleCancelProfileEdit = () => {
+    setProfileForm({
+      name: restaurant.name || "",
+      ownerName: restaurant.ownerName || "",
+      location: restaurant.location || "",
+      contactNumber: restaurant.contactNumber || "",
+    });
+    setIsEditingProfile(false);
   };
 
   // Save Food Item (Create or Edit)
@@ -581,12 +647,34 @@ export default function RestaurantDashboard() {
 
   // Filtered Food Items
   const filteredFoodItems = useMemo(() => {
-    return foodItems.filter((item) => {
-      const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchCat = categoryFilter === "ALL" || item.category === categoryFilter;
-      return matchSearch && matchCat;
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    const filtered = foodItems.filter((item) => {
+      const itemName = String(item.name || "").toLowerCase();
+      const itemCategory = String(item.category || "");
+      const matchSearch = itemName.includes(normalizedSearch);
+      const matchCat = categoryFilter === "ALL" || itemCategory === categoryFilter;
+      const matchAvailability = foodAvailabilityFilter === "ALL"
+        || (foodAvailabilityFilter === "AVAILABLE" && item.availability)
+        || (foodAvailabilityFilter === "UNAVAILABLE" && !item.availability);
+      return matchSearch && matchCat && matchAvailability;
     });
-  }, [foodItems, searchQuery, categoryFilter]);
+
+    return filtered.sort((a, b) => {
+      if (foodSortBy === "name") return String(a.name || "").localeCompare(String(b.name || ""), "vi");
+      if (foodSortBy === "priceAsc") return Number(a.price || 0) - Number(b.price || 0);
+      if (foodSortBy === "priceDesc") return Number(b.price || 0) - Number(a.price || 0);
+      return new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0);
+    });
+  }, [foodItems, searchQuery, categoryFilter, foodAvailabilityFilter, foodSortBy]);
+
+  const foodCategories = useMemo(() => (
+    Array.from(new Set(foodItems.map((item) => item.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, "vi"))
+  ), [foodItems]);
+
+  const availableFoodCount = useMemo(
+    () => foodItems.filter((item) => item.availability).length,
+    [foodItems]
+  );
 
   // Filtered Orders
   const filteredOrders = useMemo(() => {
@@ -1083,7 +1171,9 @@ export default function RestaurantDashboard() {
                         <h3 className="merchant-card-title">
                           <FaUtensils style={{ color: "var(--merch-primary)" }} /> Quản lý món ăn ({filteredFoodItems.length})
                         </h3>
-                        <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "#64748b" }}>Thêm, sửa, cập nhật giá VND và trạng thái hết món.</p>
+                        <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "#64748b" }}>
+                          Đang bán {availableFoodCount}/{foodItems.length} món · Thêm, sửa, cập nhật giá VND và trạng thái hết món.
+                        </p>
                       </div>
 
                       <button
@@ -1118,13 +1208,30 @@ export default function RestaurantDashboard() {
                         style={{ padding: "0.6rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.85rem", backgroundColor: "#ffffff" }}
                       >
                         <option value="ALL">Tất cả danh mục</option>
-                        <option value="Phở & Bún">Phở & Bún</option>
-                        <option value="Cơm & Bánh Mì">Cơm & Bánh Mì</option>
-                        <option value="Pizza & Pasta">Pizza & Pasta</option>
-                        <option value="Lẩu & Nướng">Lẩu & Nướng</option>
-                        <option value="Đồ Ăn Nhanh">Đồ Ăn Nhanh</option>
-                        <option value="Đồ Uống">Đồ Uống</option>
-                        <option value="Tráng Miệng">Tráng Miệng</option>
+                        {foodCategories.map((category) => <option key={category} value={category}>{category}</option>)}
+                      </select>
+
+                      <select
+                        value={foodAvailabilityFilter}
+                        onChange={(e) => setFoodAvailabilityFilter(e.target.value)}
+                        aria-label="Lọc trạng thái món ăn"
+                        style={{ padding: "0.6rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.85rem", backgroundColor: "#ffffff" }}
+                      >
+                        <option value="ALL">Tất cả trạng thái</option>
+                        <option value="AVAILABLE">Đang bán</option>
+                        <option value="UNAVAILABLE">Hết món</option>
+                      </select>
+
+                      <select
+                        value={foodSortBy}
+                        onChange={(e) => setFoodSortBy(e.target.value)}
+                        aria-label="Sắp xếp món ăn"
+                        style={{ padding: "0.6rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.85rem", backgroundColor: "#ffffff" }}
+                      >
+                        <option value="newest">Mới cập nhật</option>
+                        <option value="name">Tên A-Z</option>
+                        <option value="priceAsc">Giá tăng dần</option>
+                        <option value="priceDesc">Giá giảm dần</option>
                       </select>
                     </div>
 
@@ -1220,25 +1327,38 @@ export default function RestaurantDashboard() {
                       <h3 className="merchant-card-title">
                         <FaStore style={{ color: "var(--merch-primary)" }} /> Thông tin quán
                       </h3>
-                      <button
-                        type="button"
-                        className={`merchant-store-status-btn ${availability ? "open" : "closed"}`}
-                        onClick={handleToggleStoreAvailability}
-                      >
-                        {availability ? "🟢 Đang mở cửa" : "⚪ Đã đóng cửa"}
-                      </button>
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                        {!isEditingProfile && (
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingProfile(true)}
+                            style={{ padding: "0.55rem 0.85rem", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "#ffffff", color: "#0f172a", fontWeight: "700", cursor: "pointer" }}
+                          >
+                            <FaEdit size={12} /> Chỉnh sửa
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className={`merchant-store-status-btn ${availability ? "open" : "closed"}`}
+                          onClick={handleToggleStoreAvailability}
+                        >
+                          {availability ? "🟢 Đang mở cửa" : "⚪ Đã đóng cửa"}
+                        </button>
+                      </div>
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: "1rem", fontSize: "0.9rem" }}>
+                    <form onSubmit={handleSaveRestaurantProfile} style={{ display: "flex", flexDirection: "column", gap: "1rem", fontSize: "0.9rem" }}>
                       <div>
                         <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", marginBottom: "0.3rem" }}>
                           Tên nhà hàng
                         </label>
                         <input
                           type="text"
-                          value={restaurant.name || ""}
-                          disabled
-                          style={{ width: "100%", padding: "0.65rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: "#f8fafc" }}
+                          value={profileForm.name}
+                          onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))}
+                          disabled={!isEditingProfile}
+                          required
+                          style={{ width: "100%", padding: "0.65rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: isEditingProfile ? "#ffffff" : "#f8fafc" }}
                         />
                       </div>
 
@@ -1248,9 +1368,11 @@ export default function RestaurantDashboard() {
                         </label>
                         <input
                           type="text"
-                          value={restaurant.ownerName || "Ban Quản Trị"}
-                          disabled
-                          style={{ width: "100%", padding: "0.65rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: "#f8fafc" }}
+                          value={profileForm.ownerName}
+                          onChange={(e) => setProfileForm((prev) => ({ ...prev, ownerName: e.target.value }))}
+                          disabled={!isEditingProfile}
+                          required
+                          style={{ width: "100%", padding: "0.65rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: isEditingProfile ? "#ffffff" : "#f8fafc" }}
                         />
                       </div>
 
@@ -1260,9 +1382,11 @@ export default function RestaurantDashboard() {
                         </label>
                         <input
                           type="text"
-                          value={restaurant.location || "11B Tràng Tiền, Quận Hoàn Kiếm, Hà Nội"}
-                          disabled
-                          style={{ width: "100%", padding: "0.65rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: "#f8fafc" }}
+                          value={profileForm.location}
+                          onChange={(e) => setProfileForm((prev) => ({ ...prev, location: e.target.value }))}
+                          disabled={!isEditingProfile}
+                          required
+                          style={{ width: "100%", padding: "0.65rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: isEditingProfile ? "#ffffff" : "#f8fafc" }}
                         />
                       </div>
 
@@ -1272,12 +1396,24 @@ export default function RestaurantDashboard() {
                         </label>
                         <input
                           type="text"
-                          value={restaurant.contactNumber || "024 3934 7888"}
-                          disabled
-                          style={{ width: "100%", padding: "0.65rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: "#f8fafc" }}
+                          value={profileForm.contactNumber}
+                          onChange={(e) => setProfileForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
+                          disabled={!isEditingProfile}
+                          required
+                          style={{ width: "100%", padding: "0.65rem 1rem", borderRadius: "8px", border: "1px solid #e2e8f0", backgroundColor: isEditingProfile ? "#ffffff" : "#f8fafc" }}
                         />
                       </div>
-                    </div>
+                      {isEditingProfile && (
+                        <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end", marginTop: "0.25rem" }}>
+                          <button type="button" onClick={handleCancelProfileEdit} disabled={isSavingProfile} style={{ padding: "0.6rem 1rem", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "#ffffff", cursor: "pointer" }}>
+                            Hủy
+                          </button>
+                          <button type="submit" disabled={isSavingProfile} style={{ padding: "0.6rem 1rem", borderRadius: "8px", border: "none", backgroundColor: "var(--merch-primary)", color: "#ffffff", fontWeight: "700", cursor: isSavingProfile ? "wait" : "pointer" }}>
+                            {isSavingProfile ? "Đang lưu..." : "Lưu thay đổi"}
+                          </button>
+                        </div>
+                      )}
+                    </form>
                   </div>
                 </div>
               )}
