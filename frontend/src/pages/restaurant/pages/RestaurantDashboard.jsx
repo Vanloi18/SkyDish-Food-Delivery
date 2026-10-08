@@ -140,7 +140,7 @@ export default function RestaurantDashboard() {
     try {
       if (!token) {
         navigate("/restaurant/login");
-        return;
+        return null;
       }
       const res = await axios.get(`${API_URLS.RESTAURANT}/api/restaurant/profile`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -149,12 +149,14 @@ export default function RestaurantDashboard() {
         setRestaurant(res.data);
         setAvailability(!!res.data.availability);
       }
+      return res.data;
     } catch (err) {
       if (err.response?.status === 401) {
         localStorage.removeItem("restaurantToken");
         localStorage.removeItem("token");
         navigate("/restaurant/login");
       }
+      return null;
     }
   }, [token, navigate]);
 
@@ -262,13 +264,17 @@ export default function RestaurantDashboard() {
 
     const loadAll = async () => {
       setLoading(true);
+      const profile = await fetchRestaurantProfile();
+      const restaurantId = profile?._id;
+      const restaurantRequests = restaurantId
+        ? [fetchReviews(restaurantId), fetchCoupons(restaurantId)]
+        : [];
+
       await Promise.all([
-        fetchRestaurantProfile(),
         fetchFoodItems(),
         fetchOrders(),
-        fetchReviews(restaurant._id),
-        fetchCoupons(restaurant._id),
         fetchNotifications(),
+        ...restaurantRequests,
       ]);
       setLoading(false);
     };
@@ -295,7 +301,7 @@ export default function RestaurantDashboard() {
     return () => {
       if (socket) socket.disconnect();
     };
-  }, [token, navigate, fetchRestaurantProfile, fetchFoodItems, fetchOrders, fetchReviews, fetchCoupons, fetchNotifications, restaurant._id]);
+  }, [token, navigate, fetchRestaurantProfile, fetchFoodItems, fetchOrders, fetchReviews, fetchCoupons, fetchNotifications]);
 
   useEffect(() => {
     if (!token) return undefined;
