@@ -119,7 +119,11 @@ router.put('/update', authMiddleware, upload.single('profilePicture'), async (re
     }
 
     await restaurant.save();
-    res.status(200).json({ message: 'Profile updated successfully', restaurant });
+    const safeRestaurant = restaurant.toObject();
+    if (safeRestaurant.admin) {
+      delete safeRestaurant.admin.password;
+    }
+    res.status(200).json({ message: 'Profile updated successfully', restaurant: safeRestaurant });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server Error' });
