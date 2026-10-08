@@ -341,8 +341,17 @@ export default function RestaurantDashboard() {
   // Save Food Item (Create or Edit)
   const handleSaveFoodItem = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!foodForm.name || !foodForm.price) {
-      showAlert("danger", "Vui lòng nhập tên món và giá bán.");
+    const normalizedPrice = Number(foodForm.price);
+    if (!foodForm.name?.trim()) {
+      showAlert("danger", "Vui lòng nhập tên món.");
+      return;
+    }
+    if (
+      foodForm.price === "" ||
+      !Number.isFinite(normalizedPrice) ||
+      normalizedPrice < 0
+    ) {
+      showAlert("danger", "Giá bán phải là một số không âm.");
       return;
     }
 

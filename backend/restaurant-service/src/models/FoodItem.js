@@ -18,6 +18,7 @@ const foodItemSchema = new mongoose.Schema(
     price: {
       type: Number,
       required: true,
+      min: [0, 'Giá món ăn không được âm.'],
     },
     image: {
       type: String,

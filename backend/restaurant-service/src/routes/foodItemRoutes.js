@@ -96,6 +96,9 @@ router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
     res.status(200).json({ message: 'Food item updated successfully', foodItem });
   } catch (err) {
     console.error(err);
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ message: 'Dữ liệu món ăn không hợp lệ.', details: err.message });
+    }
     res.status(500).json({ message: 'Server Error' });
   }
 });
