@@ -38,7 +38,7 @@ router.post('/create', authMiddleware, upload.single('image'), async (req, res) 
     res.status(201).json({ message: 'Food item created successfully', newFoodItem });
   } catch (err) {
     console.error(err);
-    if (err.name === 'ValidationError') {
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
       return res.status(400).json({ message: 'Dữ liệu món ăn không hợp lệ.', details: err.message });
     }
     res.status(500).json({ message: 'Server Error' });
