@@ -878,7 +878,7 @@ export default function RestaurantDashboard() {
                                     backgroundColor: ord.status === "Delivered" ? "#ecfdf5" : ord.status === "Preparing" ? "#eff6ff" : ord.status === "Confirmed" ? "#f0fdf4" : ord.status === "Canceled" ? "#fef2f2" : "#fff7ed",
                                     color: ord.status === "Delivered" ? "#047857" : ord.status === "Preparing" ? "#2563eb" : ord.status === "Confirmed" ? "#16a34a" : ord.status === "Canceled" ? "#dc2626" : "#ea580c",
                                   }}>
-                                    {ord.status === "Pending" ? "Chờ xác nhận" : ord.status === "Confirmed" ? "Đã xác nhận" : ord.status === "Preparing" ? "Đang chuẩn bị" : ord.status === "Out for Delivery" ? "Đang giao" : ord.status === "Delivered" ? "Đã giao" : "Đã hủy"}
+                                    {ord.status === "Pending" ? "Chờ xác nhận" : ord.status === "Confirmed" ? "Đã xác nhận" : ord.status === "Preparing" ? "Đang chuẩn bị" : ord.status === "Out for Delivery" || ord.status === "Delivering" ? "Đang giao" : ord.status === "Delivered" ? "Đã giao" : "Đã hủy"}
                                   </span>
                                 </td>
                                 <td style={{ padding: "0.85rem 0.5rem", textAlign: "right" }}>
@@ -952,7 +952,7 @@ export default function RestaurantDashboard() {
 
                       {/* Filter Status Pills */}
                       <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                        {["ALL", "Pending", "Confirmed", "Preparing", "Out for Delivery", "Delivered", "Canceled"].map((st) => (
+                        {["ALL", "Pending", "Confirmed", "Preparing", "Out for Delivery", "Delivering", "Delivered", "Canceled"].map((st) => (
                           <button
                             key={st}
                             type="button"
@@ -968,7 +968,7 @@ export default function RestaurantDashboard() {
                             }}
                             onClick={() => setOrderStatusFilter(st)}
                           >
-                            {st === "ALL" ? "Tất cả" : st === "Pending" ? "Chờ xác nhận" : st === "Confirmed" ? "Đã xác nhận" : st === "Preparing" ? "Đang chuẩn bị" : st === "Out for Delivery" ? "Đang giao" : st === "Delivered" ? "Hoàn thành" : "Đã hủy"}
+                            {st === "ALL" ? "Tất cả" : st === "Pending" ? "Chờ xác nhận" : st === "Confirmed" ? "Đã xác nhận" : st === "Preparing" ? "Đang chuẩn bị" : st === "Out for Delivery" || st === "Delivering" ? "Đang giao" : st === "Delivered" ? "Hoàn thành" : "Đã hủy"}
                           </button>
                         ))}
                       </div>
@@ -1010,7 +1010,7 @@ export default function RestaurantDashboard() {
                                     color: ord.status === "Delivered" ? "#047857" : ord.status === "Preparing" ? "#2563eb" : ord.status === "Confirmed" ? "#16a34a" : "#ea580c",
                                   }}
                                 >
-                                  {ord.status === "Pending" ? "Chờ xác nhận" : ord.status === "Confirmed" ? "Đã xác nhận" : ord.status === "Preparing" ? "Đang chuẩn bị" : ord.status === "Out for Delivery" ? "Đang giao" : ord.status === "Delivered" ? "Đã giao" : "Đã hủy"}
+                                  {ord.status === "Pending" ? "Chờ xác nhận" : ord.status === "Confirmed" ? "Đã xác nhận" : ord.status === "Preparing" ? "Đang chuẩn bị" : ord.status === "Out for Delivery" || ord.status === "Delivering" ? "Đang giao" : ord.status === "Delivered" ? "Đã giao" : "Đã hủy"}
                                 </span>
                               </td>
                               <td style={{ padding: "0.85rem 0.5rem", textAlign: "right" }}>
