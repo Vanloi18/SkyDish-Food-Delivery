@@ -9,6 +9,7 @@ import {
   FaUtensils, 
   FaPlus, 
   FaEdit, 
+  FaCopy,
   FaTrashAlt, 
   FaSearch, 
   FaSignOutAlt, 
@@ -359,6 +360,36 @@ export default function RestaurantDashboard() {
       }
     } catch (err) {
       showAlert("danger", "Không thể cập nhật trạng thái món ăn.");
+    }
+  };
+
+  // Duplicate a food item so the restaurant can quickly create a similar menu item.
+  const handleDuplicateFoodItem = async (food) => {
+    if (!food?._id || !token) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("name", `${food.name || "Món ăn"} (Bản sao)`);
+      formData.append("description", food.description || "Món ngon chất lượng từ nhà hàng.");
+      formData.append("price", String(Number(food.price) || 0));
+      formData.append("category", food.category || "Món khác");
+      formData.append("availability", String(food.availability !== false));
+      if (food.image) formData.append("image", food.image);
+
+      await axios.post(
+        `${API_URLS.RESTAURANT}/api/food-items/create`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      showAlert("success", `Đã nhân bản món “${food.name || "Món ăn"}”.`);
+      await fetchFoodItems();
+    } catch (err) {
+      showAlert("danger", err.response?.data?.message || "Không thể nhân bản món ăn.");
     }
   };
 
@@ -1301,6 +1332,15 @@ export default function RestaurantDashboard() {
                                    }}
                                  >
                                   <FaEdit size={12} /> Sửa
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Nhân bản món ăn"
+                                  aria-label={`Nhân bản ${food.name || "món ăn"}`}
+                                  style={{ padding: "0.4rem 0.65rem", borderRadius: "6px", backgroundColor: "#eff6ff", color: "#2563eb", border: "none", fontSize: "0.78rem", fontWeight: "600", cursor: "pointer" }}
+                                  onClick={() => handleDuplicateFoodItem(food)}
+                                >
+                                  <FaCopy size={12} />
                                 </button>
                                 <button
                                   type="button"
