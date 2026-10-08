@@ -3,6 +3,8 @@ import { io } from 'socket.io-client';
 import FormData from 'form-data';
 
 const results = [];
+const FRONTEND_PORT = process.env.FRONTEND_PORT || '3300';
+const FRONTEND_URL = process.env.FRONTEND_URL || `http://localhost:${FRONTEND_PORT}`;
 
 function logPass(suite, name, details = '') {
   console.log(`✅ [${suite}] ${name} ${details}`);
@@ -541,15 +543,15 @@ async function runTests() {
   }
 
   // ----------------------------------------------------
-  // 7. FRONTEND WEB APP (PORT 3000 & PRODUCTION BUILD)
+  // 7. FRONTEND WEB APP (configurable host port)
   // ----------------------------------------------------
-  console.log('\n--- TESTING FRONTEND WEB APP (PORT 3000) ---');
+  console.log(`\n--- TESTING FRONTEND WEB APP (${FRONTEND_URL}) ---`);
   try {
-    const feRes = await axios.get('http://localhost:3000', { timeout: 2000 });
+    const feRes = await axios.get(FRONTEND_URL, { timeout: 2000 });
     if (feRes.status === 200 && feRes.data.includes('root')) {
-      logPass('Frontend React App', 'HTTP GET http://localhost:3000', `React index HTML returned`);
+      logPass('Frontend React App', `HTTP GET ${FRONTEND_URL}`, `React index HTML returned`);
     } else {
-      logFail('Frontend React App', 'HTTP GET http://localhost:3000', `Status ${feRes.status}`);
+      logFail('Frontend React App', `HTTP GET ${FRONTEND_URL}`, `Status ${feRes.status}`);
     }
   } catch (err) {
     // Check if production bundle is built
@@ -557,7 +559,7 @@ async function runTests() {
     if (fs.existsSync('./build/index.html') || fs.existsSync('./frontend/build/index.html')) {
       logPass('Frontend React App', 'Production Static Build Verification', `frontend/build/index.html generated & verified`);
     } else {
-      logFail('Frontend React App', 'HTTP GET http://localhost:3000', 'Port 3000 offline and build missing');
+      logFail('Frontend React App', `HTTP GET ${FRONTEND_URL}`, 'Frontend port offline and build missing');
     }
   }
 

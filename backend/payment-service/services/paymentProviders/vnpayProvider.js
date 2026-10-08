@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const Payment = require("../../models/PaymentModel");
+const { syncOrdersByPayment } = require("../orderSync");
 
 /**
  * Format Date as YYYYMMDDHHmmss (Vietnam GMT+7)
@@ -44,6 +45,7 @@ async function createVNPayUrl({
   amount,
   email,
   phone,
+  orderIds,
   bankCode,
   language = "vn",
   ipAddr = "127.0.0.1",
@@ -115,6 +117,7 @@ async function createVNPayUrl({
   if (!payment) {
     payment = new Payment({
       orderId,
+      orderIds: orderIds || [],
       userId: String(userId),
       amount,
       currency: "vnd",
@@ -127,6 +130,7 @@ async function createVNPayUrl({
   } else {
     payment.paymentMethod = "VNPAY";
     payment.status = "Pending";
+    payment.orderIds = orderIds || payment.orderIds || [];
   }
   await payment.save();
 
@@ -174,11 +178,23 @@ async function verifyVNPayReturn(queryParams) {
 
   // Update Payment record in MongoDB
   let payment = await Payment.findOne({ orderId });
+  if (payment && Math.round(Number(payment.amount)) !== Math.round(amount)) {
+    return {
+      isValid: false,
+      isSuccess: false,
+      message: "Số tiền VNPay không khớp với số tiền đơn hàng.",
+      orderId,
+    };
+  }
   if (payment) {
     payment.status = paymentStatus;
     payment.providerTransactionId = transactionNo || orderId;
     payment.providerResponse = vnp_Params;
     await payment.save();
+    await syncOrdersByPayment(orderId, {
+      paymentStatus,
+      status: isSuccess ? "Confirmed" : undefined,
+    });
   }
 
   return {

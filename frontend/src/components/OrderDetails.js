@@ -46,7 +46,9 @@ function OrderDetails() {
 
   const checkExistingReview = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_URLS.RESTAURANT}/api/reviews/order/${id}`);
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API_URLS.RESTAURANT}/api/reviews/order/${id}`, { headers });
       if (res.data.reviewed) {
         setExistingReview(res.data.review);
       }

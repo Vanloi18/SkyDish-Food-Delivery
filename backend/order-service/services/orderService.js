@@ -446,6 +446,28 @@ export const createOrderService = async (orderData, authenticatedUser) => {
         });
     }
 
+    const orderGroupId = orderData.orderGroupId
+        ? String(orderData.orderGroupId).trim().slice(0, 120)
+        : null;
+
+    // Idempotency for checkout retries. A payment callback or a double click
+    // must not create a second child order for the same restaurant.
+    if (orderGroupId) {
+        const existingOrder = await Order.findOne({
+            orderGroupId,
+            customerId,
+            restaurantId: detectedRestaurantId || orderData.restaurantId || "restaurant_1",
+        });
+        if (existingOrder) {
+            if (paymentStatus === "Paid") existingOrder.paymentStatus = "Paid";
+            if (orderData.status === "Confirmed" && existingOrder.status === "Pending") {
+                existingOrder.status = "Confirmed";
+            }
+            await existingOrder.save();
+            return existingOrder;
+        }
+    }
+
     // 4. Quote shipping from GHN when enabled; retain existing local fee otherwise.
     const shippingQuote = await getShippingQuoteService({
         restaurantId: detectedRestaurantId,
@@ -460,12 +482,28 @@ export const createOrderService = async (orderData, authenticatedUser) => {
         : (subtotal >= 300000 ? 0 : shippingQuote.deliveryFee);
     let discount = 0;
     let validCouponDoc = null;
+    let couponAccepted = false;
 
     if (couponCode && typeof couponCode === "string" && couponCode.trim()) {
         const cleanCode = couponCode.trim().toUpperCase();
         validCouponDoc = await Coupon.findOne({ code: cleanCode, isActive: true });
         if (validCouponDoc) {
-            if (subtotal >= (validCouponDoc.minOrderValue || 0)) {
+            const now = new Date();
+            const isInSchedule =
+                (!validCouponDoc.startAt || now >= validCouponDoc.startAt) &&
+                (!validCouponDoc.endAt || now <= validCouponDoc.endAt);
+            const appliesToRestaurant =
+                validCouponDoc.restaurantId === "PLATFORM" ||
+                String(validCouponDoc.restaurantId) === String(detectedRestaurantId);
+            const hasUsageLeft =
+                Number(validCouponDoc.usedCount || 0) < Number(validCouponDoc.usageLimit || 0);
+            const userUsage = (validCouponDoc.usedByUsers || []).filter(
+                (usage) => String(usage.userId) === customerId
+            ).length;
+            const withinUserLimit = userUsage < Number(validCouponDoc.perUserLimit || 1);
+
+            if (isInSchedule && appliesToRestaurant && hasUsageLeft && withinUserLimit && subtotal >= (validCouponDoc.minOrderValue || 0)) {
+                couponAccepted = true;
                 if (validCouponDoc.discountType === "percentage") {
                     discount = (subtotal * validCouponDoc.discountValue) / 100;
                     if (validCouponDoc.maxDiscount && validCouponDoc.maxDiscount > 0) {
@@ -477,6 +515,11 @@ export const createOrderService = async (orderData, authenticatedUser) => {
                     discount = deliveryFee;
                 }
             }
+        }
+        if (!couponAccepted) {
+            const error = new Error("Mã giảm giá không còn hợp lệ với đơn hàng này.");
+            error.statusCode = 400;
+            throw error;
         }
     }
 
@@ -503,6 +546,7 @@ export const createOrderService = async (orderData, authenticatedUser) => {
             customerName,
             customerEmail,
             customerPhone,
+            orderGroupId,
             restaurantId: detectedRestaurantId || "restaurant_1",
             restaurantName: orderData.restaurantName || undefined,
             items: verifiedItems,

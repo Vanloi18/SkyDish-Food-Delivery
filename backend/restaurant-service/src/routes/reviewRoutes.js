@@ -164,12 +164,16 @@ router.get('/restaurant/:restaurantId/foods', async (req, res) => {
 });
 
 // 3. Get review by orderId (to check if already reviewed)
-router.get('/order/:orderId', async (req, res) => {
+router.get('/order/:orderId', authMiddleware, async (req, res) => {
   try {
     const { orderId } = req.params;
     const review = await Review.findOne({ orderId });
     if (!review) {
       return res.status(200).json({ reviewed: false, review: null });
+    }
+    const isAdmin = ['admin', 'superAdmin'].includes(req.user?.role);
+    if (!isAdmin && String(review.customerId) !== String(req.user?.id)) {
+      return res.status(403).json({ message: 'Bạn không có quyền xem đánh giá của đơn hàng này.' });
     }
     res.status(200).json({ reviewed: true, review });
   } catch (err) {
@@ -179,8 +183,11 @@ router.get('/order/:orderId', async (req, res) => {
 });
 
 // 4. Admin endpoint: Get all reviews
-router.get('/', async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
+    if (!['admin', 'superAdmin'].includes(req.user?.role)) {
+      return res.status(403).json({ message: 'Chỉ quản trị viên mới được xem toàn bộ đánh giá.' });
+    }
     const reviews = await Review.find().populate('restaurantId', 'name location').sort({ createdAt: -1 });
     res.status(200).json(reviews);
   } catch (err) {

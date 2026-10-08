@@ -95,6 +95,7 @@ router.post('/validate', async (req, res) => {
       coupon: {
         id: coupon._id,
         code: coupon.code,
+        restaurantId: coupon.restaurantId,
         discountType: coupon.discountType,
         discountValue: coupon.discountValue,
       },

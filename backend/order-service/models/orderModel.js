@@ -6,6 +6,9 @@ const orderSchema = new mongoose.Schema(
         customerName: { type: String },
         customerEmail: { type: String },
         customerPhone: { type: String },
+        // Shared checkout identifier. Multiple restaurant orders created from
+        // one cart use the same group id and are paid together.
+        orderGroupId: { type: String, default: null, index: true },
         restaurantId: { type: String, required: true, index: true },
         restaurantName: { type: String },
         items: [

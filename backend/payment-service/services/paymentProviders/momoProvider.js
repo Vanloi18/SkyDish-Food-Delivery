@@ -84,9 +84,14 @@ async function syncOrderStatus(orderId, { paymentStatus, status }) {
     const db = mongoose.connection.db;
     if (db) {
       const ordersCol = db.collection("orders");
-      const filter = mongoose.Types.ObjectId.isValid(orderId)
-        ? { $or: [{ _id: new mongoose.Types.ObjectId(orderId) }, { _id: String(orderId) }] }
-        : { _id: String(orderId) };
+      const filter = {
+        $or: [
+          { orderGroupId: String(orderId) },
+          ...(mongoose.Types.ObjectId.isValid(orderId)
+            ? [{ _id: new mongoose.Types.ObjectId(orderId) }, { _id: String(orderId) }]
+            : [{ _id: String(orderId) }]),
+        ],
+      };
 
       const updateDoc = {
         $set: {
@@ -95,7 +100,7 @@ async function syncOrderStatus(orderId, { paymentStatus, status }) {
           updatedAt: new Date(),
         },
       };
-      await ordersCol.updateOne(filter, updateDoc);
+      await ordersCol.updateMany(filter, updateDoc);
     }
   } catch (dbErr) {
     console.warn("Notice: Order synchronization to MongoDB failed:", dbErr.message);
@@ -131,6 +136,7 @@ async function createMoMoPayment({
   amount,
   email,
   phone,
+  orderIds,
   orderInfo,
   extraData = "",
 }) {
@@ -158,6 +164,7 @@ async function createMoMoPayment({
       paymentStatus: "Paid",
       disablePayment: true,
       orderId,
+      orderIds: orderIds || [],
       amount: payment.amount,
       provider: "MOMO",
     };
@@ -202,6 +209,7 @@ async function createMoMoPayment({
   if (!payment) {
     payment = new Payment({
       orderId,
+      orderIds: orderIds || [],
       userId: String(userId),
       amount: roundedAmount,
       currency: "vnd",
@@ -214,6 +222,7 @@ async function createMoMoPayment({
   } else {
     payment.paymentMethod = "MOMO";
     payment.status = "Pending";
+    payment.orderIds = orderIds || payment.orderIds || [];
   }
   await payment.save();
 

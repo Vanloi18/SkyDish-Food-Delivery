@@ -532,11 +532,12 @@ const CheckoutForm = () => {
 
   const hasDistanceBasedShipping = useMemo(() => {
     return Boolean(
+      !hasMixedRestaurants &&
       deliveryPosition &&
       hasCoordinate(restaurantInfo.latitude) &&
       hasCoordinate(restaurantInfo.longitude)
     );
-  }, [deliveryPosition, restaurantInfo.latitude, restaurantInfo.longitude]);
+  }, [hasMixedRestaurants, deliveryPosition, restaurantInfo.latitude, restaurantInfo.longitude]);
 
   const deliveryDistanceKm = useMemo(() => {
     if (!hasDistanceBasedShipping) return null;
@@ -640,7 +641,7 @@ const CheckoutForm = () => {
 
   const activeDeliveryFee = hasDistanceBasedShipping
     ? distanceBasedFee
-    : (ghnEnabled
+    : (!hasMixedRestaurants && ghnEnabled
       ? (ghnQuoteKey === currentGhnQuoteKey && ghnQuote !== null ? ghnQuote : deliveryFee)
       : deliveryFee);
   const activeCouponDiscount = appliedCoupon?.discountType === "shipping" && (hasDistanceBasedShipping || ghnEnabled)
@@ -668,6 +669,8 @@ const CheckoutForm = () => {
       name: it.name,
       quantity: it.quantity || 1,
       price: Number(it.price) || 0,
+      restaurantId: it.restaurantId || "",
+      restaurantName: it.restaurantName || "",
     })),
     restaurantId: effectiveRestaurantId,
     restaurantName: effectiveRestaurantName,
@@ -688,10 +691,6 @@ const CheckoutForm = () => {
       setError("Giỏ hàng đang trống. Vui lòng chọn món trước khi thanh toán.");
       return false;
     }
-    if (hasMixedRestaurants) {
-      setError("Mỗi đơn chỉ áp dụng cho một nhà hàng. Vui lòng quay lại giỏ hàng để điều chỉnh.");
-      return false;
-    }
     if (restaurantInfo.error) {
       setError(restaurantInfo.error);
       return false;
@@ -708,7 +707,7 @@ const CheckoutForm = () => {
       setError("Đang kiểm tra cấu hình cước giao hàng. Vui lòng chờ.");
       return false;
     }
-    if (!hasDistanceBasedShipping && ghnEnabled && (addressDirectoryProvider !== "GHN" || !addrProvinceId || !addrDistrictId || !addrWardCode || ghnQuoteKey !== currentGhnQuoteKey || ghnQuote === null)) {
+    if (!hasMixedRestaurants && !hasDistanceBasedShipping && ghnEnabled && (addressDirectoryProvider !== "GHN" || !addrProvinceId || !addrDistrictId || !addrWardCode || ghnQuoteKey !== currentGhnQuoteKey || ghnQuote === null)) {
       setError(ghnQuoteError || "Vui lòng chọn đầy đủ địa chỉ và chờ GHN báo giá trước khi thanh toán.");
       return false;
     }
@@ -781,6 +780,58 @@ const CheckoutForm = () => {
     await handleApplyCoupon(null, coupon.code);
   };
 
+  // Create one child order per restaurant while keeping one checkout/payment id.
+  // Order Service recalculates each child total from its own database prices.
+  const buildGroupedOrderPayloads = useCallback((method, status = "Pending") => {
+    const groups = new Map();
+    orderData.items.forEach((item) => {
+      const restaurantId = item.restaurantId || orderData.restaurantId || "restaurant_1";
+      if (!groups.has(restaurantId)) {
+        groups.set(restaurantId, {
+          restaurantId,
+          restaurantName: item.restaurantName || (restaurantId === orderData.restaurantId ? orderData.restaurantName : ""),
+          items: [],
+        });
+      }
+      groups.get(restaurantId).items.push(item);
+    });
+
+    const groupList = Array.from(groups.values());
+    const couponRestaurantId = appliedCoupon?.coupon?.restaurantId || effectiveRestaurantId;
+    const couponIndex = groupList.findIndex((group) => (
+      appliedCoupon && (
+        appliedCoupon.coupon?.restaurantId === "PLATFORM" ||
+        String(group.restaurantId) === String(couponRestaurantId)
+      )
+    ));
+
+    return groupList.map((group, index) => ({
+      orderGroupId: orderData.orderId,
+      restaurantId: group.restaurantId,
+      restaurantName: group.restaurantName,
+      customerName: `${orderData.firstName} ${orderData.lastName}`.trim(),
+      customerEmail: orderData.email,
+      customerPhone: orderData.phone,
+      items: group.items.map((it) => ({
+        foodId: it.foodId,
+        name: it.name,
+        quantity: it.quantity,
+        price: it.price,
+      })),
+      deliveryAddress: orderData.deliveryAddress,
+      deliveryProvinceId: orderData.deliveryProvinceId,
+      deliveryDistrictId: orderData.deliveryDistrictId,
+      deliveryWardCode: orderData.deliveryWardCode,
+      deliveryAreaProvider: orderData.deliveryAreaProvider,
+      deliveryLatitude: orderData.deliveryLatitude,
+      deliveryLongitude: orderData.deliveryLongitude,
+      paymentMethod: method,
+      paymentStatus: status === "Paid" ? "Paid" : "Pending",
+      couponCode: index === couponIndex ? orderData.couponCode : null,
+      status: status === "Paid" ? "Confirmed" : "Pending",
+    }));
+  }, [orderData, appliedCoupon, effectiveRestaurantId]);
+
   // Order creation helper — always sends Bearer token and rejects unauthenticated guests
   const createOrderInOrderService = useCallback(async (method, status = "Pending") => {
     const validToken = getValidToken();
@@ -791,35 +842,19 @@ const CheckoutForm = () => {
     }
 
     try {
-      const res = await axios.post(
+      const payloads = buildGroupedOrderPayloads(method, status);
+      const responses = await Promise.all(payloads.map((payload) => axios.post(
         `${API_URLS.ORDER}/api/orders`,
-        {
-          restaurantId: orderData.restaurantId,
-          restaurantName: orderData.restaurantName,
-          customerName: `${orderData.firstName} ${orderData.lastName}`.trim(),
-          customerEmail: orderData.email,
-          customerPhone: orderData.phone,
-          items: orderData.items.map((it) => ({
-            foodId: it.foodId,
-            name: it.name,
-            quantity: it.quantity,
-            price: it.price,
-          })),
-          totalPrice: orderData.amount,
-          deliveryAddress: orderData.deliveryAddress,
-          deliveryProvinceId: orderData.deliveryProvinceId,
-          deliveryDistrictId: orderData.deliveryDistrictId,
-          deliveryWardCode: orderData.deliveryWardCode,
-          deliveryAreaProvider: orderData.deliveryAreaProvider,
-          deliveryLatitude: orderData.deliveryLatitude,
-          deliveryLongitude: orderData.deliveryLongitude,
-          paymentMethod: method,
-          couponCode: orderData.couponCode,
-          status: status === "Paid" ? "Confirmed" : "Pending",
-        },
+        payload,
         { headers: { Authorization: `Bearer ${validToken}` } }
-      );
-      return res.data;
+      )));
+      const orders = responses.map((response) => response.data?.order || response.data).filter(Boolean);
+      return {
+        orderGroupId: orderData.orderId,
+        orders,
+        totalAmount: orders.reduce((sum, order) => sum + Number(order.totalPrice || 0), 0),
+        primaryOrderId: orders[0]?._id || orderData.orderId,
+      };
     } catch (err) {
       if (err.response?.status === 401) {
         clearCustomerAuth();
@@ -827,7 +862,7 @@ const CheckoutForm = () => {
       }
       throw err;
     }
-  }, [orderData, navigate]);
+  }, [orderData, navigate, buildGroupedOrderPayloads]);
 
 
 
@@ -837,6 +872,7 @@ const CheckoutForm = () => {
     try {
       setLoading(true);
       setError(null);
+      await createOrderInOrderService("VNPAY", "Pending");
       const res = await axios.post(`${API_BASE_URL}/api/payment/vnpay/create`, {
         orderId: orderData.orderId,
         userId: orderData.userId,
@@ -856,7 +892,7 @@ const CheckoutForm = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderData, vnpBankCode, validateCheckout]);
+  }, [orderData, vnpBankCode, validateCheckout, createOrderInOrderService]);
 
   // 3. Initialize MoMo QR
   const generateMoMoQR = useCallback(async () => {
@@ -864,6 +900,7 @@ const CheckoutForm = () => {
     try {
       setLoading(true);
       setError(null);
+      await createOrderInOrderService("MOMO", "Pending");
       const res = await axios.post(`${API_BASE_URL}/api/payment/momo/create`, {
         orderId: orderData.orderId,
         userId: orderData.userId,
@@ -881,7 +918,7 @@ const CheckoutForm = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderData, validateCheckout]);
+  }, [orderData, validateCheckout, createOrderInOrderService]);
 
   // 4. Initialize Bank Transfer / VietQR
   const generateBankTransferQR = useCallback(async () => {
@@ -889,15 +926,13 @@ const CheckoutForm = () => {
     try {
       setBankTransferLoading(true);
       setError(null);
+      await createOrderInOrderService("BANK_TRANSFER", "Pending");
       const res = await axios.post(`${API_BASE_URL}/api/payment/bank-transfer/create`, {
         orderId: orderData.orderId,
         userId: orderData.userId,
         amount: orderData.amount,
         email: orderData.email,
         phone: orderData.phone,
-        items: orderData.items,
-        restaurantId: orderData.restaurantId,
-        deliveryAddress: orderData.deliveryAddress,
       }, { headers: getAuthHeaders() });
       if (res.data.bankDetails) {
         setBankDetails(res.data.bankDetails);
@@ -908,7 +943,7 @@ const CheckoutForm = () => {
     } finally {
       setBankTransferLoading(false);
     }
-  }, [orderData, validateCheckout]);
+  }, [orderData, validateCheckout, createOrderInOrderService]);
 
   // Customer clicked "Tôi đã chuyển khoản"
   const handleConfirmBankTransfer = async () => {
@@ -1088,10 +1123,10 @@ const CheckoutForm = () => {
     setError(null);
     try {
       const createdOrder = await createOrderInOrderService("PAYOS", "Pending");
-      if (!createdOrder?._id) throw new Error("Không lấy được mã đơn hàng từ hệ thống.");
+      if (!createdOrder?.orderGroupId) throw new Error("Không lấy được mã nhóm đơn hàng từ hệ thống.");
       const response = await axios.post(`${API_BASE_URL}/api/payment/payos/create`, {
-        orderId: createdOrder._id,
-        amount: orderData.amount,
+        orderId: createdOrder.orderGroupId,
+        amount: createdOrder.totalAmount,
         email: orderData.email,
         phone: orderData.phone,
       }, { headers: getAuthHeaders() });
@@ -1125,7 +1160,12 @@ const CheckoutForm = () => {
       // 2. Process COD in payment-service
       const response = await axios.post(
         `${API_BASE_URL}/api/payment/cod/process`,
-        orderData,
+        {
+          orderId: orderData.orderId,
+          amount: orderData.amount,
+          email: orderData.email,
+          phone: orderData.phone,
+        },
         { headers: getAuthHeaders() }
       );
       if (response.data.success || response.data.paymentStatus === "Pending") {

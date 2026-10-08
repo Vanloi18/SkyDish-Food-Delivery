@@ -1,8 +1,8 @@
 import { API_URLS } from "../../config/api";
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import axios from "axios";
-import { FaArrowLeft, FaCheckCircle, FaImage, FaStar } from "react-icons/fa";
+import { FaArrowLeft, FaCheckCircle, FaStar } from "react-icons/fa";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import Button from "../../components/common/Button";
@@ -12,7 +12,6 @@ import "../../styles/experience.css";
 
 export default function ReviewPage() {
   const { orderId } = useParams();
-  const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [existingReview, setExistingReview] = useState(null);
   const [rating, setRating] = useState(5);
@@ -28,7 +27,7 @@ export default function ReviewPage() {
         const headers = getAuthHeaders();
         const [orderResponse, reviewResponse] = await Promise.all([
           axios.get(`${API_URLS.ORDER}/api/orders/${orderId}`, { headers }),
-          axios.get(`${API_URLS.RESTAURANT}/api/reviews/order/${orderId}`),
+          axios.get(`${API_URLS.RESTAURANT}/api/reviews/order/${orderId}`, { headers }),
         ]);
         setOrder(orderResponse.data);
         if (reviewResponse.data.reviewed) setExistingReview(reviewResponse.data.review);

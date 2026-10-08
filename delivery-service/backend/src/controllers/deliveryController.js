@@ -173,6 +173,46 @@ export const createDelivery = async (req, res) => {
       });
     }
 
+    const role = req.role || req.user?.role || "driver";
+    const isAdmin = role === "admin" || role === "superAdmin" || role === "superadmin";
+    const order = await getOrderSnapshot(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy đơn hàng cần tạo chuyến giao.",
+      });
+    }
+
+    if (String(order.customerId) !== String(customerId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Khách hàng của chuyến giao không khớp với đơn hàng.",
+      });
+    }
+
+    if (role === "customer" && String(req.user?.id) !== String(order.customerId)) {
+      return res.status(403).json({
+        success: false,
+        message: "Bạn chỉ được tạo chuyến giao cho đơn hàng của mình.",
+      });
+    }
+
+    if (role === "restaurant" && String(req.user?.id) !== String(order.restaurantId)) {
+      return res.status(403).json({
+        success: false,
+        message: "Nhà hàng chỉ được tạo chuyến giao cho đơn của nhà hàng mình.",
+      });
+    }
+
+    if (driverId && !isAdmin && String(driverId) !== String(req.driver)) {
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không được tự chỉ định tài xế khác.",
+      });
+    }
+
+    if (role === "driver") driverId = req.driver;
+
     // Kiểm tra GPS nếu frontend có gửi
     const hasLatitude =
       deliveryLatitude !== undefined &&
@@ -628,7 +668,15 @@ export const updateDeliveryStatus = async (
 
     const isAdmin =
       req.role === "admin" ||
-      req.role === "superadmin";
+      req.role === "superadmin" ||
+      req.role === "superAdmin";
+
+    if (!isAdmin && req.role !== "driver") {
+      return res.status(403).json({
+        success: false,
+        message: "Chỉ tài xế được cập nhật trạng thái chuyến giao.",
+      });
+    }
 
     if (
       delivery.driver &&

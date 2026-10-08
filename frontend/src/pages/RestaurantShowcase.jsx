@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import {
   FaArrowRight,
   FaPlay,
-  FaPause,
   FaVolumeMute,
   FaVolumeUp,
   FaTicketAlt,

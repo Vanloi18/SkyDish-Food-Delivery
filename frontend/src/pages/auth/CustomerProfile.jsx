@@ -30,6 +30,7 @@ import StatCard from "../../components/common/StatCard";
 import LoadingSkeleton from "../../components/common/LoadingSkeleton";
 import EmptyState from "../../components/common/EmptyState";
 import { formatCurrency } from "../../utils/currency";
+import { getAuthHeaders } from "../../utils/authHelper";
 
 export default function CustomerProfile() {
   const [profile, setProfile] = useState(null);
@@ -155,7 +156,7 @@ export default function CustomerProfile() {
         });
         const reviewEntries = await Promise.all(deliveredOrders.map(async (order) => {
           try {
-            const reviewResponse = await axios.get(`${API_URLS.RESTAURANT}/api/reviews/order/${order._id}`);
+            const reviewResponse = await axios.get(`${API_URLS.RESTAURANT}/api/reviews/order/${order._id}`, { headers: getAuthHeaders() });
             return [order._id, Boolean(reviewResponse.data?.reviewed)];
           } catch {
             return [order._id, false];

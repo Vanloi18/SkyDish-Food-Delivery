@@ -31,10 +31,15 @@ async function syncOrderStatus(orderId, { paymentStatus, status, cancellationRea
   try {
     const db = mongoose.connection.db;
     if (db) {
-      const filter = mongoose.Types.ObjectId.isValid(orderId)
-        ? { $or: [{ _id: new mongoose.Types.ObjectId(orderId) }, { _id: String(orderId) }] }
-        : { _id: String(orderId) };
-      await db.collection("orders").updateOne(filter, {
+      const filter = {
+        $or: [
+          { orderGroupId: String(orderId) },
+          ...(mongoose.Types.ObjectId.isValid(orderId)
+            ? [{ _id: new mongoose.Types.ObjectId(orderId) }, { _id: String(orderId) }]
+            : [{ _id: String(orderId) }]),
+        ],
+      };
+      await db.collection("orders").updateMany(filter, {
         $set: {
           paymentStatus,
           ...(status ? { status } : {}),
@@ -86,7 +91,7 @@ async function applyPayOSStatus(payment, status, providerResponse, transactionId
   return payment.status;
 }
 
-async function createPayOSPayment({ orderId, userId, amount, email, phone }) {
+async function createPayOSPayment({ orderId, userId, amount, email, phone, orderIds }) {
   const payos = createPayOSClient();
   if (!userId || userId === "GUEST") {
     const error = new Error("Vui lòng đăng nhập để thanh toán.");
@@ -108,6 +113,7 @@ async function createPayOSPayment({ orderId, userId, amount, email, phone }) {
     return {
       checkoutUrl: payment.payosCheckoutUrl,
       orderId,
+      orderIds: orderIds || [],
       amount: payment.amount,
       provider: "PAYOS",
     };
@@ -117,6 +123,7 @@ async function createPayOSPayment({ orderId, userId, amount, email, phone }) {
   if (!payment) {
     payment = new Payment({
       orderId,
+      orderIds: orderIds || [],
       userId: String(userId),
       amount: roundedAmount,
       currency: "vnd",
@@ -130,6 +137,7 @@ async function createPayOSPayment({ orderId, userId, amount, email, phone }) {
     payment.amount = roundedAmount;
     payment.paymentMethod = "PAYOS";
     payment.status = "Pending";
+    payment.orderIds = orderIds || payment.orderIds || [];
     payment.payosCheckoutUrl = undefined;
   }
   payment.payosOrderCode = orderCode;

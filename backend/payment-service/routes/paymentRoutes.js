@@ -16,6 +16,7 @@ const {
 } = require("../services/paymentProviders/bankTransferProvider");
 
 const jwt = require("jsonwebtoken");
+const { getAuthorizedOrderGroup } = require("../services/orderAuthorization");
 
 const getAuthUser = (req) => {
   const authHeader = req.header("Authorization");
@@ -36,6 +37,14 @@ const validatePaymentAmount = (amount) => {
   return !isNaN(val) && val > 0;
 };
 
+const authorizePaymentRequest = async (req, authUser) => {
+  const group = await getAuthorizedOrderGroup(req.body.orderId, authUser);
+  req.body.amount = group.amount;
+  req.body.orderIds = group.orderIds;
+  req.body.userId = authUser.id;
+  return group;
+};
+
 // ==========================================
 // 1. STRIPE PAYMENT FLOW (PRESERVED)
 // ==========================================
@@ -44,12 +53,11 @@ router.post("/process", async (req, res) => {
     if (!validatePaymentAmount(req.body.amount)) {
       return res.status(400).json({ error: "Invalid payment amount: must be greater than 0" });
     }
-
     const authUser = getAuthUser(req);
     if (!authUser) {
       return res.status(401).json({ error: "Unauthorized: Authentication required" });
     }
-    req.body.userId = authUser.id;
+    await authorizePaymentRequest(req, authUser);
 
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
     if (existingPayment && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
@@ -59,8 +67,8 @@ router.post("/process", async (req, res) => {
     const result = await processStripePayment(req.body);
     return res.json(result);
   } catch (error) {
-    if (error.status) {
-      return res.status(error.status).json({ error: error.message });
+    if (error.status || error.statusCode) {
+      return res.status(error.status || error.statusCode).json({ error: error.message });
     }
     // Handle duplicate key recovery gracefully
     if (error.code === 11000) {
@@ -93,12 +101,11 @@ router.post("/vnpay/create", async (req, res) => {
     if (!validatePaymentAmount(req.body.amount)) {
       return res.status(400).json({ error: "Invalid payment amount: must be greater than 0" });
     }
-
     const authUser = getAuthUser(req);
     if (!authUser) {
       return res.status(401).json({ error: "Unauthorized: Authentication required" });
     }
-    req.body.userId = authUser.id;
+    await authorizePaymentRequest(req, authUser);
 
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
     if (existingPayment && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
@@ -110,7 +117,7 @@ router.post("/vnpay/create", async (req, res) => {
     return res.status(200).json(result);
   } catch (error) {
     console.error("❌ VNPay creation error:", error.message || error);
-    return res.status(500).json({ error: "VNPay payment creation failed. Please try again." });
+    return res.status(error.status || error.statusCode || 500).json({ error: error.message || "VNPay payment creation failed. Please try again." });
   }
 });
 
@@ -147,12 +154,11 @@ router.post("/momo/create", async (req, res) => {
     if (!validatePaymentAmount(req.body.amount)) {
       return res.status(400).json({ error: "Invalid payment amount: must be greater than 0" });
     }
-
     const authUser = getAuthUser(req);
     if (!authUser) {
       return res.status(401).json({ error: "Unauthorized: Authentication required" });
     }
-    req.body.userId = authUser.id;
+    await authorizePaymentRequest(req, authUser);
 
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
     if (existingPayment && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
@@ -228,7 +234,7 @@ router.post("/payos/create", async (req, res) => {
     if (!authUser) {
       return res.status(401).json({ error: "Unauthorized: Authentication required" });
     }
-    req.body.userId = authUser.id;
+    await authorizePaymentRequest(req, authUser);
 
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
     if (existingPayment && authUser.role !== "admin" && authUser.role !== "superAdmin" && existingPayment.userId && existingPayment.userId !== authUser.id) {
@@ -272,12 +278,11 @@ router.post("/cod/process", async (req, res) => {
     if (!validatePaymentAmount(req.body.amount)) {
       return res.status(400).json({ error: "Invalid payment amount: must be greater than 0" });
     }
-
     const authUser = getAuthUser(req);
     if (!authUser) {
       return res.status(401).json({ error: "Unauthorized: Authentication required" });
     }
-    req.body.userId = authUser.id;
+    await authorizePaymentRequest(req, authUser);
 
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
     if (existingPayment && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
@@ -314,12 +319,11 @@ router.post("/bank-transfer/create", async (req, res) => {
     if (!validatePaymentAmount(req.body.amount)) {
       return res.status(400).json({ error: "Invalid payment amount: must be greater than 0" });
     }
-
     const authUser = getAuthUser(req);
     if (!authUser) {
       return res.status(401).json({ error: "Unauthorized: Authentication required" });
     }
-    req.body.userId = authUser.id;
+    await authorizePaymentRequest(req, authUser);
 
     const existingPayment = await Payment.findOne({ orderId: req.body.orderId });
     if (existingPayment && authUser.role !== 'admin' && authUser.role !== 'superAdmin' && existingPayment.userId && existingPayment.userId !== authUser.id) {
@@ -397,6 +401,8 @@ router.get("/status/:orderId", async (req, res) => {
       currency: payment.currency,
       paymentMethod: payment.paymentMethod || "STRIPE",
       status: payment.status,
+      paymentStatus: payment.status,
+      orderIds: payment.orderIds || [payment.orderId],
       createdAt: payment.createdAt,
       updatedAt: payment.updatedAt,
     });

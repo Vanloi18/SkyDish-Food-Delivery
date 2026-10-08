@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 
 const PaymentSchema = new mongoose.Schema({
-  orderId: { type: String, required: true, unique: true }, // Unique per order
+  orderId: { type: String, required: true, unique: true }, // Unique per checkout group
+  orderIds: [{ type: String }], // Child orders covered by one checkout payment
   userId: { type: String, required: true },
   amount: { type: Number, required: true },
   currency: { type: String, default: "vnd" },

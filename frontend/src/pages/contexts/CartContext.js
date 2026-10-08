@@ -66,36 +66,8 @@ export const CartProvider = ({ children }) => {
   }, [cartItems]);
 
   const addToCart = (food, quantityToAdd = 1) => {
-    const incomingRestaurant = getRestaurant(food);
-    const activeRestaurant = getRestaurant(cartItems[0]);
-
-    // An order belongs to one restaurant in the current order-service contract.
-    // Do not silently send items from another restaurant to the first restaurant.
-    if (
-      cartItems.length > 0 &&
-      activeRestaurant.id &&
-      incomingRestaurant.id &&
-      activeRestaurant.id !== incomingRestaurant.id
-    ) {
-      return {
-        added: false,
-        reason: "different-restaurant",
-        restaurantName: activeRestaurant.name || "nhà hàng hiện tại",
-      };
-    }
-
     setCartItems((prev) => {
       const normalizedFood = normalizeCartItem({ ...food, quantity: quantityToAdd });
-      const currentRestaurant = getRestaurant(prev[0]);
-
-      if (
-        prev.length > 0 &&
-        currentRestaurant.id &&
-        normalizedFood.restaurantId &&
-        currentRestaurant.id !== normalizedFood.restaurantId
-      ) {
-        return prev;
-      }
 
       const existingIndex = prev.findIndex((item) => getCartKey(item) === normalizedFood.cartKey);
       if (existingIndex > -1) {
@@ -153,11 +125,13 @@ export const CartProvider = ({ children }) => {
     0
   );
 
-  const deliveryFee = cartItems.length > 0 ? 15000 : 0;
-  const totalAmount = subtotal + deliveryFee;
   const restaurantsInCart = Array.from(
     new Set(cartItems.map((item) => getRestaurant(item).id).filter(Boolean))
   );
+  // Each restaurant produces one child order and therefore one delivery leg.
+  // The final authoritative quote is recalculated by Order Service at checkout.
+  const deliveryFee = cartItems.length > 0 ? 15000 * Math.max(1, restaurantsInCart.length) : 0;
+  const totalAmount = subtotal + deliveryFee;
   const cartRestaurant = getRestaurant(cartItems[0]);
   const hasMixedRestaurants = restaurantsInCart.length > 1;
 

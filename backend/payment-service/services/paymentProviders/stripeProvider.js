@@ -6,7 +6,7 @@ const { sendSmsNotification } = require("../../utils/twilioService");
 /**
  * Process Stripe PaymentIntent creation or retrieval
  */
-async function processStripePayment({ orderId, userId, amount, currency, email, phone }) {
+async function processStripePayment({ orderId, userId, amount, currency, email, phone, orderIds }) {
   if (!userId || userId === "GUEST") {
     throw { status: 401, message: "Unauthorized: Guest payments are strictly prohibited. Please login." };
   }
@@ -45,6 +45,7 @@ async function processStripePayment({ orderId, userId, amount, currency, email, 
 
   payment = new Payment({
     orderId,
+    orderIds: orderIds || [],
     userId,
     amount,
     currency: targetCurrency,

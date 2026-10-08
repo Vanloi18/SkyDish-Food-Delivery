@@ -6,6 +6,7 @@ const axios = require("axios");
  */
 async function processCodPayment({
   orderId,
+  orderIds,
   userId,
   amount,
   currency = "vnd",
@@ -45,6 +46,7 @@ async function processCodPayment({
 
   payment = new Payment({
     orderId,
+    orderIds: orderIds || [],
     userId: String(userId),
     amount,
     currency: currency || "vnd",

@@ -1,5 +1,6 @@
 const Payment = require("../../models/PaymentModel");
 const axios = require("axios");
+const { syncOrdersByPayment } = require("../orderSync");
 
 /**
  * Helper to get bank transfer config from environment
@@ -35,6 +36,7 @@ function generateVietQRUrl({ bankId, accountNumber, template, amount, paymentRef
  */
 async function createBankTransferPayment({
   orderId,
+  orderIds,
   userId,
   amount,
   currency = "vnd",
@@ -100,6 +102,7 @@ async function createBankTransferPayment({
   } else {
     payment = new Payment({
       orderId,
+      orderIds: orderIds || [],
       userId: String(userId),
       amount: validAmount,
       currency: currency || "vnd",
@@ -268,16 +271,10 @@ async function verifyBankTransactionWebhook({
   };
   await payment.save();
 
-  // Synchronize Order Service
-  try {
-    const orderServiceUrl = process.env.ORDER_SERVICE_URL || "http://127.0.0.1:5005";
-    await axios.patch(`${orderServiceUrl}/api/orders/${payment.orderId}`, {
-      status: "Confirmed",
-      paymentStatus: "Paid",
-    }, { timeout: 3000 });
-  } catch (err) {
-    console.warn("Order service status update notice:", err.message);
-  }
+  await syncOrdersByPayment(payment.orderId, {
+    status: "Confirmed",
+    paymentStatus: "Paid",
+  });
 
   return {
     isValid: true,

@@ -105,7 +105,7 @@ From repo root:
 docker-compose up --build
 MongoDB container → mongodb://mongo:27017
 Services available on ports 4000, 5002, 5003, 5004, 5005
-Frontend → http://localhost:3000
+Frontend → http://localhost:3300 trong cấu hình hiện tại của nhóm
 
 7. Running on Kubernetes
 Ensure your local cluster is running (e.g., Docker Desktop).
@@ -157,7 +157,7 @@ Swagger UI: http://localhost:5004/api-docs
 cd frontend
 npm install
 npm start
-Visit http://localhost:3000.
+Visit http://localhost:3300.
 Login/Register pages under /auth/login and /auth/register.
 
 10. Testing & Linting
