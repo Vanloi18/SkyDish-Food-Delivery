@@ -119,6 +119,9 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     res.status(200).json({ message: 'Food item deleted successfully' });
   } catch (err) {
     console.error(err);
+    if (err.name === 'CastError') {
+      return res.status(400).json({ message: 'Mã món ăn không hợp lệ.', details: err.message });
+    }
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -147,6 +150,9 @@ router.put('/availability/:id', authMiddleware, async (req, res) => {
     res.status(200).json({ message: `Food item is now ${availability ? 'Available' : 'Unavailable'}`, foodItem });
   } catch (err) {
     console.error(err);
+    if (err.name === 'CastError') {
+      return res.status(400).json({ message: 'Mã món ăn không hợp lệ.', details: err.message });
+    }
     res.status(500).json({ message: 'Server Error' });
   }
 });
