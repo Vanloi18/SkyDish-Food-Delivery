@@ -573,10 +573,11 @@ export default function RestaurantDashboard() {
       return;
     }
     try {
-      await axios.post(`${API_URLS.RESTAURANT}/api/coupons/create`, {
-        ...couponForm,
-        restaurantId: restaurant._id || "PLATFORM",
-      });
+      await axios.post(
+        `${API_URLS.RESTAURANT}/api/coupons/create`,
+        { ...couponForm, restaurantId: restaurant._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       showAlert("success", "Tạo mã khuyến mãi thành công!");
       setCouponModalOpen(false);
       setCouponForm({ code: "", description: "", discountType: "fixed", discountValue: 20000, minOrderValue: 100000, usageLimit: 500 });
@@ -589,7 +590,11 @@ export default function RestaurantDashboard() {
   // Toggle Coupon Status
   const handleToggleCoupon = async (couponId) => {
     try {
-      const res = await axios.put(`${API_URLS.RESTAURANT}/api/coupons/${couponId}/deactivate`);
+      const res = await axios.put(
+        `${API_URLS.RESTAURANT}/api/coupons/${couponId}/deactivate`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       showAlert("success", res.data.message);
       await fetchCoupons(restaurant._id);
     } catch (err) {

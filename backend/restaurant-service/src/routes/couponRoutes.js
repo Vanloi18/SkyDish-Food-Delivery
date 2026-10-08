@@ -1,7 +1,18 @@
 import express from 'express';
 import Coupon from '../models/Coupon.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+const managerRoles = new Set(['restaurant', 'admin', 'superAdmin']);
+
+const isCouponManager = (req) => managerRoles.has(req.user?.role);
+
+const ownsCoupon = (req, coupon) => (
+  req.user?.role === 'admin' ||
+  req.user?.role === 'superAdmin' ||
+  (req.user?.role === 'restaurant' && String(coupon.restaurantId) === String(req.user.id))
+);
 
 // 1. Validate a Coupon for Checkout (Backend Authoritative Calculation)
 router.post('/validate', async (req, res) => {
@@ -122,8 +133,12 @@ router.get('/restaurant/:restaurantId', async (req, res) => {
 });
 
 // 4. Create a new coupon (Merchant or Admin)
-router.post('/create', async (req, res) => {
+router.post('/create', authMiddleware, async (req, res) => {
   try {
+    if (!isCouponManager(req)) {
+      return res.status(403).json({ message: 'Bạn không có quyền tạo mã giảm giá.' });
+    }
+
     const {
       code,
       description,
@@ -136,8 +151,24 @@ router.post('/create', async (req, res) => {
       endAt,
     } = req.body;
 
-    if (!code || !discountType || discountValue === undefined) {
+    const validDiscountTypes = new Set(['percentage', 'fixed', 'shipping']);
+    if (typeof code !== 'string' || !code.trim() || !validDiscountTypes.has(discountType) || discountValue === undefined) {
       return res.status(400).json({ message: 'Vui lòng nhập đầy đủ mã, loại giảm giá và giá trị ưu đãi.' });
+    }
+
+    const numericDiscount = Number(discountValue);
+    const numericMinOrder = minOrderValue === undefined || minOrderValue === '' ? 0 : Number(minOrderValue);
+    const numericMaxDiscount = maxDiscount === undefined || maxDiscount === '' ? 0 : Number(maxDiscount);
+    const numericUsageLimit = usageLimit === undefined || usageLimit === '' ? 1000 : Number(usageLimit);
+    if (!Number.isFinite(numericDiscount) || numericDiscount < 0 || !Number.isFinite(numericMinOrder) || numericMinOrder < 0 || numericMaxDiscount < 0 || numericUsageLimit <= 0) {
+      return res.status(400).json({ message: 'Giá trị giảm, đơn tối thiểu và giới hạn sử dụng phải hợp lệ.' });
+    }
+
+    const scopedRestaurantId = req.user.role === 'restaurant'
+      ? String(req.user.id)
+      : (restaurantId || 'PLATFORM');
+    if (req.user.role === 'restaurant' && restaurantId && String(restaurantId) !== String(req.user.id)) {
+      return res.status(403).json({ message: 'Nhà hàng chỉ được tạo mã giảm giá cho chính mình.' });
     }
 
     const cleanCode = code.trim().toUpperCase();
@@ -150,11 +181,11 @@ router.post('/create', async (req, res) => {
       code: cleanCode,
       description: description || `Ưu đãi ${cleanCode}`,
       discountType,
-      discountValue: Number(discountValue),
-      minOrderValue: Number(minOrderValue) || 0,
-      maxDiscount: Number(maxDiscount) || 0,
-      restaurantId: restaurantId || 'PLATFORM',
-      usageLimit: Number(usageLimit) || 1000,
+      discountValue: numericDiscount,
+      minOrderValue: numericMinOrder,
+      maxDiscount: numericMaxDiscount,
+      restaurantId: scopedRestaurantId,
+      usageLimit: numericUsageLimit,
       endAt: endAt ? new Date(endAt) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
     });
 
@@ -167,11 +198,18 @@ router.post('/create', async (req, res) => {
 });
 
 // 5. Toggle / Deactivate coupon
-router.put('/:id/deactivate', async (req, res) => {
+router.put('/:id/deactivate', authMiddleware, async (req, res) => {
   try {
+    if (!isCouponManager(req)) {
+      return res.status(403).json({ message: 'Bạn không có quyền cập nhật mã giảm giá.' });
+    }
+
     const coupon = await Coupon.findById(req.params.id);
     if (!coupon) {
       return res.status(404).json({ message: 'Không tìm thấy mã giảm giá.' });
+    }
+    if (!ownsCoupon(req, coupon)) {
+      return res.status(403).json({ message: 'Bạn không có quyền cập nhật mã giảm giá của nhà hàng khác.' });
     }
 
     coupon.isActive = !coupon.isActive;
@@ -188,12 +226,21 @@ router.put('/:id/deactivate', async (req, res) => {
 });
 
 // 6. Delete coupon
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    const coupon = await Coupon.findByIdAndDelete(req.params.id);
+    if (!isCouponManager(req)) {
+      return res.status(403).json({ message: 'Bạn không có quyền xóa mã giảm giá.' });
+    }
+
+    const coupon = await Coupon.findById(req.params.id);
     if (!coupon) {
       return res.status(404).json({ message: 'Không tìm thấy mã giảm giá.' });
     }
+    if (!ownsCoupon(req, coupon)) {
+      return res.status(403).json({ message: 'Bạn không có quyền xóa mã giảm giá của nhà hàng khác.' });
+    }
+
+    await coupon.deleteOne();
     res.status(200).json({ message: 'Đã xóa mã giảm giá.' });
   } catch (err) {
     console.error('Error deleting coupon:', err);
