@@ -31,7 +31,7 @@ router.post('/create', authMiddleware, upload.single('image'), async (req, res) 
         : 'Món ngon chất lượng từ nhà hàng.',
       price: Number(price),
       image,
-      category,
+      category: typeof category === 'string' ? category.trim() : category,
     });
 
     await newFoodItem.save();
@@ -70,10 +70,10 @@ router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
       return res.status(403).json({ message: 'You are not authorized to modify this food item' });
     }
 
-    if (name) foodItem.name = name;
+    if (typeof name === 'string') foodItem.name = name.trim();
     if (description !== undefined) foodItem.description = description;
     if (price !== undefined) foodItem.price = Number(price);
-    if (category) foodItem.category = category;
+    if (typeof category === 'string') foodItem.category = category.trim();
     if (typeof availability !== 'undefined') {
       foodItem.availability = availability === true || availability === 'true';
     }
@@ -96,7 +96,7 @@ router.put('/:id', authMiddleware, upload.single('image'), async (req, res) => {
     res.status(200).json({ message: 'Food item updated successfully', foodItem });
   } catch (err) {
     console.error(err);
-    if (err.name === 'ValidationError') {
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
       return res.status(400).json({ message: 'Dữ liệu món ăn không hợp lệ.', details: err.message });
     }
     res.status(500).json({ message: 'Server Error' });
